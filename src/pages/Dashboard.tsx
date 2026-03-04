@@ -1,0 +1,162 @@
+import { useState, useCallback, useEffect } from 'react';
+import { toast } from 'sonner';
+import ProblemExplorer from '@/components/ProblemExplorer';
+import CodeEditor from '@/components/CodeEditor';
+import AIPanel from '@/components/AIPanel';
+import ConsolePanel, { ConsoleEntry } from '@/components/ConsolePanel';
+import Toolbar from '@/components/Toolbar';
+import SettingsDialog from '@/components/SettingsDialog';
+import { Problem, getProblems, updateProblem, DEFAULT_CODE } from '@/lib/store';
+import { executeJavaCode } from '@/lib/judge0';
+import { detectProblemTitle, analyzeCode } from '@/lib/ollama';
+import { saveAnalysis } from '@/lib/store';
+
+interface DashboardProps {
+  username: string;
+  onLogout: () => void;
+}
+
+const Dashboard = ({ username, onLogout }: DashboardProps) => {
+  const [problems, setProblems] = useState<Problem[]>(getProblems());
+  const [activeProblem, setActiveProblem] = useState<Problem | null>(null);
+  const [code, setCode] = useState(DEFAULT_CODE);
+  const [consoleEntries, setConsoleEntries] = useState<ConsoleEntry[]>([]);
+  const [isRunning, setIsRunning] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+
+  const refreshProblems = useCallback(() => {
+    setProblems(getProblems());
+  }, []);
+
+  const handleSelectProblem = (problem: Problem) => {
+    setActiveProblem(problem);
+    setCode(problem.code);
+  };
+
+  const addConsoleEntry = (type: ConsoleEntry['type'], text: string) => {
+    setConsoleEntries(prev => [...prev, {
+      type,
+      text,
+      timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }),
+    }]);
+  };
+
+  const handleRun = async () => {
+    setIsRunning(true);
+    addConsoleEntry('system', '▶ Compiling and running...');
+    try {
+      const result = await executeJavaCode(code);
+      if (result.compile_output) {
+        addConsoleEntry('error', result.compile_output);
+      }
+      if (result.stderr) {
+        addConsoleEntry('error', result.stderr);
+      }
+      if (result.stdout) {
+        addConsoleEntry('output', result.stdout);
+      }
+      if (result.status.id === 3) {
+        addConsoleEntry('info', `✓ Executed in ${result.time}s | Memory: ${result.memory} KB`);
+      } else {
+        addConsoleEntry('error', `Status: ${result.status.description}`);
+      }
+    } catch (err: any) {
+      addConsoleEntry('error', err.message);
+    }
+    setIsRunning(false);
+  };
+
+  const handleSave = async () => {
+    if (!activeProblem) {
+      toast.error('No problem selected');
+      return;
+    }
+    setIsSaving(true);
+    try {
+      // Auto-detect title if it's "New Problem"
+      if (activeProblem.title === 'New Problem') {
+        try {
+          const detectedTitle = await detectProblemTitle(code);
+          if (detectedTitle && detectedTitle !== 'Unknown Problem') {
+            updateProblem(activeProblem.id, { title: detectedTitle, code });
+            setActiveProblem(prev => prev ? { ...prev, title: detectedTitle, code } : null);
+            toast.success(`Saved as "${detectedTitle}"`);
+          } else {
+            updateProblem(activeProblem.id, { code });
+            toast.success('Code saved');
+          }
+        } catch {
+          updateProblem(activeProblem.id, { code });
+          toast.success('Code saved');
+        }
+      } else {
+        updateProblem(activeProblem.id, { code });
+        toast.success('Code saved');
+      }
+      refreshProblems();
+    } catch (err) {
+      toast.error('Failed to save');
+    }
+    setIsSaving(false);
+  };
+
+  const handleAnalyze = async () => {
+    if (!activeProblem) {
+      toast.error('No problem selected');
+      return;
+    }
+    // This triggers the AI panel's analysis. We just emit a toast.
+    toast.info('Use the Analysis tab in the AI panel to analyze your code.');
+  };
+
+  return (
+    <div className="flex h-screen flex-col bg-background">
+      <Toolbar
+        onRun={handleRun}
+        onSave={handleSave}
+        onAnalyze={handleAnalyze}
+        onSettings={() => setShowSettings(true)}
+        onLogout={onLogout}
+        username={username}
+        isRunning={isRunning}
+        isSaving={isSaving}
+      />
+
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left: Problem Explorer */}
+        <div className="w-56 shrink-0 border-r border-panel-border">
+          <ProblemExplorer
+            problems={problems}
+            activeProblemId={activeProblem?.id || null}
+            onSelect={handleSelectProblem}
+            onRefresh={refreshProblems}
+          />
+        </div>
+
+        {/* Center + Bottom: Editor & Console */}
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <div className="flex-1 overflow-hidden">
+            <CodeEditor code={code} onChange={setCode} />
+          </div>
+          <div className="h-48 shrink-0 border-t border-panel-border">
+            <ConsolePanel
+              entries={consoleEntries}
+              isRunning={isRunning}
+              onClear={() => setConsoleEntries([])}
+            />
+          </div>
+        </div>
+
+        {/* Right: AI Panel */}
+        <div className="w-72 shrink-0 border-l border-panel-border">
+          <AIPanel code={code} problemId={activeProblem?.id || null} />
+        </div>
+      </div>
+
+      <SettingsDialog open={showSettings} onClose={() => setShowSettings(false)} />
+    </div>
+  );
+};
+
+export default Dashboard;
