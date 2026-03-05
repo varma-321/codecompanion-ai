@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import ProblemExplorer from '@/components/ProblemExplorer';
 import CodeEditor from '@/components/CodeEditor';
@@ -7,9 +7,8 @@ import ConsolePanel, { ConsoleEntry } from '@/components/ConsolePanel';
 import Toolbar from '@/components/Toolbar';
 import SettingsDialog from '@/components/SettingsDialog';
 import { Problem, getProblems, updateProblem, DEFAULT_CODE } from '@/lib/store';
-import { executeJavaCode } from '@/lib/judge0';
-import { detectProblemTitle, analyzeCode } from '@/lib/ollama';
-import { saveAnalysis } from '@/lib/store';
+import { executeJavaCode } from '@/lib/piston';
+import { detectProblemTitle } from '@/lib/ollama';
 
 interface DashboardProps {
   username: string;
@@ -74,7 +73,6 @@ const Dashboard = ({ username, onLogout }: DashboardProps) => {
     }
     setIsSaving(true);
     try {
-      // Auto-detect title if it's "New Problem"
       if (activeProblem.title === 'New Problem') {
         try {
           const detectedTitle = await detectProblemTitle(code);
@@ -95,7 +93,7 @@ const Dashboard = ({ username, onLogout }: DashboardProps) => {
         toast.success('Code saved');
       }
       refreshProblems();
-    } catch (err) {
+    } catch {
       toast.error('Failed to save');
     }
     setIsSaving(false);
@@ -106,7 +104,6 @@ const Dashboard = ({ username, onLogout }: DashboardProps) => {
       toast.error('No problem selected');
       return;
     }
-    // This triggers the AI panel's analysis. We just emit a toast.
     toast.info('Use the Analysis tab in the AI panel to analyze your code.');
   };
 
@@ -124,7 +121,6 @@ const Dashboard = ({ username, onLogout }: DashboardProps) => {
       />
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Left: Problem Explorer */}
         <div className="w-56 shrink-0 border-r border-panel-border">
           <ProblemExplorer
             problems={problems}
@@ -134,7 +130,6 @@ const Dashboard = ({ username, onLogout }: DashboardProps) => {
           />
         </div>
 
-        {/* Center + Bottom: Editor & Console */}
         <div className="flex flex-1 flex-col overflow-hidden">
           <div className="flex-1 overflow-hidden">
             <CodeEditor code={code} onChange={setCode} />
@@ -148,8 +143,7 @@ const Dashboard = ({ username, onLogout }: DashboardProps) => {
           </div>
         </div>
 
-        {/* Right: AI Panel */}
-        <div className="w-72 shrink-0 border-l border-panel-border">
+        <div className="w-80 shrink-0 border-l border-panel-border">
           <AIPanel code={code} problemId={activeProblem?.id || null} />
         </div>
       </div>

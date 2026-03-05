@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Brain, Lightbulb, Code2, Zap, ChevronRight, Loader2, AlertCircle, BookOpen, Bug, FlaskConical, FileInput } from 'lucide-react';
+import { Brain, Lightbulb, Code2, Zap, ChevronRight, Loader2, AlertCircle, BookOpen, Bug, FlaskConical, FileInput, GraduationCap, MessageSquareText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { analyzeCode, getHints, getSolution, checkOllamaStatus, getExtraInsights } from '@/lib/ollama';
-import { Analysis, saveAnalysis, getAnalysisForProblem } from '@/lib/store';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { analyzeCode, getHints as getAIHints, getSolution, checkOllamaStatus, getOllamaModels, getSelectedModel, setSelectedModel, getExtraInsights } from '@/lib/ollama';
+import { Analysis, saveAnalysis, getAnalysisForProblem, saveHint, getHints as getStoredHints, saveSolution, getSolutions, saveTestCases, getTestCases } from '@/lib/store';
 import ReactMarkdown from 'react-markdown';
 
 interface AIPanelProps {
@@ -14,6 +15,8 @@ interface AIPanelProps {
 const AIPanel = ({ code, problemId }: AIPanelProps) => {
   const [ollamaOnline, setOllamaOnline] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [models, setModels] = useState<string[]>([]);
+  const [currentModel, setCurrentModel] = useState(getSelectedModel());
 
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
@@ -28,13 +31,21 @@ const AIPanel = ({ code, problemId }: AIPanelProps) => {
 
   const [extraContent, setExtraContent] = useState('');
   const [loadingExtra, setLoadingExtra] = useState(false);
+  const [activeExtraTab, setActiveExtraTab] = useState<string>('');
 
-  // Check Ollama status periodically
   useEffect(() => {
     const check = async () => {
       setChecking(true);
       const online = await checkOllamaStatus();
       setOllamaOnline(online);
+      if (online) {
+        const availableModels = await getOllamaModels();
+        setModels(availableModels);
+        if (availableModels.length > 0 && !availableModels.includes(currentModel)) {
+          setCurrentModel(availableModels[0]);
+          setSelectedModel(availableModels[0]);
+        }
+      }
       setChecking(false);
     };
     check();
@@ -42,18 +53,28 @@ const AIPanel = ({ code, problemId }: AIPanelProps) => {
     return () => clearInterval(interval);
   }, []);
 
-  // Load existing analysis
   useEffect(() => {
     if (problemId) {
       const existing = getAnalysisForProblem(problemId);
       setAnalysis(existing);
+      const storedHints = getStoredHints(problemId);
+      setHints(storedHints.map(h => h.hintText));
+      setHintLevel(storedHints.length);
+    } else {
+      setAnalysis(null);
+      setHints([]);
+      setHintLevel(0);
     }
-    setHints([]);
-    setHintLevel(0);
     setSolution(null);
     setSolutionType(null);
     setExtraContent('');
+    setActiveExtraTab('');
   }, [problemId]);
+
+  const handleModelChange = (model: string) => {
+    setCurrentModel(model);
+    setSelectedModel(model);
+  };
 
   const handleAnalyze = async () => {
     if (!ollamaOnline || !problemId) return;
@@ -80,9 +101,10 @@ const AIPanel = ({ code, problemId }: AIPanelProps) => {
     const nextLevel = hintLevel + 1;
     setLoadingHint(true);
     try {
-      const hint = await getHints(code, nextLevel);
+      const hint = await getAIHints(code, nextLevel);
       setHints(prev => [...prev, hint]);
       setHintLevel(nextLevel);
+      if (problemId) saveHint(problemId, nextLevel, hint);
     } catch (err) {
       console.error('Hint failed:', err);
     }
@@ -96,15 +118,26 @@ const AIPanel = ({ code, problemId }: AIPanelProps) => {
     try {
       const sol = await getSolution(code, type);
       setSolution(sol);
+      if (problemId) {
+        saveSolution({
+          problemId,
+          solutionType: type,
+          solutionCode: sol.code,
+          explanation: sol.explanation,
+          timeComplexity: sol.timeComplexity,
+          spaceComplexity: sol.spaceComplexity,
+        });
+      }
     } catch (err) {
       console.error('Solution failed:', err);
     }
     setLoadingSolution(false);
   };
 
-  const handleExtra = async (type: 'algorithm' | 'edgecases' | 'testcases' | 'examples') => {
+  const handleExtra = async (type: 'algorithm' | 'edgecases' | 'testcases' | 'examples' | 'explain' | 'learning') => {
     if (!ollamaOnline) return;
     setLoadingExtra(true);
+    setActiveExtraTab(type);
     try {
       const result = await getExtraInsights(code, type);
       setExtraContent(result);
@@ -123,7 +156,7 @@ const AIPanel = ({ code, problemId }: AIPanelProps) => {
         checking ? 'animate-pulse-dot bg-muted-foreground' :
         ollamaOnline ? 'bg-success' : 'bg-destructive'
       }`} />
-      {checking ? 'Checking...' : ollamaOnline ? 'Ollama Online' : 'Ollama Offline'}
+      {checking ? 'Checking...' : ollamaOnline ? 'Online' : 'Offline'}
     </div>
   );
 
@@ -152,22 +185,63 @@ const AIPanel = ({ code, problemId }: AIPanelProps) => {
         <StatusBadge />
       </div>
 
+      {/* Model Selector */}
+      {ollamaOnline && models.length > 0 && (
+        <div className="border-b border-panel-border px-3 py-2">
+          <Select value={currentModel} onValueChange={handleModelChange}>
+            <SelectTrigger className="h-7 text-xs">
+              <SelectValue placeholder="Select model" />
+            </SelectTrigger>
+            <SelectContent>
+              {models.map(model => (
+                <SelectItem key={model} value={model} className="text-xs">
+                  {model}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       <Tabs defaultValue="analysis" className="flex flex-1 flex-col overflow-hidden">
-        <TabsList className="mx-2 mt-2 h-8 w-auto">
-          <TabsTrigger value="analysis" className="text-xs">Analysis</TabsTrigger>
-          <TabsTrigger value="hints" className="text-xs">Hints</TabsTrigger>
-          <TabsTrigger value="solutions" className="text-xs">Solutions</TabsTrigger>
-          <TabsTrigger value="extras" className="text-xs">More</TabsTrigger>
+        <TabsList className="mx-2 mt-2 h-auto w-auto flex-wrap gap-0.5">
+          <TabsTrigger value="analysis" className="text-[11px] px-2 py-1">Analysis</TabsTrigger>
+          <TabsTrigger value="hints" className="text-[11px] px-2 py-1">Hints</TabsTrigger>
+          <TabsTrigger value="solutions" className="text-[11px] px-2 py-1">Solutions</TabsTrigger>
+          <TabsTrigger value="optimize" className="text-[11px] px-2 py-1">Optimize</TabsTrigger>
+          <TabsTrigger value="edgecases" className="text-[11px] px-2 py-1">Edge Cases</TabsTrigger>
+          <TabsTrigger value="testcases" className="text-[11px] px-2 py-1">Test Cases</TabsTrigger>
         </TabsList>
 
         <div className="flex-1 overflow-y-auto p-3">
+          {/* Analysis Tab */}
           <TabsContent value="analysis" className="mt-0">
             <Button onClick={handleAnalyze} disabled={analyzing || !problemId} size="sm" className="mb-3 w-full text-xs">
               {analyzing ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Zap className="mr-1 h-3 w-3" />}
               {analyzing ? 'Analyzing...' : 'Analyze Code'}
             </Button>
+
+            {/* Extra AI tools */}
+            <div className="mb-3 flex gap-1">
+              <Button onClick={() => handleExtra('explain')} disabled={loadingExtra} size="sm" variant="outline" className="flex-1 text-[10px] px-1">
+                <MessageSquareText className="mr-0.5 h-3 w-3" /> Explain
+              </Button>
+              <Button onClick={() => handleExtra('learning')} disabled={loadingExtra} size="sm" variant="outline" className="flex-1 text-[10px] px-1">
+                <GraduationCap className="mr-0.5 h-3 w-3" /> Learn
+              </Button>
+              <Button onClick={() => handleExtra('algorithm')} disabled={loadingExtra} size="sm" variant="outline" className="flex-1 text-[10px] px-1">
+                <BookOpen className="mr-0.5 h-3 w-3" /> Algo
+              </Button>
+            </div>
+
             {analysis && (
               <div className="animate-fade-in space-y-3 text-xs">
+                {analysis.algorithmUsed && analysis.algorithmUsed !== 'Unknown' && (
+                  <div className="rounded-md bg-accent px-3 py-1.5 text-center">
+                    <span className="text-[10px] text-muted-foreground">Detected Algorithm</span>
+                    <div className="font-semibold text-accent-foreground">{analysis.algorithmUsed}</div>
+                  </div>
+                )}
                 <div className="rounded-md bg-card p-3">
                   <div className="mb-2 font-semibold text-foreground">Summary</div>
                   <p className="text-muted-foreground">{analysis.summary}</p>
@@ -182,10 +256,6 @@ const AIPanel = ({ code, problemId }: AIPanelProps) => {
                     <div className="font-mono font-semibold text-foreground">{analysis.spaceComplexity}</div>
                   </div>
                 </div>
-                <div className="rounded-md bg-card p-3">
-                  <div className="mb-1 font-semibold text-foreground">Algorithm</div>
-                  <p className="text-muted-foreground">{analysis.algorithmUsed}</p>
-                </div>
                 {analysis.optimizations.length > 0 && (
                   <div className="rounded-md bg-card p-3">
                     <div className="mb-1 font-semibold text-foreground">Optimizations</div>
@@ -196,8 +266,23 @@ const AIPanel = ({ code, problemId }: AIPanelProps) => {
                 )}
               </div>
             )}
+
+            {/* Extra content (explain/learn/algo) */}
+            {loadingExtra && activeExtraTab && (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              </div>
+            )}
+            {extraContent && !loadingExtra && ['explain', 'learning', 'algorithm'].includes(activeExtraTab) && (
+              <div className="mt-3 animate-fade-in rounded-md bg-card p-3">
+                <div className="prose prose-sm max-w-none text-xs text-muted-foreground">
+                  <ReactMarkdown>{extraContent}</ReactMarkdown>
+                </div>
+              </div>
+            )}
           </TabsContent>
 
+          {/* Hints Tab */}
           <TabsContent value="hints" className="mt-0">
             <div className="mb-3 text-xs text-muted-foreground">
               Get progressive hints without spoiling the solution.
@@ -218,8 +303,12 @@ const AIPanel = ({ code, problemId }: AIPanelProps) => {
                 {hints.length === 0 ? 'Get First Hint' : 'Next Hint'}
               </Button>
             )}
+            {hintLevel >= 4 && (
+              <p className="text-center text-[10px] text-muted-foreground">All hints revealed.</p>
+            )}
           </TabsContent>
 
+          {/* Solutions Tab */}
           <TabsContent value="solutions" className="mt-0">
             <div className="mb-3 flex gap-1">
               {(['brute', 'better', 'optimal'] as const).map(type => (
@@ -263,27 +352,43 @@ const AIPanel = ({ code, problemId }: AIPanelProps) => {
             )}
           </TabsContent>
 
-          <TabsContent value="extras" className="mt-0">
-            <div className="mb-3 grid grid-cols-2 gap-1">
-              <Button onClick={() => handleExtra('algorithm')} disabled={loadingExtra} size="sm" variant="outline" className="text-xs">
-                <BookOpen className="mr-1 h-3 w-3" /> Algorithm
-              </Button>
-              <Button onClick={() => handleExtra('edgecases')} disabled={loadingExtra} size="sm" variant="outline" className="text-xs">
-                <Bug className="mr-1 h-3 w-3" /> Edge Cases
-              </Button>
-              <Button onClick={() => handleExtra('testcases')} disabled={loadingExtra} size="sm" variant="outline" className="text-xs">
-                <FlaskConical className="mr-1 h-3 w-3" /> Test Cases
-              </Button>
-              <Button onClick={() => handleExtra('examples')} disabled={loadingExtra} size="sm" variant="outline" className="text-xs">
-                <FileInput className="mr-1 h-3 w-3" /> Examples
-              </Button>
-            </div>
-            {loadingExtra && (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          {/* Optimization Tab */}
+          <TabsContent value="optimize" className="mt-0">
+            <Button onClick={() => handleExtra('algorithm')} disabled={loadingExtra} size="sm" className="mb-3 w-full text-xs">
+              {loadingExtra && activeExtraTab === 'algorithm' ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Zap className="mr-1 h-3 w-3" />}
+              Get Optimization Tips
+            </Button>
+            {extraContent && activeExtraTab === 'algorithm' && !loadingExtra && (
+              <div className="animate-fade-in rounded-md bg-card p-3">
+                <div className="prose prose-sm max-w-none text-xs text-muted-foreground">
+                  <ReactMarkdown>{extraContent}</ReactMarkdown>
+                </div>
               </div>
             )}
-            {extraContent && !loadingExtra && (
+          </TabsContent>
+
+          {/* Edge Cases Tab */}
+          <TabsContent value="edgecases" className="mt-0">
+            <Button onClick={() => handleExtra('edgecases')} disabled={loadingExtra} size="sm" className="mb-3 w-full text-xs">
+              {loadingExtra && activeExtraTab === 'edgecases' ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Bug className="mr-1 h-3 w-3" />}
+              Detect Edge Cases
+            </Button>
+            {extraContent && activeExtraTab === 'edgecases' && !loadingExtra && (
+              <div className="animate-fade-in rounded-md bg-card p-3">
+                <div className="prose prose-sm max-w-none text-xs text-muted-foreground">
+                  <ReactMarkdown>{extraContent}</ReactMarkdown>
+                </div>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Test Cases Tab */}
+          <TabsContent value="testcases" className="mt-0">
+            <Button onClick={() => handleExtra('testcases')} disabled={loadingExtra} size="sm" className="mb-3 w-full text-xs">
+              {loadingExtra && activeExtraTab === 'testcases' ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <FlaskConical className="mr-1 h-3 w-3" />}
+              Generate Test Cases
+            </Button>
+            {extraContent && activeExtraTab === 'testcases' && !loadingExtra && (
               <div className="animate-fade-in rounded-md bg-card p-3">
                 <div className="prose prose-sm max-w-none text-xs text-muted-foreground">
                   <ReactMarkdown>{extraContent}</ReactMarkdown>

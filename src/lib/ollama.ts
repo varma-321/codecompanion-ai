@@ -1,6 +1,17 @@
 // Ollama API client - connects to local Ollama instance
 
-const OLLAMA_URL = 'http://localhost:11434';
+const OLLAMA_URL = 'http://127.0.0.1:11434';
+
+let selectedModel = localStorage.getItem('ollama_selected_model') || 'llama3.2';
+
+export function getSelectedModel(): string {
+  return selectedModel;
+}
+
+export function setSelectedModel(model: string) {
+  selectedModel = model;
+  localStorage.setItem('ollama_selected_model', model);
+}
 
 export async function checkOllamaStatus(): Promise<boolean> {
   try {
@@ -21,11 +32,11 @@ export async function getOllamaModels(): Promise<string[]> {
   }
 }
 
-async function generate(prompt: string, model: string = 'llama3.2'): Promise<string> {
+async function generate(prompt: string): Promise<string> {
   const res = await fetch(`${OLLAMA_URL}/api/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model, prompt, stream: false }),
+    body: JSON.stringify({ model: selectedModel, prompt, stream: false }),
   });
   if (!res.ok) throw new Error('Ollama request failed');
   const data = await res.json();
@@ -42,7 +53,7 @@ export async function analyzeCode(code: string): Promise<{
 }> {
   const prompt = `Analyze this Java DSA code. Return ONLY a JSON object with these fields:
 - problemName: the DSA problem being solved
-- algorithmUsed: the algorithm/approach used
+- algorithmUsed: the algorithm/approach used (e.g. Binary Search, Two Pointers, DFS, Dynamic Programming, Sliding Window, Greedy, BFS)
 - timeComplexity: Big-O time complexity
 - spaceComplexity: Big-O space complexity
 - summary: brief explanation of what the code does
@@ -144,12 +155,14 @@ ${code}
   return response.trim().replace(/['"]/g, '');
 }
 
-export async function getExtraInsights(code: string, type: 'algorithm' | 'edgecases' | 'testcases' | 'examples'): Promise<string> {
+export async function getExtraInsights(code: string, type: 'algorithm' | 'edgecases' | 'testcases' | 'examples' | 'explain' | 'learning'): Promise<string> {
   const prompts: Record<string, string> = {
     algorithm: `Explain the algorithm used in this Java code in detail with visual examples:\n\`\`\`java\n${code}\n\`\`\``,
-    edgecases: `List all edge cases for this Java DSA code. Format as a numbered list:\n\`\`\`java\n${code}\n\`\`\``,
-    testcases: `Suggest test cases for this Java DSA code with expected outputs:\n\`\`\`java\n${code}\n\`\`\``,
+    edgecases: `List all important edge cases for this Java DSA code. Include: empty input, large input, duplicate elements, boundary values, negative numbers, single element. Format as a numbered list:\n\`\`\`java\n${code}\n\`\`\``,
+    testcases: `Generate test cases for this Java DSA code with specific inputs and expected outputs. Format as a table or numbered list:\n\`\`\`java\n${code}\n\`\`\``,
     examples: `Generate sample inputs and expected outputs for this Java code:\n\`\`\`java\n${code}\n\`\`\``,
+    explain: `Explain this Java code step-by-step. Break down each line and explain what it does, why it's there, and how data flows through the algorithm:\n\`\`\`java\n${code}\n\`\`\``,
+    learning: `As a DSA tutor, explain:\n1. Why this algorithm works for this problem\n2. How it can be optimized further\n3. Common mistakes students make with this approach\n4. Related problems that use similar techniques\n\nCode:\n\`\`\`java\n${code}\n\`\`\``,
   };
 
   return generate(prompts[type]);
