@@ -104,6 +104,60 @@ const ProblemWorkspace = () => {
     enabled: !!key,
   });
 
+  // Auto-generate full problem details if not hardcoded
+  const generateFullDetail = useCallback(async () => {
+    if (!roadmapProblem || !key || hasHardcodedDetail) return;
+    // Check cache
+    const cached = getCachedDetail(key);
+    if (cached && cached.testCases.length > 0) {
+      setDetail(cached);
+      if (!localStorage.getItem(`workspace-code-${key}`)) setCode(cached.starterCode);
+      return;
+    }
+    setIsGenerating(true);
+    setGenerateError('');
+    try {
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-problem-detail`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          title: roadmapProblem.title,
+          difficulty: roadmapProblem.difficulty,
+          topic: (roadmapProblem as any).topic || '',
+        }),
+      });
+      if (!resp.ok) throw new Error('Failed to generate');
+      const { detail: generated } = await resp.json();
+      if (generated) {
+        const enhanced: EnhancedDetail = {
+          key,
+          description: generated.description,
+          examples: generated.examples || [],
+          starterCode: generated.starterCode || detail.starterCode,
+          testCases: generated.testCases || [],
+          functionName: generated.functionName || 'solve',
+          returnType: generated.returnType || 'void',
+          params: generated.params || [],
+          constraints: generated.constraints,
+          hints: generated.hints,
+          approach: generated.approach,
+        };
+        setCachedDetail(key, enhanced);
+        setDetail(enhanced);
+        // Update code only if user hasn't written anything
+        if (!localStorage.getItem(`workspace-code-${key}`) && generated.starterCode) {
+          setCode(generated.starterCode);
+        }
+      }
+    } catch (err: any) {
+      setGenerateError('Could not auto-generate problem details. You can still code!');
+    }
+    setIsGenerating(false);
+  }, [key, roadmapProblem, hasHardcodedDetail]);
+
   // Reset code when problem changes
   useEffect(() => {
     const saved = localStorage.getItem(`workspace-code-${key}`);
@@ -116,6 +170,10 @@ const ProblemWorkspace = () => {
     setConsoleEntries([]);
     setTestResults([]);
     setBottomTab('description');
+    // Auto-generate if no hardcoded detail
+    if (!hasHardcodedDetail) {
+      generateFullDetail();
+    }
   }, [key]);
 
   // Keyboard shortcuts
