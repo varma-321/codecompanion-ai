@@ -48,27 +48,37 @@ const Dashboard = ({ username, onLogout }: DashboardProps) => {
   };
 
   const handleRun = async () => {
+    if (isRunning) return; // Prevent duplicate requests
+    
     setIsRunning(true);
     setExecStatus('sending');
     addConsoleEntry('system', '▶ Compiling and running...');
+    
     try {
       const result = await executeJavaCode(code, (status) => setExecStatus(status));
 
-      if (result.stderr) {
-        addConsoleEntry('error', result.stderr);
-      }
-      if (result.stdout) {
-        addConsoleEntry('output', result.stdout);
-      }
-      if (result.status.id === 3) {
-        addConsoleEntry('info', '✓ Execution complete');
-      } else if (result.status.description !== 'Compilation Error') {
-        addConsoleEntry('error', `Status: ${result.status.description}`);
+      if (result.success) {
+        // Successful execution
+        if (result.output) {
+          addConsoleEntry('output', result.output);
+        }
+        addConsoleEntry('info', '✓ Execution completed successfully');
+      } else {
+        // Error occurred
+        if (result.error) {
+          addConsoleEntry('error', result.error);
+        }
+        
+        // Add status description for non-compilation errors
+        if (result.status.description !== 'Compilation Error') {
+          addConsoleEntry('system', `Status: ${result.status.description}`);
+        }
       }
     } catch (err: any) {
       addConsoleEntry('error', err?.message || 'Execution failed');
       setExecStatus('failed');
     }
+    
     setIsRunning(false);
   };
 
