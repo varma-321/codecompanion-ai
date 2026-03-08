@@ -8,7 +8,7 @@ import Toolbar from '@/components/Toolbar';
 import ExecutionStatus from '@/components/ExecutionStatus';
 import SettingsDialog from '@/components/SettingsDialog';
 import { Problem, getProblems, updateProblem, DEFAULT_CODE } from '@/lib/store';
-import { executeJavaCode, type ExecutionStatus as ExecStatusType } from '@/lib/piston';
+import { executeJavaCode, type ExecutionStatus as ExecStatusType } from '@/lib/executor';
 import { detectProblemTitle } from '@/lib/ollama';
 
 interface DashboardProps {
