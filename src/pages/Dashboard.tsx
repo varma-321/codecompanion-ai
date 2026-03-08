@@ -158,33 +158,21 @@ const Dashboard = () => {
     setBottomTab('console');
     addConsoleEntry('system', `▶ Running ${testCases.length} test(s)...`);
 
-    const results: TestResult[] = [];
-    const API_BASE_URL = (await import('@/lib/api')).API_BASE_URL;
+    const { runAllTests } = await import('@/lib/test-runner');
 
-    for (let i = 0; i < testCases.length; i++) {
-      const tc = testCases[i];
-      // Build multi-variable test input
-      const inputs = (tc.inputs && Object.keys(tc.inputs).length > 0)
+    const tcInputs = testCases.map(tc => ({
+      inputs: (tc.inputs && Object.keys(tc.inputs).length > 0)
         ? tc.inputs
-        : { [tc.variable_name || 'arr']: tc.input || '' };
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/run-java`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code, testInputs: inputs, testInput: tc.input }),
-          signal: AbortSignal.timeout(15000),
-        });
-        const data = await response.json();
-        const actual = (data.success ? (data.output || '') : (data.error || '')).trim();
-        const expected = tc.expected_output.trim();
-        const passed = actual === expected;
-        results.push({ test: i + 1, status: passed ? 'PASSED' : 'FAILED', expected, actual: actual || '(no output)' });
-        addConsoleEntry(passed ? 'info' : 'error', `Test ${i + 1} ${passed ? 'PASSED' : 'FAILED'}${!passed ? ` (expected: ${expected}, got: ${actual})` : ''}`);
-      } catch (err: any) {
-        results.push({ test: i + 1, status: 'FAILED', expected: tc.expected_output, actual: err.message || 'Error' });
-        addConsoleEntry('error', `Test ${i + 1} FAILED: ${err.message || 'Error'}`);
-      }
-    }
+        : { [tc.variable_name || 'arr']: tc.input || '' },
+      expected: tc.expected_output.trim(),
+    }));
+
+    const results = await runAllTests(code, tcInputs, setExecStatus, (idx, r) => {
+      addConsoleEntry(
+        r.status === 'PASSED' ? 'info' : 'error',
+        `Test ${r.test} ${r.status}${r.status === 'FAILED' ? ` (expected: ${r.expected}, got: ${r.actual})` : ''}`
+      );
+    });
 
     const passed = results.filter(r => r.status === 'PASSED').length;
     addConsoleEntry('system', `\nExecution finished. ${passed}/${results.length} tests passed.`);
