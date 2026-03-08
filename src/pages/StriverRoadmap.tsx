@@ -80,9 +80,7 @@ const StriverRoadmap = () => {
   };
 
   const handlePractice = (problem: RoadmapProblem) => {
-    // Navigate to IDE with problem context
-    navigate(`/?roadmap_problem=${encodeURIComponent(problem.key)}&title=${encodeURIComponent(problem.title)}`);
-    toast.info(`Opening: ${problem.title}`);
+    navigate(`/problem/${problem.key}`);
   };
 
   const toggleSolved = async (problem: RoadmapProblem) => {
