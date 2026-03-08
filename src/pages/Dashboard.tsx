@@ -144,7 +144,7 @@ const Dashboard = ({ username, onLogout }: DashboardProps) => {
         </div>
 
         <div className="w-80 shrink-0 border-l border-panel-border">
-          <AIPanel code={code} problemId={activeProblem?.id || null} />
+          <AIChatPanel code={code} problemId={activeProblem?.id || null} />
         </div>
       </div>
 
