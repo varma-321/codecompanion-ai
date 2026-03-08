@@ -24,9 +24,9 @@ const ProblemExplorer = ({ problems, activeProblemId, onSelect, onRefresh }: Pro
   );
 
   const handleCreate = async () => {
-    if (!user) return;
+    if (!authUser) return;
     try {
-      const problem = await createProblem(user.id, 'New Problem', DEFAULT_CODE);
+      const problem = await createProblem(authUser.id, 'New Problem', DEFAULT_CODE);
       onRefresh();
       onSelect(problem);
     } catch { /* silent */ }
