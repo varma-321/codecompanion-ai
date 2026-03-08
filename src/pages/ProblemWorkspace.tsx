@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Play, FlaskConical, Loader2, CheckCircle2, XCircle, Brain, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Play, FlaskConical, Loader2, CheckCircle2, XCircle, Brain, ChevronRight, Code2, GitCompare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -11,6 +11,9 @@ import ConsolePanel, { ConsoleEntry } from '@/components/ConsolePanel';
 import TestCasePanel, { TestResult } from '@/components/TestCasePanel';
 import TestResultsTable from '@/components/TestResultsTable';
 import ExecutionStatus from '@/components/ExecutionStatus';
+import ProblemTimer from '@/components/ProblemTimer';
+import CodeSnippets from '@/components/CodeSnippets';
+import SolutionComparison from '@/components/SolutionComparison';
 import { useUser } from '@/lib/user-context';
 import { supabase } from '@/integrations/supabase/client';
 import { STRIVER_ROADMAP, getDifficultyBg } from '@/lib/striver-roadmap-data';
@@ -44,9 +47,10 @@ const ProblemWorkspace = () => {
   const [isRunningTests, setIsRunningTests] = useState(false);
   const [execStatus, setExecStatus] = useState<ExecStatusType>('ready');
   const [testResults, setTestResults] = useState<TestResult[]>([]);
-  const [bottomTab, setBottomTab] = useState<'description' | 'console' | 'results'>('description');
+  const [bottomTab, setBottomTab] = useState<'description' | 'console' | 'results' | 'snippets' | 'solutions'>('description');
   const [consoleHeight, setConsoleHeight] = useState(320);
   const [showDescription, setShowDescription] = useState(true);
+  const [timeSpent, setTimeSpent] = useState(0);
 
   // Reset code when problem changes
   useEffect(() => {
@@ -177,7 +181,9 @@ const ProblemWorkspace = () => {
         <Badge className={`text-[10px] ${getDifficultyBg(roadmapProblem.difficulty)}`}>
           {roadmapProblem.difficulty}
         </Badge>
-        <div className="ml-auto flex items-center gap-1.5">
+        <div className="ml-auto flex items-center gap-2">
+          <ProblemTimer problemId={key || null} onTimeUpdate={setTimeSpent} />
+          <div className="h-4 w-px bg-panel-border" />
           <Button onClick={handleRun} disabled={isRunning || isRunningTests} size="sm" className="h-7 gap-1 text-xs">
             {isRunning ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
             Run
@@ -263,7 +269,7 @@ const ProblemWorkspace = () => {
           {/* Bottom panel */}
           <div className="shrink-0 border-t border-panel-border" style={{ height: consoleHeight }}>
             <div className="flex items-center border-b border-panel-border bg-ide-toolbar">
-              {(['description', 'console', 'results'] as const).map(tab => (
+              {(['description', 'console', 'results', 'snippets', 'solutions'] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => setBottomTab(tab)}
@@ -273,6 +279,8 @@ const ProblemWorkspace = () => {
                 >
                   {tab === 'results' && testResults.length > 0
                     ? `Results (${testResults.filter(r => r.status === 'PASSED').length}/${testResults.length})`
+                    : tab === 'snippets' ? '📋 Templates'
+                    : tab === 'solutions' ? '⚡ Solutions'
                     : tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </button>
               ))}
@@ -321,6 +329,12 @@ const ProblemWorkspace = () => {
                     )}
                   </div>
                 </ScrollArea>
+              )}
+              {bottomTab === 'snippets' && (
+                <CodeSnippets onInsert={(snippet) => setCode(prev => prev + snippet)} />
+              )}
+              {bottomTab === 'solutions' && (
+                <SolutionComparison code={code} problemTitle={roadmapProblem.title} />
               )}
             </div>
           </div>

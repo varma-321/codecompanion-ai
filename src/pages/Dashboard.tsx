@@ -16,6 +16,9 @@ import StreakPanel from '@/components/StreakPanel';
 import RecursionTreePanel from '@/components/RecursionTreePanel';
 import Toolbar from '@/components/Toolbar';
 import ExecutionStatus from '@/components/ExecutionStatus';
+import ProblemTimer from '@/components/ProblemTimer';
+import CodeSnippets from '@/components/CodeSnippets';
+import SolutionComparison from '@/components/SolutionComparison';
 import SettingsDialog from '@/components/SettingsDialog';
 import { useUser } from '@/lib/user-context';
 import {
@@ -50,7 +53,7 @@ const Dashboard = () => {
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [isGeneratingTests, setIsGeneratingTests] = useState(false);
   const [isRunningTests, setIsRunningTests] = useState(false);
-  const [bottomTab, setBottomTab] = useState<'console' | 'tests' | 'results' | 'debugger' | 'daily' | 'notes' | 'streak' | 'recursion'>('tests');
+  const [bottomTab, setBottomTab] = useState<'console' | 'tests' | 'results' | 'debugger' | 'daily' | 'notes' | 'streak' | 'recursion' | 'snippets' | 'solutions'>('tests');
 
   // Execution analytics
   const [execTimeMs, setExecTimeMs] = useState<number | null>(null);
@@ -343,6 +346,8 @@ const Dashboard = () => {
                 {isExplaining ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Brain className="h-3.5 w-3.5" />}
                 Explain Code
               </Button>
+              <div className="h-5 w-px bg-panel-border mx-1" />
+              <ProblemTimer problemId={activeProblem?.id || null} />
               <ExecutionStatus status={execStatus} />
             </div>
           )}
@@ -359,7 +364,7 @@ const Dashboard = () => {
           >
             {/* Tab bar */}
             <div className="flex items-center border-b border-panel-border bg-ide-toolbar">
-              {(['console', 'tests', 'results', 'debugger', 'notes', 'recursion', 'streak', 'daily'] as const).map(tab => (
+              {(['console', 'tests', 'results', 'debugger', 'notes', 'recursion', 'snippets', 'solutions', 'streak', 'daily'] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => { setBottomTab(tab); setConsoleCollapsed(false); }}
@@ -373,7 +378,8 @@ const Dashboard = () => {
                     ? `Results (${testResults.filter(r => r.status === 'PASSED').length}/${testResults.length})`
                     : tab === 'debugger' ? '🔍 Debug' : tab === 'daily' ? '📅 Daily'
                     : tab === 'notes' ? '📝 Notes' : tab === 'recursion' ? '🌳 Recursion'
-                    : tab === 'streak' ? '🔥 Streak' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                    : tab === 'streak' ? '🔥 Streak' : tab === 'snippets' ? '📋 Templates'
+                    : tab === 'solutions' ? '⚡ Solutions' : tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </button>
               ))}
             </div>
@@ -484,6 +490,28 @@ const Dashboard = () => {
                 <div className="flex flex-1">
                   <div className="flex-1 overflow-auto">
                     <StreakPanel />
+                  </div>
+                  <div className="w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
+                    <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
+                  </div>
+                </div>
+              )}
+
+              {bottomTab === 'snippets' && (
+                <div className="flex flex-1">
+                  <div className="flex-1 overflow-hidden">
+                    <CodeSnippets onInsert={(snippet) => setCode(prev => prev + snippet)} />
+                  </div>
+                  <div className="w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
+                    <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
+                  </div>
+                </div>
+              )}
+
+              {bottomTab === 'solutions' && (
+                <div className="flex flex-1">
+                  <div className="flex-1 overflow-hidden">
+                    <SolutionComparison code={code} problemTitle={activeProblem?.title} />
                   </div>
                   <div className="w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
                     <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />

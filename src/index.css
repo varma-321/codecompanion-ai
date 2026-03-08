@@ -91,6 +91,18 @@
   }
 }
 
+/* Smooth theme transition */
+*, *::before, *::after {
+  transition-property: background-color, border-color, color, box-shadow;
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Disable transitions on Monaco editor internals for perf */
+.monaco-editor *, .monaco-editor *::before, .monaco-editor *::after {
+  transition: none !important;
+}
+
 @layer base {
   * {
     @apply border-border;
@@ -108,27 +120,26 @@
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: hsl(var(--panel-bg));
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
   background: hsl(var(--border));
-  border-radius: 4px;
+  border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground));
+  background: hsl(var(--muted-foreground) / 0.5);
 }
 
 /* Panel resize handle */
 .resize-handle {
   background: hsl(var(--panel-border));
-  transition: background 0.2s;
 }
 .resize-handle:hover {
-  background: hsl(var(--primary));
+  background: hsl(var(--primary) / 0.5);
 }
 
 /* Console terminal style */
@@ -144,4 +155,10 @@
 
 .console-output .success {
   color: hsl(var(--success));
+}
+
+/* Focus ring polish */
+:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
 }
