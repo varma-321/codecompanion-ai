@@ -9,6 +9,9 @@ import Index from "./pages/Index";
 import StudyAnalytics from "./pages/StudyAnalytics";
 import ProblemGenerator from "./pages/ProblemGenerator";
 import StriverRoadmap from "./pages/StriverRoadmap";
+import NeetCodeRoadmap from "./pages/NeetCodeRoadmap";
+import LeetCodeTop150Roadmap from "./pages/LeetCodeTop150Roadmap";
+import ModuleSelector from "./pages/ModuleSelector";
 import ProblemWorkspace from "./pages/ProblemWorkspace";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
@@ -25,7 +28,10 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/modules" element={<ModuleSelector />} />
               <Route path="/striver" element={<StriverRoadmap />} />
+              <Route path="/neetcode" element={<NeetCodeRoadmap />} />
+              <Route path="/leetcode150" element={<LeetCodeTop150Roadmap />} />
               <Route path="/problem/:key" element={<ProblemWorkspace />} />
               <Route path="/analytics" element={<StudyAnalytics />} />
               <Route path="/generate" element={<ProblemGenerator />} />
