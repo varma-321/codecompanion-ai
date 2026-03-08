@@ -31,6 +31,9 @@ import CheatSheet from "./pages/CheatSheet";
 import CodePlayground from "./pages/CodePlayground";
 import ProgressExport from "./pages/ProgressExport";
 import LearningMode from "./pages/LearningMode";
+import StudyPlanner from "./pages/StudyPlanner";
+import WeakTopicAnalyzer from "./pages/WeakTopicAnalyzer";
+import ComplexityTracker from "./pages/ComplexityTracker";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
