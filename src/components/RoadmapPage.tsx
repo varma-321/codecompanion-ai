@@ -154,20 +154,20 @@ const RoadmapPage = ({ title, icon, roadmap, backPath = '/modules' }: RoadmapPag
   return (
     <div className="flex h-screen flex-col bg-background">
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-panel-border bg-ide-toolbar px-4 py-2">
-        <Button variant="ghost" size="sm" onClick={() => navigate(backPath)} className="h-7 gap-1 text-xs">
-          <ArrowLeft className="h-3 w-3" /> Back
+      <div className="flex items-center gap-2 sm:gap-3 border-b border-panel-border bg-ide-toolbar px-3 sm:px-4 py-2 overflow-x-auto scrollbar-none">
+        <Button variant="ghost" size="sm" onClick={() => navigate(backPath)} className="h-7 gap-1 text-xs shrink-0">
+          <ArrowLeft className="h-3 w-3" /> <span className="hidden sm:inline">Back</span>
         </Button>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {icon}
-          <span className="text-sm font-bold">{title}</span>
+          <span className="text-xs sm:text-sm font-bold truncate max-w-[150px] sm:max-w-none">{title}</span>
         </div>
-        <Badge variant="secondary" className="text-xs">{stats.solved}/{stats.total} solved</Badge>
+        <Badge variant="secondary" className="text-xs shrink-0">{stats.solved}/{stats.total}</Badge>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar stats */}
-        <div className="w-72 shrink-0 border-r border-panel-border bg-ide-sidebar overflow-auto">
+      <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
+        {/* Sidebar stats - hidden on mobile, shown as horizontal scroll on tablet */}
+        <div className="hidden md:block w-64 lg:w-72 shrink-0 border-r border-panel-border bg-ide-sidebar overflow-auto">
           <div className="p-4 space-y-4">
             <div>
               <div className="flex items-center justify-between mb-1">
