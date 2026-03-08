@@ -8,6 +8,7 @@ import {
   chat as aiChat, getExtraInsights, checkOllamaStatus, getOllamaModels,
   getSelectedModel, setSelectedModel
 } from '@/lib/ollama';
+import { explainCodeViaBackend } from '@/lib/explain';
 import ReactMarkdown from 'react-markdown';
 
 interface ChatMessage {
@@ -36,6 +37,7 @@ const quickActions = [
 
 const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) => {
   const [ollamaOnline, setOllamaOnline] = useState(false);
+  const [backendOnline, setBackendOnline] = useState(true);
   const [checking, setChecking] = useState(true);
   const [models, setModels] = useState<string[]>([]);
   const [currentModel, setCurrentModel] = useState(getSelectedModel());
@@ -49,16 +51,29 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
   useEffect(() => {
     const check = async () => {
       setChecking(true);
+      // Check Ollama
       const online = await checkOllamaStatus();
       setOllamaOnline(online);
       if (online) {
         const availableModels = await getOllamaModels();
         setModels(availableModels);
       }
+      // Check backend
+      try {
+        const res = await fetch(`${(await import('@/lib/api')).API_BASE_URL}/api/explain-code`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: '' }),
+          signal: AbortSignal.timeout(5000),
+        });
+        setBackendOnline(true);
+      } catch {
+        setBackendOnline(false);
+      }
       setChecking(false);
     };
     check();
-    const interval = setInterval(check, 15000);
+    const interval = setInterval(check, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -88,12 +103,16 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
 
   const handleSend = async (customPrompt?: string) => {
     const text = customPrompt || input.trim();
-    if (!text || !ollamaOnline || isLoading) return;
-    if (!currentModel) {
-      addMessage('system', '⚠️ Please select an Ollama model before using AI features.');
-      setIsLoading(false);
+    if (!text || isLoading) return;
+
+    // If Ollama is online but no model selected, warn (except for backend-only features)
+    const useOllama = ollamaOnline && !!currentModel;
+
+    if (!useOllama && !backendOnline) {
+      addMessage('system', '⚠️ No AI service available. Please check your connection.');
       return;
     }
+
     if (!customPrompt) setInput('');
 
     setIsLoading(true);
@@ -101,41 +120,57 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
     try {
       if (text === '__analyze__') {
         addMessage('user', '🔍 Analyze this code');
-        const result = await analyzeCode(code);
-        const md = `### Analysis Results\n\n**Problem:** ${result.problemName}\n**Algorithm:** ${result.algorithmUsed}\n\n| Metric | Value |\n|--------|-------|\n| Time Complexity | \`${result.timeComplexity}\` |\n| Space Complexity | \`${result.spaceComplexity}\` |\n\n**Summary:** ${result.summary}\n\n${result.optimizations.length > 0 ? '**Optimizations:**\n' + result.optimizations.map(o => `- ${o}`).join('\n') : ''}`;
-        addMessage('assistant', md);
+        if (useOllama) {
+          const result = await analyzeCode(code);
+          const md = `### Analysis Results\n\n**Problem:** ${result.problemName}\n**Algorithm:** ${result.algorithmUsed}\n\n| Metric | Value |\n|--------|-------|\n| Time Complexity | \`${result.timeComplexity}\` |\n| Space Complexity | \`${result.spaceComplexity}\` |\n\n**Summary:** ${result.summary}\n\n${result.optimizations.length > 0 ? '**Optimizations:**\n' + result.optimizations.map(o => `- ${o}`).join('\n') : ''}`;
+          addMessage('assistant', md);
+        } else {
+          const explanation = await explainCodeViaBackend(code);
+          addMessage('assistant', explanation);
+        }
       } else if (text === '__hints__') {
+        if (!useOllama) { addMessage('system', '⚠️ Hints require Ollama. Please select a model.'); setIsLoading(false); return; }
         const nextLevel = Math.min(hintLevel + 1, 4);
         addMessage('user', `💡 Give me hint ${nextLevel}`);
         const hint = await getAIHints(code, nextLevel);
         addMessage('assistant', `### Hint ${nextLevel} of 4\n\n${hint}`);
         setHintLevel(nextLevel);
       } else if (text.startsWith('__solution_')) {
+        if (!useOllama) { addMessage('system', '⚠️ Solutions require Ollama. Please select a model.'); setIsLoading(false); return; }
         const type = text.replace('__solution_', '').replace('__', '') as 'brute' | 'better' | 'optimal';
         addMessage('user', `📝 Generate ${type} solution`);
         const sol = await getSolution(code, type);
         const md = `### ${type.charAt(0).toUpperCase() + type.slice(1)} Solution\n\n| Metric | Value |\n|--------|-------|\n| Time | \`${sol.timeComplexity}\` |\n| Space | \`${sol.spaceComplexity}\` |\n\n**Explanation:** ${sol.explanation}\n\n\`\`\`java\n${sol.code}\n\`\`\``;
         addMessage('assistant', md);
       } else if (text === '__mistakes__') {
+        if (!useOllama) { addMessage('system', '⚠️ Mistake detection requires Ollama. Please select a model.'); setIsLoading(false); return; }
         addMessage('user', '🐛 Find mistakes in my code');
         const result = await detectMistakes(code);
         addMessage('assistant', result);
       } else if (text === '__patterns__') {
+        if (!useOllama) { addMessage('system', '⚠️ Pattern detection requires Ollama. Please select a model.'); setIsLoading(false); return; }
         addMessage('user', '📚 Detect algorithm patterns');
         const result = await detectPatterns(code);
         addMessage('assistant', result);
       } else if (text === '__edgecases__') {
+        if (!useOllama) { addMessage('system', '⚠️ Edge cases require Ollama. Please select a model.'); setIsLoading(false); return; }
         addMessage('user', '⚠️ Find edge cases');
         const result = await getExtraInsights(code, 'edgecases');
         addMessage('assistant', result);
       } else if (text === '__testcases__') {
+        if (!useOllama) { addMessage('system', '⚠️ Test cases require Ollama. Please select a model.'); setIsLoading(false); return; }
         addMessage('user', '🧪 Generate test cases');
         const result = await getExtraInsights(code, 'testcases');
         addMessage('assistant', result);
       } else {
         addMessage('user', text);
-        const response = await aiChat(code, text);
-        addMessage('assistant', response);
+        if (useOllama) {
+          const response = await aiChat(code, text);
+          addMessage('assistant', response);
+        } else {
+          const explanation = await explainCodeViaBackend(code);
+          addMessage('assistant', explanation);
+        }
       }
     } catch (err: any) {
       const isRateLimit = err?.message?.includes('429') || err?.message?.toLowerCase().includes('rate');
@@ -167,18 +202,24 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
   };
 
   // Status Badge Component
-  const StatusBadge = () => (
-    <div className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors duration-300 ${
-      checking ? 'bg-secondary text-muted-foreground' :
-      ollamaOnline ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'
-    }`}>
-      <span className={`h-1.5 w-1.5 rounded-full transition-colors duration-300 ${
-        checking ? 'animate-pulse-dot bg-muted-foreground' :
-        ollamaOnline ? 'bg-success' : 'bg-destructive'
-      }`} />
-      {checking ? 'Checking...' : ollamaOnline ? `Ollama (Online)` : 'AI Offline'}
-    </div>
-  );
+  const StatusBadge = () => {
+    const isAnyOnline = ollamaOnline || backendOnline;
+    const label = checking ? 'Checking...' :
+      ollamaOnline && currentModel ? `Ollama (${currentModel})` :
+      backendOnline ? 'Groq Cloud (Online)' : 'AI Offline';
+    return (
+      <div className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors duration-300 ${
+        checking ? 'bg-secondary text-muted-foreground' :
+        isAnyOnline ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'
+      }`}>
+        <span className={`h-1.5 w-1.5 rounded-full transition-colors duration-300 ${
+          checking ? 'animate-pulse-dot bg-muted-foreground' :
+          isAnyOnline ? 'bg-success' : 'bg-destructive'
+        }`} />
+        {label}
+      </div>
+    );
+  };
 
   // Skeleton Loader for AI thinking
   const AISkeleton = () => (

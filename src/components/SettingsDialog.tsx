@@ -40,10 +40,10 @@ const SettingsDialog = ({ open, onClose }: SettingsDialogProps) => {
           <div>
             <Label className="text-sm font-medium">Code Execution</Label>
             <p className="text-xs text-muted-foreground mt-1">
-              Java code is compiled and run using the <strong>Piston API</strong> (free, no key required).
+              Java code is compiled and run using the <strong>deployed backend</strong> at Render.
             </p>
             <p className="text-[11px] text-muted-foreground mt-1">
-              ℹ️ Local JDK execution requires a backend server and is not supported in browser-based apps.
+              ℹ️ The server may take ~30s to wake up on first request (free tier).
             </p>
           </div>
 
