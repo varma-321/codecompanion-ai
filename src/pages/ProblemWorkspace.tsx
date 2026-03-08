@@ -594,6 +594,30 @@ const ProblemWorkspace = () => {
 
       {/* Keyboard Shortcuts Dialog */}
       <KeyboardShortcutsDialog isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
+
+      {/* Success Celebration Modal */}
+      <SuccessCelebration
+        open={showCelebration}
+        onClose={() => setShowCelebration(false)}
+        problemTitle={roadmapProblem?.title || 'Problem'}
+        passedCount={testResults.filter(r => r.status === 'PASSED').length}
+        totalCount={testResults.length}
+        executionTime={celebrationTime}
+        onTryAgain={() => setShowCelebration(false)}
+        onNextProblem={() => {
+          // Find next problem in the same topic
+          for (const topic of ALL_ROADMAPS) {
+            const idx = topic.problems.findIndex(p => p.key === key);
+            if (idx >= 0 && idx < topic.problems.length - 1) {
+              navigate(`/problem/${topic.problems[idx + 1].key}`);
+              setShowCelebration(false);
+              return;
+            }
+          }
+          navigate('/modules');
+          setShowCelebration(false);
+        }}
+      />
     </div>
   );
 };
