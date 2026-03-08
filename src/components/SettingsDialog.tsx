@@ -38,13 +38,17 @@ const SettingsDialog = ({ open, onClose }: SettingsDialogProps) => {
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <Label className="text-sm">Code Execution</Label>
-            <p className="text-xs text-muted-foreground">
-              Java code is compiled and run using the <strong>Piston API</strong> — no API key required.
+            <Label className="text-sm font-medium">Code Execution</Label>
+            <p className="text-xs text-muted-foreground mt-1">
+              Java code is compiled and run using the <strong>Piston API</strong> (free, no key required).
+            </p>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              ℹ️ Local JDK execution requires a backend server and is not supported in browser-based apps.
             </p>
           </div>
+
           <div>
-            <Label className="text-sm">Ollama AI Model</Label>
+            <Label className="text-sm font-medium">Ollama AI</Label>
             <p className="mb-2 text-xs text-muted-foreground">
               Run <code className="rounded bg-secondary px-1 py-0.5 font-mono text-[11px]">ollama serve</code> locally.
               {ollamaOnline ? (
@@ -67,6 +71,18 @@ const SettingsDialog = ({ open, onClose }: SettingsDialogProps) => {
                 </SelectContent>
               </Select>
             )}
+          </div>
+
+          <div>
+            <Label className="text-sm font-medium">AI Features</Label>
+            <ul className="mt-1 text-xs text-muted-foreground space-y-0.5">
+              <li>• Code analysis & complexity detection</li>
+              <li>• 4-level progressive hints</li>
+              <li>• Brute / Better / Optimal solutions</li>
+              <li>• Pattern detection & mistake finder</li>
+              <li>• Edge cases & test case generation</li>
+              <li>• Free-form chat about your code</li>
+            </ul>
           </div>
         </div>
       </DialogContent>
