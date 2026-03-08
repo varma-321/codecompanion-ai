@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Play, FlaskConical, Loader2, CheckCircle2, XCircle, Brain, ChevronRight, Code2, GitCompare, Cloud, Keyboard, Sparkles, AlertTriangle, Zap, TrendingUp, Trophy } from 'lucide-react';
+import { ArrowLeft, Play, FlaskConical, Loader2, CheckCircle2, XCircle, Brain, ChevronRight, Code2, GitCompare, Cloud, Keyboard, Sparkles, AlertTriangle, Zap, TrendingUp, Trophy, Eye, EyeOff } from 'lucide-react';
 import { useAutosave } from '@/hooks/use-autosave';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -117,6 +117,7 @@ const ProblemWorkspace = () => {
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
   const [showCelebration, setShowCelebration] = useState(false);
   const [celebrationTime, setCelebrationTime] = useState<number | undefined>();
+  const [focusMode, setFocusMode] = useState(false);
 
   // Autosave active approach code to Supabase + localStorage
   const autosaveWorkspaceCode = useCallback(async (val: string) => {
@@ -458,6 +459,9 @@ const ProblemWorkspace = () => {
           <div className="h-4 w-px bg-panel-border" />
           <ProblemTimer problemId={key || null} onTimeUpdate={setTimeSpent} />
           <div className="h-4 w-px bg-panel-border" />
+          <Button variant="ghost" size="sm" onClick={() => setFocusMode(!focusMode)} className={`h-7 w-7 p-0 ${focusMode ? 'text-primary' : ''}`} title="Focus Mode">
+            {focusMode ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+          </Button>
           <Button variant="ghost" size="sm" onClick={() => setShowShortcuts(true)} className="h-7 w-7 p-0" title="Keyboard Shortcuts (Ctrl+K)">
             <Keyboard className="h-3.5 w-3.5" />
           </Button>
@@ -476,7 +480,7 @@ const ProblemWorkspace = () => {
       {/* Main layout: 3 columns */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left: Problem Description */}
-        {showDescription && (
+        {showDescription && !focusMode && (
           <div className="w-[380px] shrink-0 border-r border-panel-border overflow-hidden flex flex-col">
             <div className="flex items-center justify-between border-b border-panel-border bg-ide-toolbar px-3 py-1.5">
               <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Problem</span>
@@ -705,9 +709,11 @@ const ProblemWorkspace = () => {
         </div>
 
         {/* Right: AI Assistant */}
-        <div className="w-[360px] shrink-0 border-l border-panel-border overflow-hidden">
-          <AIChatPanel code={code} problemId={null} aiEnabled={true} />
-        </div>
+        {!focusMode && (
+          <div className="w-[360px] shrink-0 border-l border-panel-border overflow-hidden">
+            <AIChatPanel code={code} problemId={null} aiEnabled={true} />
+          </div>
+        )}
       </div>
 
       {/* Keyboard Shortcuts Dialog */}

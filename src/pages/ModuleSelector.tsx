@@ -3,7 +3,8 @@ import { useEffect, useState, useMemo } from 'react';
 import {
   ArrowLeft, Map, Code2, BookOpen, TrendingUp, Trophy, Timer, Brain, Target,
   Bookmark, Award, Share2, Plus, MessageSquare, Layers, Building2, Clock,
-  FileSpreadsheet, Zap, BarChart3, GraduationCap, Dices, Flame
+  FileSpreadsheet, Zap, BarChart3, GraduationCap, Dices, Flame, Calendar,
+  AlertTriangle, Activity
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -47,7 +48,10 @@ const MODULES: ModuleCard[] = [
   { id: 'achievements', title: 'Achievements', subtitle: 'XP, levels & badges', icon: <Award className="h-5 w-5" />, route: '/achievements', category: 'social', accent: 'text-yellow-500' },
   { id: 'leaderboard', title: 'Leaderboard', subtitle: 'Compete with others', icon: <Trophy className="h-5 w-5" />, route: '/leaderboard', category: 'social', accent: 'text-amber-500' },
   { id: 'community', title: 'Community Solutions', subtitle: 'Share & learn from others', icon: <Share2 className="h-5 w-5" />, route: '/community', category: 'social', accent: 'text-green-500' },
-  // Tools
+  // Tools & Productivity
+  { id: 'planner', title: 'Study Planner', subtitle: 'Daily goals & streaks', icon: <Calendar className="h-5 w-5" />, route: '/study-planner', category: 'tools', accent: 'text-primary' },
+  { id: 'weak-topics', title: 'Weak Topic Analyzer', subtitle: 'Find & fix weak areas', icon: <AlertTriangle className="h-5 w-5" />, route: '/weak-topics', category: 'tools', accent: 'text-destructive' },
+  { id: 'complexity', title: 'Complexity Tracker', subtitle: 'Track execution trends', icon: <Activity className="h-5 w-5" />, route: '/complexity', category: 'tools', accent: 'text-emerald-500' },
   { id: 'goals', title: 'Weekly Goals', subtitle: 'Track weekly targets', icon: <Target className="h-5 w-5" />, route: '/goals', category: 'tools', accent: 'text-lime-500' },
   { id: 'pomodoro', title: 'Pomodoro Timer', subtitle: 'Focus & break cycles', icon: <Clock className="h-5 w-5" />, route: '/pomodoro', category: 'tools', accent: 'text-red-400' },
   { id: 'bookmarks', title: 'Bookmarks', subtitle: 'Saved for revision', icon: <Bookmark className="h-5 w-5" />, route: '/bookmarks', category: 'tools', accent: 'text-blue-400' },

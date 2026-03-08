@@ -31,6 +31,9 @@ import CheatSheet from "./pages/CheatSheet";
 import CodePlayground from "./pages/CodePlayground";
 import ProgressExport from "./pages/ProgressExport";
 import LearningMode from "./pages/LearningMode";
+import StudyPlanner from "./pages/StudyPlanner";
+import WeakTopicAnalyzer from "./pages/WeakTopicAnalyzer";
+import ComplexityTracker from "./pages/ComplexityTracker";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -73,6 +76,9 @@ const App = () => (
               <Route path="/playground" element={<CodePlayground />} />
               <Route path="/export" element={<ProgressExport />} />
               <Route path="/learning" element={<LearningMode />} />
+              <Route path="/study-planner" element={<StudyPlanner />} />
+              <Route path="/weak-topics" element={<WeakTopicAnalyzer />} />
+              <Route path="/complexity" element={<ComplexityTracker />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
