@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Play, Brain, Loader2, FlaskConical } from 'lucide-react';
+import { Play, Brain, Loader2, FlaskConical, Bug, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ProblemExplorer from '@/components/ProblemExplorer';
 import CodeEditor from '@/components/CodeEditor';
@@ -8,6 +8,9 @@ import AIChatPanel from '@/components/AIChatPanel';
 import ConsolePanel, { ConsoleEntry } from '@/components/ConsolePanel';
 import TestCasePanel, { TestResult } from '@/components/TestCasePanel';
 import TestResultsTable from '@/components/TestResultsTable';
+import VisualDebugger from '@/components/VisualDebugger';
+import ExecutionAnalyticsPanel from '@/components/ExecutionAnalyticsPanel';
+import DailyChallenge from '@/components/DailyChallenge';
 import Toolbar from '@/components/Toolbar';
 import ExecutionStatus from '@/components/ExecutionStatus';
 import SettingsDialog from '@/components/SettingsDialog';
