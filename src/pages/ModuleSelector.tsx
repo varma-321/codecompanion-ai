@@ -95,67 +95,66 @@ const ModuleSelector = () => {
 
   return (
     <div className="flex h-screen flex-col bg-background">
-      <div className="flex items-center gap-3 border-b border-panel-border bg-ide-toolbar px-4 py-2">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/')} className="h-7 gap-1 text-xs">
-          <ArrowLeft className="h-3 w-3" /> Back to IDE
+      <div className="flex items-center gap-3 border-b border-border bg-card px-5 py-3">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/')} className="h-8 gap-1.5 text-xs font-medium rounded-lg">
+          <ArrowLeft className="h-3.5 w-3.5" /> Back to IDE
         </Button>
+        <div className="h-4 w-px bg-border" />
         <div className="flex items-center gap-2">
-          <TrendingUp className="h-4 w-4 text-primary" />
-          <span className="text-sm font-bold">Feature Hub</span>
+          <TrendingUp className="h-4 w-4 text-foreground" />
+          <span className="text-sm font-semibold tracking-tight">Feature Hub</span>
         </div>
       </div>
 
       <div className="flex-1 overflow-auto">
-        <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
+        <div className="max-w-5xl mx-auto px-6 py-10 space-y-10">
           {/* Hero Stats */}
-          <div className="flex flex-wrap items-center gap-6">
+          <div className="flex flex-wrap items-end gap-6">
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Welcome back{authUser ? '' : ' — Log in to track progress'}</h1>
-              <p className="text-sm text-muted-foreground mt-1">{MODULES.length} modules available across {categories.length} categories</p>
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">Welcome back</h1>
+              <p className="text-sm text-muted-foreground mt-1">{MODULES.length} modules · {categories.length} categories</p>
             </div>
-            <div className="ml-auto flex items-center gap-4">
+            <div className="ml-auto flex items-center gap-5">
               <div className="text-center">
-                <p className="text-xl font-bold text-primary">{solvedCount}</p>
-                <p className="text-[10px] text-muted-foreground">Solved</p>
+                <p className="text-2xl font-bold text-foreground tabular-nums">{solvedCount}</p>
+                <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Solved</p>
               </div>
               <div className="h-8 w-px bg-border" />
               <div className="text-center">
-                <p className="text-xl font-bold text-foreground">{totalProblems}</p>
-                <p className="text-[10px] text-muted-foreground">Total</p>
+                <p className="text-2xl font-bold text-foreground tabular-nums">{totalProblems}</p>
+                <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Total</p>
               </div>
               <div className="h-8 w-px bg-border" />
               <div className="text-center flex flex-col items-center">
-                <p className="text-xl font-bold text-orange-500">{streak}</p>
-                <p className="text-[10px] text-muted-foreground flex items-center gap-0.5"><Flame className="h-3 w-3" /> Streak</p>
+                <p className="text-2xl font-bold text-foreground tabular-nums">{streak}</p>
+                <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider flex items-center gap-0.5"><Flame className="h-3 w-3" /> Streak</p>
               </div>
             </div>
           </div>
 
           {solvedCount > 0 && (
-            <Progress value={(solvedCount / totalProblems) * 100} className="h-2" />
+            <Progress value={(solvedCount / totalProblems) * 100} className="h-1.5 rounded-full" />
           )}
 
           {/* Categories */}
           {categories.map(cat => (
             <div key={cat}>
-              <h2 className="text-sm font-bold text-foreground mb-3">{CATEGORY_INFO[cat].label}</h2>
+              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">{CATEGORY_INFO[cat].label}</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                 {MODULES.filter(m => m.category === cat).map(mod => (
-                  <Card
+                  <div
                     key={mod.id}
-                    className="cursor-pointer transition-all hover:border-primary/40 hover:shadow-md group"
+                    className="card-interactive cursor-pointer rounded-xl border border-border bg-card p-4 flex items-start gap-3.5 group"
                     onClick={() => navigate(mod.route)}
                   >
-                    <CardContent className="p-4 flex items-start gap-3">
-                      <div className={`p-2 rounded-lg bg-secondary/60 ${mod.accent} group-hover:bg-primary/10 transition-colors`}>
-                        {mod.icon}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-foreground truncate">{mod.title}</p>
-                        <p className="text-[11px] text-muted-foreground">{mod.subtitle}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
+                    <div className="p-2 rounded-lg bg-secondary text-foreground group-hover:bg-foreground group-hover:text-background transition-colors">
+                      {mod.icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{mod.title}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">{mod.subtitle}</p>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
