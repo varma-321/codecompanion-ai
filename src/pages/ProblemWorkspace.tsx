@@ -270,18 +270,17 @@ const ProblemWorkspace = () => {
     setIsRunning(false);
   };
 
-  // Run Tests: runs only the first 3 sample test cases (like LeetCode "Run")
+  // Run Tests: runs ALL test cases, saves progress, shows celebration
   const handleRunTests = async () => {
     if (isRunningTests || detail.testCases.length === 0) return;
     setIsRunningTests(true);
     setTestResults([]);
     setBottomTab('console');
-    const sampleCases = detail.testCases.slice(0, 3);
-    addConsoleEntry('system', `▶ Running ${sampleCases.length} sample test(s)...`);
+    addConsoleEntry('system', `▶ Running ${detail.testCases.length} test(s)...`);
     const startTime = Date.now();
 
     const { runAllTests } = await import('@/lib/test-runner');
-    const tcInputs = sampleCases.map(tc => ({ inputs: tc.inputs || {}, expected: (tc.expected || '').trim() }));
+    const tcInputs = detail.testCases.map(tc => ({ inputs: tc.inputs || {}, expected: (tc.expected || '').trim() }));
 
     const results = await runAllTests(code, tcInputs, setExecStatus, (idx, r) => {
       addConsoleEntry(
@@ -292,87 +291,12 @@ const ProblemWorkspace = () => {
 
     const execTime = Date.now() - startTime;
     const passed = results.filter(r => r.status === 'PASSED').length;
-    addConsoleEntry('system', `\n${passed}/${results.length} sample tests passed (${execTime}ms).`);
+    const allPassed = passed === results.length;
+    addConsoleEntry('system', `\n${passed}/${results.length} tests passed (${execTime}ms).`);
     setTestResults(results);
     setBottomTab('results');
     setExecStatus('complete');
     setIsRunningTests(false);
-  };
-
-  // Submit: runs ALL test cases (generates comprehensive ones via AI if needed)
-  const handleSubmit = async () => {
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-    setTestResults([]);
-    setBottomTab('console');
-    addConsoleEntry('system', '🚀 Submitting — generating comprehensive test cases...');
-
-    let allTestCases = detail.testCases;
-
-    // If we have fewer than 10 test cases, generate comprehensive ones via AI
-    if (allTestCases.length < 10) {
-      try {
-        addConsoleEntry('info', 'Generating 20 comprehensive test cases via AI...');
-        const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-test-cases`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({
-            code,
-            title: roadmapProblem?.title || '',
-            difficulty: roadmapProblem?.difficulty || 'Medium',
-          }),
-        });
-        if (resp.ok) {
-          const data = await resp.json();
-          if (data.testCases && data.testCases.length > 0) {
-            // Normalize AI response format
-            const normalized = data.testCases.map((tc: any) => ({
-              inputs: tc.inputs,
-              expected: (tc.expectedOutput || tc.expected || '').trim(),
-            }));
-            allTestCases = normalized;
-            addConsoleEntry('info', `✓ Generated ${allTestCases.length} test cases`);
-          }
-        } else {
-          addConsoleEntry('error', 'Failed to generate extra test cases, running with existing ones...');
-        }
-      } catch (err: any) {
-        addConsoleEntry('error', 'AI generation failed, running with existing test cases...');
-      }
-    }
-
-    addConsoleEntry('system', `▶ Running ${allTestCases.length} test(s)...`);
-    // Debug: log first test case structure
-    if (allTestCases.length > 0) {
-      console.log('[Submit] First test case:', JSON.stringify(allTestCases[0]));
-      addConsoleEntry('info', `Test case sample: ${JSON.stringify(allTestCases[0]?.inputs || {})}`);
-    }
-    const startTime = Date.now();
-
-    const { runAllTests } = await import('@/lib/test-runner');
-    const tcInputs = allTestCases.map((tc: any) => ({
-      inputs: tc.inputs || {},
-      expected: (tc.expected || tc.expectedOutput || '').trim(),
-    }));
-
-    const results = await runAllTests(code, tcInputs, setExecStatus, (idx, r) => {
-      addConsoleEntry(
-        r.status === 'PASSED' ? 'info' : 'error',
-        `Test ${r.test}/${allTestCases.length} ${r.status}${r.status === 'FAILED' ? ` (expected: ${r.expected}, got: ${r.actual})` : ''}`
-      );
-    });
-
-    const execTime = Date.now() - startTime;
-    const passed = results.filter(r => r.status === 'PASSED').length;
-    const allPassed = passed === results.length;
-    addConsoleEntry('system', `\n${allPassed ? '✅' : '❌'} ${passed}/${results.length} tests passed (${execTime}ms).`);
-    setTestResults(results);
-    setBottomTab('results');
-    setExecStatus('complete');
-    setIsSubmitting(false);
 
     // Save execution history
     if (authUser && key) {
@@ -380,7 +304,7 @@ const ProblemWorkspace = () => {
       setHistoryRefreshKey(prev => prev + 1);
     }
 
-    // Update progress in Supabase — only on Submit
+    // Update progress in Supabase
     if (authUser && key) {
       try {
         const { data: existing } = await supabase
