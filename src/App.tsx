@@ -18,6 +18,10 @@ import PatternsLibrary from "./pages/PatternsLibrary";
 import Leaderboard from "./pages/Leaderboard";
 import ProblemWorkspace from "./pages/ProblemWorkspace";
 import ResetPassword from "./pages/ResetPassword";
+import Achievements from "./pages/Achievements";
+import InterviewSimulator from "./pages/InterviewSimulator";
+import CustomProblemCreator from "./pages/CustomProblemCreator";
+import CommunitySolutions from "./pages/CommunitySolutions";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
