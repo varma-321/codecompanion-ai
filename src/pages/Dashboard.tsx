@@ -144,18 +144,18 @@ const Dashboard = () => {
     setIsRunningTests(false);
   };
 
-  const handleAddTestCase = async (input: string, expectedOutput: string) => {
+  const handleAddTestCase = async (input: string, expectedOutput: string, variableName: string) => {
     if (!activeProblem || !userId) { toast.error('Select a problem first'); return; }
     try {
-      const tc = await insertTestCase(userId, activeProblem.id, input, expectedOutput);
+      const tc = await insertTestCase(userId, activeProblem.id, input, expectedOutput, variableName);
       setTestCases(prev => [...prev, tc]);
     } catch { toast.error('Failed to add test case'); }
   };
 
-  const handleUpdateTestCase = async (id: string, input: string, expectedOutput: string) => {
+  const handleUpdateTestCase = async (id: string, input: string, expectedOutput: string, variableName: string) => {
     try {
-      await updateTestCase(id, { input, expected_output: expectedOutput });
-      setTestCases(prev => prev.map(tc => tc.id === id ? { ...tc, input, expected_output: expectedOutput } : tc));
+      await updateTestCase(id, { input, expected_output: expectedOutput, variable_name: variableName });
+      setTestCases(prev => prev.map(tc => tc.id === id ? { ...tc, input, expected_output: expectedOutput, variable_name: variableName } : tc));
     } catch { toast.error('Failed to update'); }
   };
 
