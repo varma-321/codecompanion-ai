@@ -10,6 +10,7 @@ import LearningMode from "./pages/LearningMode";
 import StudyAnalytics from "./pages/StudyAnalytics";
 import ProblemGenerator from "./pages/ProblemGenerator";
 import DSARoadmap from "./pages/DSARoadmap";
+import StriverRoadmap from "./pages/StriverRoadmap";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
