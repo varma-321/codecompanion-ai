@@ -31,6 +31,7 @@ const MODULES: ModuleCard[] = [
   { id: 'striver', title: 'Striver SDE Sheet', subtitle: '454 curated problems', icon: <Map className="h-5 w-5" />, route: '/striver', category: 'roadmap', accent: 'text-primary' },
   { id: 'neetcode', title: 'NeetCode 150', subtitle: '150 essential problems', icon: <Code2 className="h-5 w-5" />, route: '/neetcode', category: 'roadmap', accent: 'text-emerald-500' },
   { id: 'leetcode150', title: 'LeetCode Top 150', subtitle: '150 must-do problems', icon: <BookOpen className="h-5 w-5" />, route: '/leetcode150', category: 'roadmap', accent: 'text-amber-500' },
+  { id: 'learning-path', title: 'Adaptive Learning Path', subtitle: 'AI-personalized roadmap', icon: <Brain className="h-5 w-5" />, route: '/learning-path', category: 'roadmap', accent: 'text-violet-500' },
   // Practice
   { id: 'contest', title: 'Contest Mode', subtitle: 'Timed problem solving', icon: <Timer className="h-5 w-5" />, route: '/contest', category: 'practice', accent: 'text-red-500' },
   { id: 'interview', title: 'Mock Interview', subtitle: 'Simulate real interviews', icon: <MessageSquare className="h-5 w-5" />, route: '/interview', category: 'practice', accent: 'text-violet-500' },
