@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import ProblemExplorer from '@/components/ProblemExplorer';
 import CodeEditor from '@/components/CodeEditor';
-import AIPanel from '@/components/AIPanel';
+import AIChatPanel from '@/components/AIChatPanel';
 import ConsolePanel, { ConsoleEntry } from '@/components/ConsolePanel';
 import Toolbar from '@/components/Toolbar';
 import SettingsDialog from '@/components/SettingsDialog';
