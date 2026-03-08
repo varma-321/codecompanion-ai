@@ -14,6 +14,31 @@ const ALL_PROBLEMS = [...STRIVER_ROADMAP, ...NEETCODE_ROADMAP, ...LEETCODE_TOP15
   t.problems.map(p => ({ ...p, topic: t.name }))
 );
 
+// Build a title-to-problem lookup (lowercase, deduped by first match)
+const TITLE_LOOKUP = new Map<string, typeof ALL_PROBLEMS[0]>();
+ALL_PROBLEMS.forEach(p => {
+  const normalized = p.title.toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (!TITLE_LOOKUP.has(normalized)) TITLE_LOOKUP.set(normalized, p);
+});
+
+// Helper: convert a slug like 'two-sum' to a search-friendly form
+function slugToSearchTerms(slug: string): string[] {
+  return slug.split('-').filter(Boolean);
+}
+
+function findProblemBySlug(slug: string): typeof ALL_PROBLEMS[0] | null {
+  // Try exact slug-to-normalized match
+  const normalized = slug.replace(/-/g, '');
+  if (TITLE_LOOKUP.has(normalized)) return TITLE_LOOKUP.get(normalized)!;
+
+  // Try partial title matching
+  const terms = slugToSearchTerms(slug);
+  for (const [key, prob] of TITLE_LOOKUP) {
+    if (terms.every(t => key.includes(t))) return prob;
+  }
+  return null;
+}
+
 // Simulated company tags mapping common DSA problems to companies
 const COMPANY_TAGS: Record<string, string[]> = {
   'Google': ['two-sum', 'median-two-sorted', 'merge-intervals', 'lru-cache', 'word-ladder', 'trapping-rain', 'longest-substring', 'serialize-deserialize-bt', 'course-schedule', 'number-of-islands', 'valid-parentheses', 'container-most-water', 'three-sum', 'group-anagrams', 'product-except-self', 'top-k-frequent', 'coin-change', 'climbing-stairs', 'maximum-subarray', 'best-time-buy-sell', 'binary-search', 'search-rotated', 'min-window-substring', 'word-break', 'longest-increasing', 'edit-distance', 'kth-largest', 'rotate-image', 'spiral-matrix', 'set-matrix-zeroes'],
@@ -47,8 +72,8 @@ const Compan = () => {
 
   const matchedProblems = useMemo(() => {
     if (!selected) return [];
-    const keys = COMPANY_TAGS[selected] || [];
-    return keys.map(k => ALL_PROBLEMS.find(p => p.key === k)).filter(Boolean);
+    const slugs = COMPANY_TAGS[selected] || [];
+    return slugs.map(slug => findProblemBySlug(slug)).filter(Boolean) as typeof ALL_PROBLEMS;
   }, [selected]);
 
   const filteredCompanies = companies.filter(c => c.toLowerCase().includes(search.toLowerCase()));
