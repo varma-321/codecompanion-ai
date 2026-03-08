@@ -432,15 +432,6 @@ const Dashboard = () => {
                   </div>
                 </div>
               )}
-            </div>
-                    )}
-                  </div>
-                  <div className="w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
-                    <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
         </div>
       </div>
