@@ -30,6 +30,7 @@ import Bookmarks from "./pages/Bookmarks";
 import CheatSheet from "./pages/CheatSheet";
 import CodePlayground from "./pages/CodePlayground";
 import ProgressExport from "./pages/ProgressExport";
+import LearningMode from "./pages/LearningMode";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -50,23 +51,28 @@ const App = () => (
               <Route path="/leetcode150" element={<LeetCodeTop150Roadmap />} />
               <Route path="/contest" element={<ContestMode />} />
               <Route path="/review" element={<SpacedRepetition />} />
+              <Route path="/spaced-repetition" element={<SpacedRepetition />} />
               <Route path="/patterns" element={<PatternsLibrary />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/problem/:key" element={<ProblemWorkspace />} />
               <Route path="/analytics" element={<StudyAnalytics />} />
               <Route path="/generate" element={<ProblemGenerator />} />
+              <Route path="/generator" element={<ProblemGenerator />} />
               <Route path="/achievements" element={<Achievements />} />
               <Route path="/interview" element={<InterviewSimulator />} />
               <Route path="/create" element={<CustomProblemCreator />} />
+              <Route path="/custom-problems" element={<CustomProblemCreator />} />
               <Route path="/community" element={<CommunitySolutions />} />
               <Route path="/flashcards" element={<Flashcards />} />
               <Route path="/companies" element={<CompanyTags />} />
+              <Route path="/company-tags" element={<CompanyTags />} />
               <Route path="/goals" element={<WeeklyGoals />} />
               <Route path="/pomodoro" element={<PomodoroTimer />} />
               <Route path="/bookmarks" element={<Bookmarks />} />
               <Route path="/cheatsheet" element={<CheatSheet />} />
               <Route path="/playground" element={<CodePlayground />} />
               <Route path="/export" element={<ProgressExport />} />
+              <Route path="/learning" element={<LearningMode />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
