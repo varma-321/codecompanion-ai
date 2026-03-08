@@ -31,12 +31,14 @@ const MODULES: ModuleCard[] = [
   { id: 'striver', title: 'Striver SDE Sheet', subtitle: '454 curated problems', icon: <Map className="h-5 w-5" />, route: '/striver', category: 'roadmap', accent: 'text-primary' },
   { id: 'neetcode', title: 'NeetCode 150', subtitle: '150 essential problems', icon: <Code2 className="h-5 w-5" />, route: '/neetcode', category: 'roadmap', accent: 'text-emerald-500' },
   { id: 'leetcode150', title: 'LeetCode Top 150', subtitle: '150 must-do problems', icon: <BookOpen className="h-5 w-5" />, route: '/leetcode150', category: 'roadmap', accent: 'text-amber-500' },
+  { id: 'learning-path', title: 'Adaptive Learning Path', subtitle: 'AI-personalized roadmap', icon: <Brain className="h-5 w-5" />, route: '/learning-path', category: 'roadmap', accent: 'text-violet-500' },
   // Practice
   { id: 'contest', title: 'Contest Mode', subtitle: 'Timed problem solving', icon: <Timer className="h-5 w-5" />, route: '/contest', category: 'practice', accent: 'text-red-500' },
   { id: 'interview', title: 'Mock Interview', subtitle: 'Simulate real interviews', icon: <MessageSquare className="h-5 w-5" />, route: '/interview', category: 'practice', accent: 'text-violet-500' },
   { id: 'playground', title: 'Code Playground', subtitle: 'Free-form Java sandbox', icon: <Zap className="h-5 w-5" />, route: '/playground', category: 'practice', accent: 'text-cyan-500' },
   { id: 'generator', title: 'Problem Generator', subtitle: 'AI-generated challenges', icon: <Dices className="h-5 w-5" />, route: '/generator', category: 'practice', accent: 'text-pink-500' },
   { id: 'custom', title: 'Custom Problems', subtitle: 'Create your own problems', icon: <Plus className="h-5 w-5" />, route: '/custom-problems', category: 'practice', accent: 'text-indigo-500' },
+  { id: 'code-review', title: 'AI Code Review', subtitle: 'Quality & best practices', icon: <Zap className="h-5 w-5" />, route: '/code-review', category: 'practice', accent: 'text-amber-500' },
   // Study
   { id: 'flashcards', title: 'Flashcards', subtitle: '30+ DSA concept cards', icon: <Layers className="h-5 w-5" />, route: '/flashcards', category: 'study', accent: 'text-orange-500' },
   { id: 'cheatsheet', title: 'Cheat Sheet', subtitle: 'Quick algorithm reference', icon: <BookOpen className="h-5 w-5" />, route: '/cheatsheet', category: 'study', accent: 'text-teal-500' },
@@ -48,6 +50,7 @@ const MODULES: ModuleCard[] = [
   { id: 'achievements', title: 'Achievements', subtitle: 'XP, levels & badges', icon: <Award className="h-5 w-5" />, route: '/achievements', category: 'social', accent: 'text-yellow-500' },
   { id: 'leaderboard', title: 'Leaderboard', subtitle: 'Compete with others', icon: <Trophy className="h-5 w-5" />, route: '/leaderboard', category: 'social', accent: 'text-amber-500' },
   { id: 'community', title: 'Community Solutions', subtitle: 'Share & learn from others', icon: <Share2 className="h-5 w-5" />, route: '/community', category: 'social', accent: 'text-green-500' },
+  { id: 'discuss', title: 'Discussion Forum', subtitle: 'Per-problem discussions', icon: <MessageSquare className="h-5 w-5" />, route: '/discuss', category: 'social', accent: 'text-blue-500' },
   // Tools & Productivity
   { id: 'planner', title: 'Study Planner', subtitle: 'Daily goals & streaks', icon: <Calendar className="h-5 w-5" />, route: '/study-planner', category: 'tools', accent: 'text-primary' },
   { id: 'weak-topics', title: 'Weak Topic Analyzer', subtitle: 'Find & fix weak areas', icon: <AlertTriangle className="h-5 w-5" />, route: '/weak-topics', category: 'tools', accent: 'text-destructive' },
@@ -57,6 +60,7 @@ const MODULES: ModuleCard[] = [
   { id: 'bookmarks', title: 'Bookmarks', subtitle: 'Saved for revision', icon: <Bookmark className="h-5 w-5" />, route: '/bookmarks', category: 'tools', accent: 'text-blue-400' },
   { id: 'export', title: 'Progress Export', subtitle: 'CSV & JSON export', icon: <FileSpreadsheet className="h-5 w-5" />, route: '/export', category: 'tools', accent: 'text-gray-500' },
   { id: 'analytics', title: 'Study Analytics', subtitle: 'Visualize your progress', icon: <BarChart3 className="h-5 w-5" />, route: '/analytics', category: 'tools', accent: 'text-indigo-400' },
+  { id: 'dashboard', title: 'Performance Dashboard', subtitle: 'Unified overview', icon: <TrendingUp className="h-5 w-5" />, route: '/dashboard', category: 'tools', accent: 'text-primary' },
 ];
 
 const CATEGORY_INFO: Record<string, { label: string; icon: React.ReactNode }> = {

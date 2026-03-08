@@ -2,9 +2,11 @@ import { useUser } from '@/lib/user-context';
 import { Loader2 } from 'lucide-react';
 import Login from './Login';
 import Dashboard from './Dashboard';
+import useNotificationReminders from '@/components/NotificationManager';
 
 const Index = () => {
   const { authUser, loading } = useUser();
+  useNotificationReminders();
 
   if (loading) {
     return (
