@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, AlertTriangle, Target, TrendingUp, TrendingDown, BarChart3, Brain, ChevronRight, CheckCircle2, XCircle } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, Target, TrendingUp, TrendingDown, BarChart3, Brain, ChevronRight, CheckCircle2, XCircle, Circle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
