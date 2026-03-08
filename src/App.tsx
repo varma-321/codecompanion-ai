@@ -76,6 +76,9 @@ const App = () => (
               <Route path="/playground" element={<CodePlayground />} />
               <Route path="/export" element={<ProgressExport />} />
               <Route path="/learning" element={<LearningMode />} />
+              <Route path="/study-planner" element={<StudyPlanner />} />
+              <Route path="/weak-topics" element={<WeakTopicAnalyzer />} />
+              <Route path="/complexity" element={<ComplexityTracker />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
