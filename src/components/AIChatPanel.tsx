@@ -90,12 +90,16 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
 
   const handleSend = async (customPrompt?: string) => {
     const text = customPrompt || input.trim();
-    if (!text || !ollamaOnline || isLoading) return;
-    if (!currentModel) {
-      addMessage('system', '⚠️ Please select an Ollama model before using AI features.');
-      setIsLoading(false);
+    if (!text || isLoading) return;
+
+    // If Ollama is online but no model selected, warn (except for backend-only features)
+    const useOllama = ollamaOnline && !!currentModel;
+
+    if (!useOllama && !backendOnline) {
+      addMessage('system', '⚠️ No AI service available. Please check your connection.');
       return;
     }
+
     if (!customPrompt) setInput('');
 
     setIsLoading(true);
