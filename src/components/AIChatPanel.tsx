@@ -51,16 +51,29 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
   useEffect(() => {
     const check = async () => {
       setChecking(true);
+      // Check Ollama
       const online = await checkOllamaStatus();
       setOllamaOnline(online);
       if (online) {
         const availableModels = await getOllamaModels();
         setModels(availableModels);
       }
+      // Check backend
+      try {
+        const res = await fetch(`${(await import('@/lib/api')).API_BASE_URL}/api/explain-code`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: '' }),
+          signal: AbortSignal.timeout(5000),
+        });
+        setBackendOnline(true);
+      } catch {
+        setBackendOnline(false);
+      }
       setChecking(false);
     };
     check();
-    const interval = setInterval(check, 15000);
+    const interval = setInterval(check, 30000);
     return () => clearInterval(interval);
   }, []);
 
