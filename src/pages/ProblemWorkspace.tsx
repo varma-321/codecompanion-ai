@@ -554,6 +554,100 @@ const ProblemWorkspace = () => {
         </div>
       </div>
 
+      {/* Mobile action bar - visible only on small screens */}
+      <div className="flex md:hidden items-center gap-1.5 border-b border-panel-border bg-card px-2 py-1.5 overflow-x-auto scrollbar-none">
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="outline" size="sm" className="h-7 gap-1 text-[11px] shrink-0">
+              <FileText className="h-3 w-3" /> Problem
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-[85vw] sm:max-w-md p-0">
+            <SheetHeader className="px-4 pt-4 pb-2">
+              <SheetTitle className="text-sm">{roadmapProblem.title}</SheetTitle>
+            </SheetHeader>
+            <ScrollArea className="h-[calc(100%-60px)]">
+              <div className="p-4 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Badge className={`text-[10px] ${getDifficultyBg(roadmapProblem.difficulty)}`}>{roadmapProblem.difficulty}</Badge>
+                  <Badge variant="outline" className="text-[10px]">{(roadmapProblem as any).topic}</Badge>
+                </div>
+                <div className="prose prose-sm max-w-none dark:prose-invert [&_p]:text-foreground [&_li]:text-foreground">
+                  <ReactMarkdown>{detail.description}</ReactMarkdown>
+                </div>
+                {detail.examples.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Examples</h3>
+                    {detail.examples.map((ex, i) => (
+                      <div key={i} className="rounded-lg border border-panel-border bg-secondary/30 p-3 space-y-1">
+                        <p className="text-xs font-semibold text-muted-foreground">Example {i + 1}:</p>
+                        <div className="font-mono text-xs">
+                          <p><span className="text-muted-foreground">Input:</span> <span className="text-foreground">{ex.input}</span></p>
+                          <p><span className="text-muted-foreground">Output:</span> <span className="font-semibold text-foreground">{ex.output}</span></p>
+                          {ex.explanation && <p className="text-muted-foreground mt-1">💡 {ex.explanation}</p>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {(detail as EnhancedDetail).constraints && (detail as EnhancedDetail).constraints!.length > 0 && (
+                  <div className="space-y-2">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Constraints</h3>
+                    <ul className="space-y-1">
+                      {(detail as EnhancedDetail).constraints!.map((c, i) => (
+                        <li key={i} className="text-xs text-foreground font-mono flex items-start gap-2">
+                          <span className="text-muted-foreground mt-0.5">•</span>
+                          <code className="bg-secondary/50 px-1.5 py-0.5 rounded text-[11px]">{c}</code>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {detail.testCases.length > 0 && (
+                  <div className="space-y-2">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Test Cases</h3>
+                    {detail.testCases.map((tc, i) => (
+                      <div key={i} className="rounded border border-panel-border bg-secondary/20 p-2 font-mono text-[11px] space-y-0.5">
+                        <p className="font-semibold text-muted-foreground">Test {i + 1}:</p>
+                        {Object.entries(tc.inputs).map(([k, v]) => (
+                          <p key={k}><span className="text-muted-foreground">{k}</span> = <span className="text-foreground">{v}</span></p>
+                        ))}
+                        <p><span className="text-muted-foreground">Expected:</span> <span className="text-success font-semibold">{tc.expected}</span></p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          </SheetContent>
+        </Sheet>
+
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="outline" size="sm" className="h-7 gap-1 text-[11px] shrink-0">
+              <Bot className="h-3 w-3" /> AI Chat
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-[85vw] sm:max-w-md p-0">
+            <SheetHeader className="px-4 pt-4 pb-2">
+              <SheetTitle className="text-sm">AI Assistant</SheetTitle>
+            </SheetHeader>
+            <div className="h-[calc(100%-60px)] overflow-hidden">
+              <AIChatPanel code={code} problemId={null} aiEnabled={true} />
+            </div>
+          </SheetContent>
+        </Sheet>
+
+        <Button onClick={handleRunTests} disabled={isRunning || isRunningTests || detail.testCases.length === 0} size="sm" variant="outline" className="h-7 gap-1 text-[11px] shrink-0 sm:hidden">
+          {isRunningTests ? <Loader2 className="h-3 w-3 animate-spin" /> : <FlaskConical className="h-3 w-3" />}
+          Test
+        </Button>
+        <Button onClick={handleAnalyze} disabled={isAnalyzing || !code.trim()} size="sm" variant="outline" className="h-7 gap-1 text-[11px] shrink-0 md:hidden">
+          {isAnalyzing ? <Loader2 className="h-3 w-3 animate-spin" /> : <BarChart3 className="h-3 w-3" />}
+          Analyze
+        </Button>
+      </div>
+
       {/* Main layout: responsive columns */}
       <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
         {/* Left: Problem Description */}
