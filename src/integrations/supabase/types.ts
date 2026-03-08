@@ -475,6 +475,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_code_saves: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          language: string
+          problem_key: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          code?: string
+          created_at?: string
+          id?: string
+          language?: string
+          problem_key: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          language?: string
+          problem_key?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_problem_progress: {
         Row: {
           attempts: number
