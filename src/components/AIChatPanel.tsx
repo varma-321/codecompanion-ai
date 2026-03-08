@@ -53,10 +53,7 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
       if (online) {
         const availableModels = await getOllamaModels();
         setModels(availableModels);
-        if (availableModels.length > 0 && !availableModels.includes(currentModel)) {
-          setCurrentModel(availableModels[0]);
-          setSelectedModel(availableModels[0]);
-        }
+        // Don't auto-select; let the user choose manually
       }
       setChecking(false);
     };
