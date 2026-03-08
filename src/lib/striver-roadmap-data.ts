@@ -612,6 +612,12 @@ export const STRIVER_ROADMAP: RoadmapTopic[] = [
   },
 ];
 
+// Sort problems within each topic: Easy → Medium → Hard
+const difficultyOrder: Record<string, number> = { Easy: 0, Medium: 1, Hard: 2 };
+STRIVER_ROADMAP.forEach(topic => {
+  topic.problems.sort((a, b) => (difficultyOrder[a.difficulty] ?? 1) - (difficultyOrder[b.difficulty] ?? 1));
+});
+
 export const getTotalProblems = () =>
   STRIVER_ROADMAP.reduce((sum, t) => sum + t.problems.length, 0);
 
