@@ -326,15 +326,15 @@ const ProblemWorkspace = () => {
                       <div className="flex h-full items-center justify-center text-xs text-muted-foreground py-10">
                         Run tests to see results
                       </div>
+                    )}
+                  </div>
+                </ScrollArea>
               )}
               {bottomTab === 'snippets' && (
                 <CodeSnippets onInsert={(snippet) => setCode(prev => prev + snippet)} />
               )}
               {bottomTab === 'solutions' && (
                 <SolutionComparison code={code} problemTitle={roadmapProblem.title} />
-              )}
-            </div>
-                </ScrollArea>
               )}
             </div>
           </div>
