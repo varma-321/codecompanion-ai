@@ -171,23 +171,46 @@ const ProblemWorkspace = () => {
     setIsGenerating(false);
   }, [key, roadmapProblem, hasHardcodedDetail]);
 
-  // Reset code when problem changes
+  // Load saved code from DB (with localStorage fallback)
   useEffect(() => {
-    const saved = localStorage.getItem(`workspace-code-${key}`);
-    if (saved && saved !== detail.starterCode) {
-      setCode(saved);
-    } else {
-      setCode(detail.starterCode);
-    }
-    wsResetSaved(saved || detail.starterCode);
-    setConsoleEntries([]);
-    setTestResults([]);
-    setBottomTab('description');
+    let cancelled = false;
+    const loadCode = async () => {
+      let savedCode: string | null = null;
+      // Try DB first
+      if (authUser && key) {
+        try {
+          const { data } = await supabase
+            .from('user_code_saves')
+            .select('code')
+            .eq('user_id', authUser.id)
+            .eq('problem_key', key)
+            .maybeSingle();
+          if (data && (data as any).code) savedCode = (data as any).code;
+        } catch {}
+      }
+      // Fallback to localStorage
+      if (!savedCode) {
+        savedCode = localStorage.getItem(`workspace-code-${key}`);
+      }
+      if (cancelled) return;
+      if (savedCode && savedCode !== detail.starterCode) {
+        setCode(savedCode);
+        wsResetSaved(savedCode);
+      } else {
+        setCode(detail.starterCode);
+        wsResetSaved(detail.starterCode);
+      }
+      setConsoleEntries([]);
+      setTestResults([]);
+      setBottomTab('description');
+    };
+    loadCode();
     // Auto-generate if no hardcoded detail
     if (!hasHardcodedDetail) {
       generateFullDetail();
     }
-  }, [key]);
+    return () => { cancelled = true; };
+  }, [key, authUser?.id]);
 
   // Keyboard shortcuts
   useEffect(() => {
