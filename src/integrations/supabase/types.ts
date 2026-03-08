@@ -58,6 +58,42 @@ export type Database = {
           },
         ]
       }
+      contest_results: {
+        Row: {
+          contest_type: string
+          created_at: string
+          id: string
+          problem_keys: string[]
+          problems_attempted: number
+          problems_solved: number
+          score: number
+          total_time_seconds: number
+          user_id: string
+        }
+        Insert: {
+          contest_type?: string
+          created_at?: string
+          id?: string
+          problem_keys?: string[]
+          problems_attempted?: number
+          problems_solved?: number
+          score?: number
+          total_time_seconds?: number
+          user_id: string
+        }
+        Update: {
+          contest_type?: string
+          created_at?: string
+          id?: string
+          problem_keys?: string[]
+          problems_attempted?: number
+          problems_solved?: number
+          score?: number
+          total_time_seconds?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       hints: {
         Row: {
           created_at: string
@@ -278,10 +314,14 @@ export type Database = {
         Row: {
           attempts: number
           created_at: string
+          ease_factor: number
           id: string
           last_attempted: string | null
           marked_for_revision: boolean
+          next_review_at: string | null
           problem_key: string
+          review_count: number
+          review_interval: number
           solved: boolean
           solved_at: string | null
           status: string
@@ -290,10 +330,14 @@ export type Database = {
         Insert: {
           attempts?: number
           created_at?: string
+          ease_factor?: number
           id?: string
           last_attempted?: string | null
           marked_for_revision?: boolean
+          next_review_at?: string | null
           problem_key: string
+          review_count?: number
+          review_interval?: number
           solved?: boolean
           solved_at?: string | null
           status?: string
@@ -302,10 +346,14 @@ export type Database = {
         Update: {
           attempts?: number
           created_at?: string
+          ease_factor?: number
           id?: string
           last_attempted?: string | null
           marked_for_revision?: boolean
+          next_review_at?: string | null
           problem_key?: string
+          review_count?: number
+          review_interval?: number
           solved?: boolean
           solved_at?: string | null
           status?: string

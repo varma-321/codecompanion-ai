@@ -12,6 +12,10 @@ import StriverRoadmap from "./pages/StriverRoadmap";
 import NeetCodeRoadmap from "./pages/NeetCodeRoadmap";
 import LeetCodeTop150Roadmap from "./pages/LeetCodeTop150Roadmap";
 import ModuleSelector from "./pages/ModuleSelector";
+import ContestMode from "./pages/ContestMode";
+import SpacedRepetition from "./pages/SpacedRepetition";
+import PatternsLibrary from "./pages/PatternsLibrary";
+import Leaderboard from "./pages/Leaderboard";
 import ProblemWorkspace from "./pages/ProblemWorkspace";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
@@ -32,6 +36,10 @@ const App = () => (
               <Route path="/striver" element={<StriverRoadmap />} />
               <Route path="/neetcode" element={<NeetCodeRoadmap />} />
               <Route path="/leetcode150" element={<LeetCodeTop150Roadmap />} />
+              <Route path="/contest" element={<ContestMode />} />
+              <Route path="/review" element={<SpacedRepetition />} />
+              <Route path="/patterns" element={<PatternsLibrary />} />
+              <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/problem/:key" element={<ProblemWorkspace />} />
               <Route path="/analytics" element={<StudyAnalytics />} />
               <Route path="/generate" element={<ProblemGenerator />} />
