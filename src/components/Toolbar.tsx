@@ -60,6 +60,18 @@ const Toolbar = ({ onRun, onSave, onAnalyze, onSettings, onLogout, username, isR
           {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
           Save
         </Button>
+        
+        {/* Autosave indicator */}
+        <span className="text-[10px] text-muted-foreground flex items-center gap-1 ml-1">
+          {isAutoSaving ? (
+            <><Loader2 className="h-3 w-3 animate-spin" /> Saving...</>
+          ) : codeIsDirty ? (
+            <span className="text-yellow-500">● Unsaved</span>
+          ) : (
+            <><Cloud className="h-3 w-3 text-green-500" /> Auto-saved</>
+          )}
+        </span>
+
         <Button onClick={onAnalyze} disabled={!aiEnabled} size="sm" variant="outline" className="h-7 gap-1 text-xs">
           <Zap className="h-3 w-3" />
           Analyze
