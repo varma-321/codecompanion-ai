@@ -39,6 +39,10 @@ import PerformanceDashboard from "./pages/PerformanceDashboard";
 import AdaptiveLearningPath from "./pages/AdaptiveLearningPath";
 import CodeReview from "./pages/CodeReview";
 import DiscussionForum from "./pages/DiscussionForum";
+import TodayReview from "./pages/TodayReview";
+import GlobalSearch from "./pages/GlobalSearch";
+import StreakCalendar from "./pages/StreakCalendar";
+import BigOVisualizer from "./pages/BigOVisualizer";
 
 const queryClient = new QueryClient();
 
