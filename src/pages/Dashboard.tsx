@@ -1,18 +1,24 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Play, Brain, Loader2 } from 'lucide-react';
+import { Play, Brain, Loader2, FlaskConical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ProblemExplorer from '@/components/ProblemExplorer';
 import CodeEditor from '@/components/CodeEditor';
 import AIChatPanel from '@/components/AIChatPanel';
 import ConsolePanel, { ConsoleEntry } from '@/components/ConsolePanel';
+import TestCasePanel, { TestResult } from '@/components/TestCasePanel';
+import TestResultsTable from '@/components/TestResultsTable';
 import Toolbar from '@/components/Toolbar';
 import ExecutionStatus from '@/components/ExecutionStatus';
 import SettingsDialog from '@/components/SettingsDialog';
 import { useUser } from '@/lib/user-context';
-import { DbProblem, fetchProblems, updateProblem, signOut, DEFAULT_CODE } from '@/lib/supabase';
+import {
+  DbProblem, DbTestCase, fetchProblems, updateProblem, signOut, DEFAULT_CODE,
+  fetchTestCases, insertTestCase, updateTestCase, deleteTestCase,
+} from '@/lib/supabase';
 import { executeJavaCode, type ExecutionStatus as ExecStatusType } from '@/lib/executor';
 import { detectProblemTitle } from '@/lib/ai-backend';
+import { supabase } from '@/integrations/supabase/client';
 
 const Dashboard = () => {
   const { authUser, profile } = useUser();
@@ -33,11 +39,29 @@ const Dashboard = () => {
   const [consoleFullscreen, setConsoleFullscreen] = useState(false);
   const [consoleHeight, setConsoleHeight] = useState(288);
 
+  // LeetCode mode state
+  const [testCases, setTestCases] = useState<DbTestCase[]>([]);
+  const [testResults, setTestResults] = useState<TestResult[]>([]);
+  const [isGeneratingTests, setIsGeneratingTests] = useState(false);
+  const [isRunningTests, setIsRunningTests] = useState(false);
+  const [bottomTab, setBottomTab] = useState<'console' | 'tests' | 'results'>('tests');
+
   useEffect(() => {
     if (userId) {
       fetchProblems(userId).then(setProblems).catch(() => {});
     }
   }, [userId]);
+
+  // Load test cases when problem changes
+  useEffect(() => {
+    if (activeProblem) {
+      fetchTestCases(activeProblem.id).then(setTestCases).catch(() => {});
+      setTestResults([]);
+    } else {
+      setTestCases([]);
+      setTestResults([]);
+    }
+  }, [activeProblem?.id]);
 
   const refreshProblems = useCallback(async () => {
     if (!userId) return;
@@ -61,6 +85,7 @@ const Dashboard = () => {
     setIsRunning(true);
     setExecStatus('sending');
     setConsoleCollapsed(false);
+    setBottomTab('console');
     addConsoleEntry('system', '▶ Compiling and running...');
     try {
       const result = await executeJavaCode(code, (status) => setExecStatus(status));
@@ -78,6 +103,91 @@ const Dashboard = () => {
       setExecStatus('failed');
     }
     setIsRunning(false);
+  };
+
+  const handleRunTests = async () => {
+    if (isRunningTests || testCases.length === 0) return;
+    setIsRunningTests(true);
+    setTestResults([]);
+    setBottomTab('console');
+    addConsoleEntry('system', `▶ Running ${testCases.length} test(s)...`);
+
+    const results: TestResult[] = [];
+    const API_BASE_URL = (await import('@/lib/api')).API_BASE_URL;
+
+    for (let i = 0; i < testCases.length; i++) {
+      const tc = testCases[i];
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/run-java`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, testInput: tc.input }),
+          signal: AbortSignal.timeout(15000),
+        });
+        const data = await response.json();
+        const actual = (data.success ? (data.output || '') : (data.error || '')).trim();
+        const expected = tc.expected_output.trim();
+        const passed = actual === expected;
+        results.push({ test: i + 1, status: passed ? 'PASSED' : 'FAILED', expected, actual: actual || '(no output)' });
+        addConsoleEntry(passed ? 'info' : 'error', `Test ${i + 1} ${passed ? 'PASSED' : 'FAILED'}${!passed ? ` (expected: ${expected}, got: ${actual})` : ''}`);
+      } catch (err: any) {
+        results.push({ test: i + 1, status: 'FAILED', expected: tc.expected_output, actual: err.message || 'Error' });
+        addConsoleEntry('error', `Test ${i + 1} FAILED: ${err.message || 'Error'}`);
+      }
+    }
+
+    const passed = results.filter(r => r.status === 'PASSED').length;
+    addConsoleEntry('system', `\nExecution finished. ${passed}/${results.length} tests passed.`);
+    setTestResults(results);
+    setBottomTab('results');
+    setExecStatus('complete');
+    setIsRunningTests(false);
+  };
+
+  const handleAddTestCase = async (input: string, expectedOutput: string) => {
+    if (!activeProblem || !userId) { toast.error('Select a problem first'); return; }
+    try {
+      const tc = await insertTestCase(userId, activeProblem.id, input, expectedOutput);
+      setTestCases(prev => [...prev, tc]);
+    } catch { toast.error('Failed to add test case'); }
+  };
+
+  const handleUpdateTestCase = async (id: string, input: string, expectedOutput: string) => {
+    try {
+      await updateTestCase(id, { input, expected_output: expectedOutput });
+      setTestCases(prev => prev.map(tc => tc.id === id ? { ...tc, input, expected_output: expectedOutput } : tc));
+    } catch { toast.error('Failed to update'); }
+  };
+
+  const handleDeleteTestCase = async (id: string) => {
+    try {
+      await deleteTestCase(id);
+      setTestCases(prev => prev.filter(tc => tc.id !== id));
+    } catch { toast.error('Failed to delete'); }
+  };
+
+  const handleGenerateAITests = async () => {
+    if (!activeProblem || !userId) { toast.error('Select a problem first'); return; }
+    setIsGeneratingTests(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-test-cases', {
+        body: { code },
+      });
+      if (error) throw error;
+      const generated = data?.testCases || [];
+      if (generated.length === 0) { toast.info('No test cases generated'); setIsGeneratingTests(false); return; }
+
+      const newCases: DbTestCase[] = [];
+      for (const tc of generated) {
+        const saved = await insertTestCase(userId, activeProblem.id, tc.input || '', tc.expectedOutput || '');
+        newCases.push(saved);
+      }
+      setTestCases(prev => [...prev, ...newCases]);
+      toast.success(`Generated ${newCases.length} test cases`);
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to generate test cases');
+    }
+    setIsGeneratingTests(false);
   };
 
   const handleSave = async () => {
@@ -122,7 +232,7 @@ const Dashboard = () => {
   };
 
   const handleLogout = async () => {
-    try { await signOut(); } catch { /* context handles state */ }
+    try { await signOut(); } catch {}
   };
 
   const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
@@ -157,6 +267,7 @@ const Dashboard = () => {
       />
 
       <div className="flex flex-1 overflow-hidden">
+        {/* Left: Problem Explorer */}
         <div className="w-56 shrink-0 border-r border-panel-border">
           <ProblemExplorer
             problems={problems}
@@ -166,6 +277,7 @@ const Dashboard = () => {
           />
         </div>
 
+        {/* Center: Editor + Bottom Panels */}
         <div className="flex flex-1 flex-col overflow-hidden">
           <div className={`overflow-hidden ${consoleFullscreen ? 'hidden' : 'flex-1'}`}>
             <CodeEditor code={code} onChange={setCode} />
@@ -173,13 +285,17 @@ const Dashboard = () => {
 
           {!consoleFullscreen && (
             <div className="flex items-center gap-2 border-t border-panel-border bg-ide-toolbar px-4 py-2">
-              <Button onClick={handleRun} disabled={isRunning} size="sm" className="h-8 gap-1.5 px-4 text-xs font-semibold">
+              <Button onClick={handleRun} disabled={isRunning || isRunningTests} size="sm" className="h-8 gap-1.5 px-4 text-xs font-semibold">
                 {isRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
                 {isRunning ? 'Running...' : 'Run Code'}
               </Button>
+              <Button onClick={handleRunTests} disabled={isRunning || isRunningTests || testCases.length === 0} size="sm" variant="outline" className="h-8 gap-1.5 px-4 text-xs font-semibold">
+                {isRunningTests ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FlaskConical className="h-3.5 w-3.5" />}
+                {isRunningTests ? 'Testing...' : `Run Tests (${testCases.length})`}
+              </Button>
               <Button onClick={handleExplain} disabled={isExplaining || !aiEnabled} size="sm" variant="outline" className="h-8 gap-1.5 px-4 text-xs font-semibold">
                 {isExplaining ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Brain className="h-3.5 w-3.5" />}
-                {isExplaining ? 'Analyzing Code...' : 'Explain Code'}
+                Explain Code
               </Button>
               <ExecutionStatus status={execStatus} />
             </div>
@@ -190,25 +306,85 @@ const Dashboard = () => {
             className="resize-handle h-1 cursor-row-resize border-t border-panel-border hover:bg-primary/30 transition-colors"
           />
 
+          {/* Bottom tabs: Console / Test Cases / Results */}
           <div
             className={`shrink-0 border-t border-panel-border ${consoleFullscreen ? 'flex-1' : ''}`}
             style={consoleFullscreen ? {} : { height: consoleCollapsed ? 32 : consoleHeight }}
           >
-            <div className="flex h-full">
-              <div className="flex-1 overflow-hidden border-r border-panel-border">
-                <ConsolePanel
-                  entries={consoleEntries}
-                  isRunning={isRunning}
-                  onClear={() => setConsoleEntries([])}
-                  isCollapsed={consoleCollapsed}
-                  onToggleCollapse={() => setConsoleCollapsed(c => !c)}
-                  isFullscreen={consoleFullscreen}
-                  onToggleFullscreen={() => setConsoleFullscreen(f => !f)}
-                />
-              </div>
-              {!consoleCollapsed && (
-                <div className="w-[420px] shrink-0 overflow-hidden">
-                  <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
+            {/* Tab bar */}
+            <div className="flex items-center border-b border-panel-border bg-ide-toolbar">
+              {(['console', 'tests', 'results'] as const).map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => { setBottomTab(tab); setConsoleCollapsed(false); }}
+                  className={`px-4 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                    bottomTab === tab
+                      ? 'border-b-2 border-primary text-primary'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {tab === 'tests' ? `Tests (${testCases.length})` : tab === 'results' && testResults.length > 0
+                    ? `Results (${testResults.filter(r => r.status === 'PASSED').length}/${testResults.length})`
+                    : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex h-[calc(100%-32px)]">
+              {bottomTab === 'console' && (
+                <div className="flex flex-1">
+                  <div className="flex-1 overflow-hidden border-r border-panel-border">
+                    <ConsolePanel
+                      entries={consoleEntries}
+                      isRunning={isRunning || isRunningTests}
+                      onClear={() => setConsoleEntries([])}
+                      isCollapsed={consoleCollapsed}
+                      onToggleCollapse={() => setConsoleCollapsed(c => !c)}
+                      isFullscreen={consoleFullscreen}
+                      onToggleFullscreen={() => setConsoleFullscreen(f => !f)}
+                    />
+                  </div>
+                  {!consoleCollapsed && (
+                    <div className="w-[420px] shrink-0 overflow-hidden">
+                      <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {bottomTab === 'tests' && (
+                <div className="flex flex-1">
+                  <div className="flex-1 overflow-hidden">
+                    <TestCasePanel
+                      testCases={testCases}
+                      testResults={testResults}
+                      onAdd={handleAddTestCase}
+                      onUpdate={handleUpdateTestCase}
+                      onDelete={handleDeleteTestCase}
+                      onGenerateAI={handleGenerateAITests}
+                      isGenerating={isGeneratingTests}
+                    />
+                  </div>
+                  <div className="w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
+                    <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
+                  </div>
+                </div>
+              )}
+
+              {bottomTab === 'results' && (
+                <div className="flex flex-1">
+                  <div className="flex-1 overflow-auto p-3">
+                    {testResults.length > 0 ? (
+                      <TestResultsTable results={testResults} />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
+                        Run tests to see results
+                      </div>
+                    )}
+                  </div>
+                  <div className="w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
+                    <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
+                  </div>
                 </div>
               )}
             </div>
