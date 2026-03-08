@@ -496,6 +496,28 @@ const Dashboard = () => {
                   </div>
                 </div>
               )}
+
+              {bottomTab === 'snippets' && (
+                <div className="flex flex-1">
+                  <div className="flex-1 overflow-hidden">
+                    <CodeSnippets onInsert={(snippet) => setCode(prev => prev + snippet)} />
+                  </div>
+                  <div className="w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
+                    <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
+                  </div>
+                </div>
+              )}
+
+              {bottomTab === 'solutions' && (
+                <div className="flex flex-1">
+                  <div className="flex-1 overflow-hidden">
+                    <SolutionComparison code={code} problemTitle={activeProblem?.title} />
+                  </div>
+                  <div className="w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
+                    <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
