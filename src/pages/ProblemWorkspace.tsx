@@ -557,7 +557,7 @@ const ProblemWorkspace = () => {
       <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
         {/* Left: Problem Description */}
         {showDescription && !focusMode && (
-          <div className="w-[380px] shrink-0 border-r border-panel-border overflow-hidden flex flex-col">
+          <div className="hidden md:flex w-[340px] lg:w-[380px] shrink-0 border-r border-panel-border overflow-hidden flex-col">
             <div className="flex items-center justify-between border-b border-panel-border bg-ide-toolbar px-3 py-1.5">
               <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Problem</span>
               <Button variant="ghost" size="sm" onClick={() => setShowDescription(false)} className="h-5 text-[10px]">
