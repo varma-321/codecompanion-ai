@@ -39,6 +39,10 @@ import PerformanceDashboard from "./pages/PerformanceDashboard";
 import AdaptiveLearningPath from "./pages/AdaptiveLearningPath";
 import CodeReview from "./pages/CodeReview";
 import DiscussionForum from "./pages/DiscussionForum";
+import TodayReview from "./pages/TodayReview";
+import GlobalSearch from "./pages/GlobalSearch";
+import StreakCalendar from "./pages/StreakCalendar";
+import BigOVisualizer from "./pages/BigOVisualizer";
 
 const queryClient = new QueryClient();
 
@@ -88,6 +92,10 @@ const App = () => (
               <Route path="/learning-path" element={<AdaptiveLearningPath />} />
               <Route path="/code-review" element={<CodeReview />} />
               <Route path="/discuss" element={<DiscussionForum />} />
+              <Route path="/today-review" element={<TodayReview />} />
+              <Route path="/search" element={<GlobalSearch />} />
+              <Route path="/streak-calendar" element={<StreakCalendar />} />
+              <Route path="/bigo" element={<BigOVisualizer />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

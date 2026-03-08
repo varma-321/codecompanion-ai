@@ -4,7 +4,7 @@ import {
   ArrowLeft, Map, Code2, BookOpen, TrendingUp, Trophy, Timer, Brain, Target,
   Bookmark, Award, Share2, Plus, MessageSquare, Layers, Building2, Clock,
   FileSpreadsheet, Zap, BarChart3, GraduationCap, Dices, Flame, Calendar,
-  AlertTriangle, Activity
+  AlertTriangle, Activity, Search, RotateCcw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -61,6 +61,10 @@ const MODULES: ModuleCard[] = [
   { id: 'export', title: 'Progress Export', subtitle: 'CSV & JSON export', icon: <FileSpreadsheet className="h-5 w-5" />, route: '/export', category: 'tools', accent: 'text-gray-500' },
   { id: 'analytics', title: 'Study Analytics', subtitle: 'Visualize your progress', icon: <BarChart3 className="h-5 w-5" />, route: '/analytics', category: 'tools', accent: 'text-indigo-400' },
   { id: 'dashboard', title: 'Performance Dashboard', subtitle: 'Unified overview', icon: <TrendingUp className="h-5 w-5" />, route: '/dashboard', category: 'tools', accent: 'text-primary' },
+  { id: 'today-review', title: "Today's Review", subtitle: 'Spaced repetition queue', icon: <RotateCcw className="h-5 w-5" />, route: '/today-review', category: 'study', accent: 'text-rose-500' },
+  { id: 'search', title: 'Problem Search', subtitle: 'Search all 750+ problems', icon: <Search className="h-5 w-5" />, route: '/search', category: 'tools', accent: 'text-blue-500' },
+  { id: 'streak-calendar', title: 'Activity Calendar', subtitle: 'GitHub-style heatmap', icon: <Calendar className="h-5 w-5" />, route: '/streak-calendar', category: 'social', accent: 'text-green-500' },
+  { id: 'bigo', title: 'Big-O Visualizer', subtitle: 'Interactive complexity chart', icon: <BarChart3 className="h-5 w-5" />, route: '/bigo', category: 'study', accent: 'text-amber-500' },
 ];
 
 const CATEGORY_INFO: Record<string, { label: string; icon: React.ReactNode }> = {
