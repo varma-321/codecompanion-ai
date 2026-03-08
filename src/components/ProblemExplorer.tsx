@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Plus, Search, Trash2, FileCode, Pencil, Check, X } from 'lucide-react';
+import { Plus, Search, Trash2, FileCode, Pencil, Check, X, Bookmark, BookmarkCheck, Filter } from 'lucide-react';
 import { DbProblem, createProblem, deleteProblem as dbDeleteProblem, updateProblem as dbUpdateProblem, DEFAULT_CODE } from '@/lib/supabase';
 import { useUser } from '@/lib/user-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { supabase } from '@/integrations/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
 
 interface ProblemExplorerProps {
