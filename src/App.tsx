@@ -92,6 +92,10 @@ const App = () => (
               <Route path="/learning-path" element={<AdaptiveLearningPath />} />
               <Route path="/code-review" element={<CodeReview />} />
               <Route path="/discuss" element={<DiscussionForum />} />
+              <Route path="/today-review" element={<TodayReview />} />
+              <Route path="/search" element={<GlobalSearch />} />
+              <Route path="/streak-calendar" element={<StreakCalendar />} />
+              <Route path="/bigo" element={<BigOVisualizer />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
