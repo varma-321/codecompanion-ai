@@ -312,6 +312,19 @@ const Dashboard = () => {
     document.addEventListener('mouseup', onMouseUp);
   }, [consoleHeight]);
 
+  const TAB_LABELS: Record<string, string> = {
+    console: 'Console',
+    tests: `Tests (${testCases.length})`,
+    results: testResults.length > 0 ? `Results (${testResults.filter(r => r.status === 'PASSED').length}/${testResults.length})` : 'Results',
+    debugger: 'Debug',
+    notes: 'Notes',
+    recursion: 'Recursion',
+    snippets: 'Templates',
+    solutions: 'Solutions',
+    streak: 'Streak',
+    daily: 'Daily',
+  };
+
   return (
     <div className="flex h-screen flex-col bg-background">
       <Toolbar
@@ -332,7 +345,7 @@ const Dashboard = () => {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Left: Problem Explorer */}
-        <div className="w-56 shrink-0 border-r border-panel-border">
+        <div className="w-56 shrink-0 border-r border-border">
           <ProblemExplorer
             problems={problems}
             activeProblemId={activeProblem?.id || null}
@@ -348,20 +361,20 @@ const Dashboard = () => {
           </div>
 
           {!consoleFullscreen && (
-            <div className="flex items-center gap-2 border-t border-panel-border bg-ide-toolbar px-4 py-2">
-              <Button onClick={handleRun} disabled={isRunning || isRunningTests} size="sm" className="h-8 gap-1.5 px-4 text-xs font-semibold">
+            <div className="flex items-center gap-2 border-t border-border bg-card px-4 py-2">
+              <Button onClick={handleRun} disabled={isRunning || isRunningTests} size="sm" className="h-8 gap-1.5 px-4 text-xs font-medium rounded-lg">
                 {isRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
                 {isRunning ? 'Running...' : 'Run Code'}
               </Button>
-              <Button onClick={handleRunTests} disabled={isRunning || isRunningTests || testCases.length === 0} size="sm" variant="outline" className="h-8 gap-1.5 px-4 text-xs font-semibold">
+              <Button onClick={handleRunTests} disabled={isRunning || isRunningTests || testCases.length === 0} size="sm" variant="outline" className="h-8 gap-1.5 px-4 text-xs font-medium rounded-lg">
                 {isRunningTests ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FlaskConical className="h-3.5 w-3.5" />}
                 {isRunningTests ? 'Testing...' : `Run Tests (${testCases.length})`}
               </Button>
-              <Button onClick={handleExplain} disabled={isExplaining || !aiEnabled} size="sm" variant="outline" className="h-8 gap-1.5 px-4 text-xs font-semibold">
+              <Button onClick={handleExplain} disabled={isExplaining || !aiEnabled} size="sm" variant="outline" className="h-8 gap-1.5 px-4 text-xs font-medium rounded-lg">
                 {isExplaining ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Brain className="h-3.5 w-3.5" />}
-                Explain Code
+                Explain
               </Button>
-              <div className="h-5 w-px bg-panel-border mx-1" />
+              <div className="h-5 w-px bg-border mx-1" />
               <ProblemTimer problemId={activeProblem?.id || null} />
               <ExecutionStatus status={execStatus} />
             </div>
@@ -369,32 +382,27 @@ const Dashboard = () => {
 
           <div
             onMouseDown={handleDividerMouseDown}
-            className="resize-handle h-1 cursor-row-resize border-t border-panel-border hover:bg-primary/30 transition-colors"
+            className="resize-handle h-1 cursor-row-resize border-t border-border hover:bg-foreground/10 transition-colors"
           />
 
-          {/* Bottom tabs: Console / Test Cases / Results */}
+          {/* Bottom tabs */}
           <div
-            className={`shrink-0 border-t border-panel-border ${consoleFullscreen ? 'flex-1' : ''}`}
-            style={consoleFullscreen ? {} : { height: consoleCollapsed ? 32 : consoleHeight }}
+            className={`shrink-0 border-t border-border ${consoleFullscreen ? 'flex-1' : ''}`}
+            style={consoleFullscreen ? {} : { height: consoleCollapsed ? 36 : consoleHeight }}
           >
             {/* Tab bar */}
-            <div className="flex items-center border-b border-panel-border bg-ide-toolbar">
+            <div className="flex items-center border-b border-border bg-card px-1 overflow-x-auto scrollbar-none">
               {(['console', 'tests', 'results', 'debugger', 'notes', 'recursion', 'snippets', 'solutions', 'streak', 'daily'] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => { setBottomTab(tab); setConsoleCollapsed(false); }}
-                  className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                  className={`px-3 py-2 text-[11px] font-medium tracking-wide transition-colors whitespace-nowrap relative ${
                     bottomTab === tab
-                      ? 'border-b-2 border-primary text-primary'
+                      ? 'text-foreground tab-active'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  {tab === 'tests' ? `Tests (${testCases.length})` : tab === 'results' && testResults.length > 0
-                    ? `Results (${testResults.filter(r => r.status === 'PASSED').length}/${testResults.length})`
-                    : tab === 'debugger' ? '🔍 Debug' : tab === 'daily' ? '📅 Daily'
-                    : tab === 'notes' ? '📝 Notes' : tab === 'recursion' ? '🌳 Recursion'
-                    : tab === 'streak' ? '🔥 Streak' : tab === 'snippets' ? '📋 Templates'
-                    : tab === 'solutions' ? '⚡ Solutions' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  {TAB_LABELS[tab] || tab}
                 </button>
               ))}
             </div>
