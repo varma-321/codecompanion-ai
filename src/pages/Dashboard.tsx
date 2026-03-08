@@ -11,7 +11,7 @@ import ExecutionStatus from '@/components/ExecutionStatus';
 import SettingsDialog from '@/components/SettingsDialog';
 import { Problem, getProblems, updateProblem, DEFAULT_CODE } from '@/lib/store';
 import { executeJavaCode, type ExecutionStatus as ExecStatusType } from '@/lib/executor';
-import { detectProblemTitle } from '@/lib/ollama';
+import { detectProblemTitle } from '@/lib/ai-backend';
 
 interface DashboardProps {
   username: string;
