@@ -17,6 +17,7 @@ import CodeSnippets from '@/components/CodeSnippets';
 import SolutionComparison from '@/components/SolutionComparison';
 import ExecutionHistoryPanel, { saveExecutionHistory } from '@/components/ExecutionHistoryPanel';
 import KeyboardShortcutsDialog from '@/components/KeyboardShortcutsDialog';
+import SuccessCelebration from '@/components/SuccessCelebration';
 import { useUser } from '@/lib/user-context';
 import { supabase } from '@/integrations/supabase/client';
 import { STRIVER_ROADMAP, getDifficultyBg, type RoadmapProblem } from '@/lib/striver-roadmap-data';
@@ -90,6 +91,8 @@ const ProblemWorkspace = () => {
   const [timeSpent, setTimeSpent] = useState(0);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [celebrationTime, setCelebrationTime] = useState<number | undefined>();
 
   // Autosave code to localStorage
   const autosaveWorkspaceCode = useCallback(async (val: string) => {
@@ -300,6 +303,10 @@ const ProblemWorkspace = () => {
         if (allPassed) toast.success('🎉 Problem solved! Progress saved.');
       } catch {}
     }
+
+    // Show celebration modal
+    setCelebrationTime(execTime);
+    setShowCelebration(true);
   };
 
   const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
@@ -587,6 +594,30 @@ const ProblemWorkspace = () => {
 
       {/* Keyboard Shortcuts Dialog */}
       <KeyboardShortcutsDialog isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
+
+      {/* Success Celebration Modal */}
+      <SuccessCelebration
+        open={showCelebration}
+        onClose={() => setShowCelebration(false)}
+        problemTitle={roadmapProblem?.title || 'Problem'}
+        passedCount={testResults.filter(r => r.status === 'PASSED').length}
+        totalCount={testResults.length}
+        executionTime={celebrationTime}
+        onTryAgain={() => setShowCelebration(false)}
+        onNextProblem={() => {
+          // Find next problem in the same topic
+          for (const topic of ALL_ROADMAPS) {
+            const idx = topic.problems.findIndex(p => p.key === key);
+            if (idx >= 0 && idx < topic.problems.length - 1) {
+              navigate(`/problem/${topic.problems[idx + 1].key}`);
+              setShowCelebration(false);
+              return;
+            }
+          }
+          navigate('/modules');
+          setShowCelebration(false);
+        }}
+      />
     </div>
   );
 };
