@@ -762,7 +762,68 @@ const ProblemWorkspace = () => {
                   </div>
                 </ScrollArea>
               )}
-              {bottomTab === 'history' && authUser && key && (
+              {bottomTab === 'analysis' && (
+                <ScrollArea className="h-full">
+                  <div className="p-4 space-y-4">
+                    {isAnalyzing ? (
+                      <div className="flex flex-col items-center justify-center py-10 gap-3">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                        <p className="text-xs text-muted-foreground">Analyzing your code complexity...</p>
+                      </div>
+                    ) : analysisResult ? (
+                      <>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="rounded-lg border border-panel-border bg-secondary/20 p-3">
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1">⏱️ Time Complexity</p>
+                            <p className="text-lg font-bold font-mono text-primary">{analysisResult.timeComplexity}</p>
+                          </div>
+                          <div className="rounded-lg border border-panel-border bg-secondary/20 p-3">
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1">💾 Space Complexity</p>
+                            <p className="text-lg font-bold font-mono text-primary">{analysisResult.spaceComplexity}</p>
+                          </div>
+                        </div>
+                        {analysisResult.suggestion && (
+                          <div className="rounded-lg border border-panel-border bg-primary/5 p-3">
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1">💡 Suggestion</p>
+                            <p className="text-xs text-foreground leading-relaxed">{analysisResult.suggestion}</p>
+                          </div>
+                        )}
+                        {analysisResult.optimizationPossible && analysisResult.betterApproach && (
+                          <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
+                            <p className="text-[10px] uppercase tracking-wider font-bold mb-1 text-emerald-600">🚀 Better Approach</p>
+                            <p className="text-xs text-foreground leading-relaxed">{analysisResult.betterApproach}</p>
+                          </div>
+                        )}
+                        {showFullExplanation && analysisResult.fullExplanation && (
+                          <div className="rounded-lg border border-panel-border bg-secondary/10 p-3">
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-2">📖 Full Explanation</p>
+                            <div className="text-xs text-foreground leading-relaxed prose prose-sm max-w-none dark:prose-invert">
+                              <ReactMarkdown>{analysisResult.fullExplanation}</ReactMarkdown>
+                            </div>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={handleFullExplanation} disabled={isExplaining}>
+                            {isExplaining ? <Loader2 className="h-3 w-3 animate-spin" /> : <Brain className="h-3 w-3" />}
+                            {showFullExplanation ? 'Refresh Explanation' : 'Full Explanation'}
+                          </Button>
+                          <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={handleAnalyze}>
+                            <BarChart3 className="h-3 w-3" /> Re-analyze
+                          </Button>
+                        </div>
+                        <div className="rounded border border-panel-border bg-secondary/10 p-2 text-[10px] text-muted-foreground">
+                          💡 Tip: Write different approaches in the Brute/Better/Optimal tabs, then analyze each to compare complexities.
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-10 gap-3">
+                        <BarChart3 className="h-8 w-8 text-muted-foreground/30" />
+                        <p className="text-xs text-muted-foreground">Click <strong>Analyze</strong> to get time & space complexity analysis</p>
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+              )}
                 <ExecutionHistoryPanel
                   key={historyRefreshKey}
                   userId={authUser.id}
