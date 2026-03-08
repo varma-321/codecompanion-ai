@@ -56,13 +56,6 @@ export type Database = {
             referencedRelation: "problems"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "analyses_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
         ]
       }
       hints: {
@@ -98,13 +91,6 @@ export type Database = {
             referencedRelation: "problems"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "hints_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
         ]
       }
       problems: {
@@ -132,15 +118,25 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "problems_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          username?: string
+        }
+        Relationships: []
       }
       solutions: {
         Row: {
@@ -184,13 +180,6 @@ export type Database = {
             referencedRelation: "problems"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "solutions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
         ]
       }
       test_cases: {
@@ -223,32 +212,7 @@ export type Database = {
             referencedRelation: "problems"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "test_cases_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
         ]
-      }
-      users: {
-        Row: {
-          created_at: string
-          id: string
-          username: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          username: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          username?: string
-        }
-        Relationships: []
       }
     }
     Views: {
