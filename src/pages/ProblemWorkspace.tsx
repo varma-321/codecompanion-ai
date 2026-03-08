@@ -17,6 +17,7 @@ import CodeSnippets from '@/components/CodeSnippets';
 import SolutionComparison from '@/components/SolutionComparison';
 import ExecutionHistoryPanel, { saveExecutionHistory } from '@/components/ExecutionHistoryPanel';
 import KeyboardShortcutsDialog from '@/components/KeyboardShortcutsDialog';
+import SuccessCelebration from '@/components/SuccessCelebration';
 import { useUser } from '@/lib/user-context';
 import { supabase } from '@/integrations/supabase/client';
 import { STRIVER_ROADMAP, getDifficultyBg, type RoadmapProblem } from '@/lib/striver-roadmap-data';
