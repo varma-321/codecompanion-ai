@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Play, Brain, Loader2, FlaskConical } from 'lucide-react';
+import { Play, Brain, Loader2, FlaskConical, Bug, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ProblemExplorer from '@/components/ProblemExplorer';
 import CodeEditor from '@/components/CodeEditor';
@@ -8,6 +8,9 @@ import AIChatPanel from '@/components/AIChatPanel';
 import ConsolePanel, { ConsoleEntry } from '@/components/ConsolePanel';
 import TestCasePanel, { TestResult } from '@/components/TestCasePanel';
 import TestResultsTable from '@/components/TestResultsTable';
+import VisualDebugger from '@/components/VisualDebugger';
+import ExecutionAnalyticsPanel from '@/components/ExecutionAnalyticsPanel';
+import DailyChallenge from '@/components/DailyChallenge';
 import Toolbar from '@/components/Toolbar';
 import ExecutionStatus from '@/components/ExecutionStatus';
 import SettingsDialog from '@/components/SettingsDialog';
@@ -44,7 +47,15 @@ const Dashboard = () => {
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [isGeneratingTests, setIsGeneratingTests] = useState(false);
   const [isRunningTests, setIsRunningTests] = useState(false);
-  const [bottomTab, setBottomTab] = useState<'console' | 'tests' | 'results'>('tests');
+  const [bottomTab, setBottomTab] = useState<'console' | 'tests' | 'results' | 'debugger' | 'daily'>('tests');
+
+  // Execution analytics
+  const [execTimeMs, setExecTimeMs] = useState<number | null>(null);
+  const [timeComplexity, setTimeComplexity] = useState<string | null>(null);
+  const [spaceComplexity, setSpaceComplexity] = useState<string | null>(null);
+  const [suggestion, setSuggestion] = useState<string | null>(null);
+  const [optimizationPossible, setOptimizationPossible] = useState(false);
+  const [isAnalyzingComplexity, setIsAnalyzingComplexity] = useState(false);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -99,12 +110,31 @@ const Dashboard = () => {
     setExecStatus('sending');
     setConsoleCollapsed(false);
     setBottomTab('console');
+    setExecTimeMs(null);
     addConsoleEntry('system', '▶ Compiling and running...');
+    const startTime = Date.now();
     try {
       const result = await executeJavaCode(code, (status) => setExecStatus(status));
+      const elapsed = Date.now() - startTime;
+      setExecTimeMs(elapsed);
       if (result.success) {
         if (result.output) addConsoleEntry('output', result.output);
-        addConsoleEntry('info', '✓ Execution completed successfully');
+        addConsoleEntry('info', `✓ Execution completed in ${elapsed}ms`);
+        // Analyze complexity in background
+        if (aiEnabled) {
+          setIsAnalyzingComplexity(true);
+          supabase.functions.invoke('analyze-complexity', { body: { code, executionTimeMs: elapsed } })
+            .then(({ data }) => {
+              if (data) {
+                setTimeComplexity(data.timeComplexity || null);
+                setSpaceComplexity(data.spaceComplexity || null);
+                setSuggestion(data.suggestion || null);
+                setOptimizationPossible(data.optimizationPossible || false);
+              }
+            })
+            .catch(() => {})
+            .finally(() => setIsAnalyzingComplexity(false));
+        }
       } else {
         if (result.error) addConsoleEntry('error', result.error);
         if (result.status.description !== 'Compilation Error') {
@@ -326,11 +356,11 @@ const Dashboard = () => {
           >
             {/* Tab bar */}
             <div className="flex items-center border-b border-panel-border bg-ide-toolbar">
-              {(['console', 'tests', 'results'] as const).map(tab => (
+              {(['console', 'tests', 'results', 'debugger', 'daily'] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => { setBottomTab(tab); setConsoleCollapsed(false); }}
-                  className={`px-4 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                  className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors ${
                     bottomTab === tab
                       ? 'border-b-2 border-primary text-primary'
                       : 'text-muted-foreground hover:text-foreground'
@@ -338,7 +368,7 @@ const Dashboard = () => {
                 >
                   {tab === 'tests' ? `Tests (${testCases.length})` : tab === 'results' && testResults.length > 0
                     ? `Results (${testResults.filter(r => r.status === 'PASSED').length}/${testResults.length})`
-                    : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                    : tab === 'debugger' ? '🔍 Debug' : tab === 'daily' ? '📅 Daily' : tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </button>
               ))}
             </div>
@@ -394,6 +424,28 @@ const Dashboard = () => {
                         Run tests to see results
                       </div>
                     )}
+                  </div>
+                  <div className="w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
+                    <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
+                  </div>
+                </div>
+              )}
+
+              {bottomTab === 'debugger' && (
+                <div className="flex flex-1">
+                  <div className="flex-1 overflow-hidden">
+                    <VisualDebugger code={code} isVisible={true} />
+                  </div>
+                  <div className="w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
+                    <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
+                  </div>
+                </div>
+              )}
+
+              {bottomTab === 'daily' && (
+                <div className="flex flex-1">
+                  <div className="flex-1 overflow-auto p-3">
+                    <DailyChallenge />
                   </div>
                   <div className="w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
                     <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
