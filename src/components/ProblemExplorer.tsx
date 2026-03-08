@@ -65,9 +65,20 @@ const ProblemExplorer = ({ problems, activeProblemId, onSelect, onRefresh }: Pro
         <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Problems
         </span>
-        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleCreate}>
-          <Plus className="h-3.5 w-3.5" />
-        </Button>
+        <div className="flex items-center gap-0.5">
+          <Button
+            variant="ghost"
+            size="icon"
+            className={`h-6 w-6 ${showBookmarked ? 'text-warning' : ''}`}
+            onClick={() => setShowBookmarked(b => !b)}
+            title="Show bookmarked"
+          >
+            {showBookmarked ? <BookmarkCheck className="h-3.5 w-3.5" /> : <Bookmark className="h-3.5 w-3.5" />}
+          </Button>
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleCreate}>
+            <Plus className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       </div>
 
       <div className="px-2 py-2">
