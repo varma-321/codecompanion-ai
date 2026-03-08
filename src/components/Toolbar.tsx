@@ -1,9 +1,8 @@
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Play, Save, Zap, Settings, LogOut, Loader2, BookOpen, BarChart3, Moon, Sun, Cloud, Timer, Brain, Trophy, Code2, Award, MessageSquare, Plus, Share2, Layers, Building2, Target, Clock, Bookmark, BookMarked, Terminal, Download } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Play, Save, Zap, Settings, LogOut, Loader2, BookOpen, Moon, Sun, Cloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTheme } from '@/lib/theme-context';
 
 interface ToolbarProps {
@@ -24,49 +23,20 @@ interface ToolbarProps {
 
 const Toolbar = ({ onRun, onSave, onAnalyze, onSettings, onLogout, username, isRunning, isSaving, runDisabled, aiEnabled, onAIToggle, isAutoSaving, codeIsDirty }: ToolbarProps) => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { theme, toggleTheme } = useTheme();
-
-  const navItems = [
-    { path: '/', label: 'IDE' },
-    { path: '/modules', label: 'Modules', icon: BookOpen },
-    { path: '/contest', label: 'Contest', icon: Timer },
-    { path: '/review', label: 'Review', icon: Brain },
-    { path: '/patterns', label: 'Patterns', icon: Code2 },
-    { path: '/leaderboard', label: 'Board', icon: Trophy },
-    { path: '/achievements', label: 'Badges', icon: Award },
-    { path: '/interview', label: 'Interview', icon: MessageSquare },
-    { path: '/flashcards', label: 'Cards', icon: Layers },
-    { path: '/companies', label: 'Companies', icon: Building2 },
-    { path: '/cheatsheet', label: 'Cheat', icon: BookMarked },
-    { path: '/playground', label: 'Play', icon: Terminal },
-    { path: '/create', label: 'Create', icon: Plus },
-    { path: '/community', label: 'Social', icon: Share2 },
-    { path: '/goals', label: 'Goals', icon: Target },
-    { path: '/pomodoro', label: 'Timer', icon: Clock },
-    { path: '/bookmarks', label: 'Saved', icon: Bookmark },
-    { path: '/analytics', label: 'Stats', icon: BarChart3 },
-    { path: '/export', label: 'Export', icon: Download },
-  ];
 
   return (
     <div className="flex items-center justify-between border-b border-panel-border bg-ide-toolbar px-3 py-1.5">
       <div className="flex items-center gap-1 flex-1 min-w-0">
-        {/* Scrollable Navigation */}
-        <div className="flex items-center gap-0.5 mr-2 border-r border-panel-border pr-2 overflow-x-auto max-w-[60vw] scrollbar-none">
-          {navItems.map(item => (
-            <Button
-              key={item.path}
-              variant={location.pathname === item.path ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => navigate(item.path)}
-              className="h-7 gap-1 text-[10px] shrink-0 px-2"
-            >
-              {item.icon && <item.icon className="h-3 w-3" />}
-              {item.label}
-            </Button>
-          ))}
-        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate('/modules')}
+          className="h-7 gap-1 text-xs shrink-0 mr-2"
+        >
+          <BookOpen className="h-3 w-3" />
+          Modules
+        </Button>
 
         <Button onClick={onRun} disabled={isRunning || runDisabled} size="sm" className="h-7 gap-1 text-xs shrink-0">
           {isRunning ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
@@ -76,7 +46,7 @@ const Toolbar = ({ onRun, onSave, onAnalyze, onSettings, onLogout, username, isR
           {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
           Save
         </Button>
-        
+
         <span className="text-[10px] text-muted-foreground flex items-center gap-1 ml-1 shrink-0">
           {isAutoSaving ? (
             <><Loader2 className="h-3 w-3 animate-spin" /> Saving...</>
