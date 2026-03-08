@@ -170,11 +170,21 @@ export function buildTestWrapper(
 ): string {
   const imports = `import java.util.*;\nimport java.io.*;\nimport java.math.*;\n`;
   
+  // Ensure inputs is a valid object with string values
+  const safeInputs: Record<string, string> = {};
+  if (inputs && typeof inputs === 'object') {
+    for (const [k, v] of Object.entries(inputs)) {
+      if (v !== null && v !== undefined) {
+        safeInputs[k] = String(v);
+      }
+    }
+  }
+
   // Build variable declarations
   const varDecls: string[] = [];
   const varNames: string[] = [];
   
-  for (const [name, value] of Object.entries(inputs)) {
+  for (const [name, value] of Object.entries(safeInputs)) {
     const jType = inferJavaType(value);
     const literal = toJavaLiteral(value, jType);
     varDecls.push(`        ${jType} ${name} = ${literal};`);
@@ -183,11 +193,15 @@ export function buildTestWrapper(
 
   // If we detected a method, call it with the variables
   let callCode: string;
-  if (methodSig) {
+  if (methodSig && varNames.length > 0) {
+    // Map method params to input variables by name first, then position
     const args = methodSig.params.map((param, idx) => {
-      if (inputs[param.name] !== undefined) return param.name;
+      // Exact name match
+      if (safeInputs[param.name] !== undefined) return param.name;
+      // Try positional match
       if (idx < varNames.length) return varNames[idx];
-      return 'null';
+      // Last resort: use a default value based on type
+      return getDefaultForType(param.type);
     }).join(', ');
 
     const resultType = methodSig.returnType;
@@ -199,6 +213,9 @@ export function buildTestWrapper(
     } else {
       callCode = `        ${resultType} result = ${caller}(${args});\n        ${printStmt}`;
     }
+  } else if (methodSig && varNames.length === 0) {
+    // No inputs provided - can't call method
+    callCode = '        System.out.println("ERROR: No test inputs provided");';
   } else {
     callCode = '        // Could not detect method signature - running code as-is';
   }
