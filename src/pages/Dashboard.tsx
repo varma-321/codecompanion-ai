@@ -26,7 +26,7 @@ const Dashboard = ({ username, onLogout }: DashboardProps) => {
   const [showSettings, setShowSettings] = useState(false);
   const [aiEnabled, setAiEnabled] = useState(true);
   const [execStatus, setExecStatus] = useState<ExecStatusType>('ready');
-  const [runDisabled, setRunDisabled] = useState(false);
+  
 
   const refreshProblems = useCallback(() => {
     setProblems(getProblems());
