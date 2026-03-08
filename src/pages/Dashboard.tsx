@@ -47,7 +47,15 @@ const Dashboard = () => {
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [isGeneratingTests, setIsGeneratingTests] = useState(false);
   const [isRunningTests, setIsRunningTests] = useState(false);
-  const [bottomTab, setBottomTab] = useState<'console' | 'tests' | 'results'>('tests');
+  const [bottomTab, setBottomTab] = useState<'console' | 'tests' | 'results' | 'debugger' | 'daily'>('tests');
+
+  // Execution analytics
+  const [execTimeMs, setExecTimeMs] = useState<number | null>(null);
+  const [timeComplexity, setTimeComplexity] = useState<string | null>(null);
+  const [spaceComplexity, setSpaceComplexity] = useState<string | null>(null);
+  const [suggestion, setSuggestion] = useState<string | null>(null);
+  const [optimizationPossible, setOptimizationPossible] = useState(false);
+  const [isAnalyzingComplexity, setIsAnalyzingComplexity] = useState(false);
 
   // Keyboard shortcuts
   useEffect(() => {
