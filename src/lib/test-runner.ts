@@ -94,6 +94,7 @@ interface MethodSignature {
   name: string;
   returnType: string;
   params: { type: string; name: string }[];
+  isStatic: boolean;
 }
 
 function parseMethodSignature(code: string): MethodSignature | null {
