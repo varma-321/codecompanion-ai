@@ -1,7 +1,9 @@
-import { Play, Save, Zap, Settings, LogOut, Loader2 } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Play, Save, Zap, Settings, LogOut, Loader2, BookOpen, BarChart3, Wand2, Moon, Sun, Map, Route } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { useTheme } from '@/lib/theme-context';
 
 interface ToolbarProps {
   onRun: () => void;
@@ -18,9 +20,36 @@ interface ToolbarProps {
 }
 
 const Toolbar = ({ onRun, onSave, onAnalyze, onSettings, onLogout, username, isRunning, isSaving, runDisabled, aiEnabled, onAIToggle }: ToolbarProps) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { theme, toggleTheme } = useTheme();
+
+  const navItems = [
+    { path: '/', label: 'IDE', icon: null },
+    { path: '/striver', label: 'Striver Sheet', icon: Route },
+    { path: '/analytics', label: 'Analytics', icon: BarChart3 },
+    { path: '/generate', label: 'Generate', icon: Wand2 },
+  ];
+
   return (
     <div className="flex items-center justify-between border-b border-panel-border bg-ide-toolbar px-3 py-1.5">
       <div className="flex items-center gap-1">
+        {/* Navigation */}
+        <div className="flex items-center gap-0.5 mr-2 border-r border-panel-border pr-2">
+          {navItems.map(item => (
+            <Button
+              key={item.path}
+              variant={location.pathname === item.path ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => navigate(item.path)}
+              className="h-7 gap-1 text-xs"
+            >
+              {item.icon && <item.icon className="h-3 w-3" />}
+              {item.label}
+            </Button>
+          ))}
+        </div>
+
         <Button onClick={onRun} disabled={isRunning || runDisabled} size="sm" className="h-7 gap-1 text-xs">
           {isRunning ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
           Run
@@ -36,7 +65,7 @@ const Toolbar = ({ onRun, onSave, onAnalyze, onSettings, onLogout, username, isR
 
         <div className="ml-3 flex items-center gap-1.5 rounded-md border border-input bg-background px-2 py-0.5">
           <Label htmlFor="ai-toggle" className="text-[10px] font-medium text-muted-foreground cursor-pointer select-none">
-            AI Assistant
+            AI
           </Label>
           <Switch
             id="ai-toggle"
@@ -47,7 +76,10 @@ const Toolbar = ({ onRun, onSave, onAnalyze, onSettings, onLogout, username, isR
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5">
+        <Button onClick={toggleTheme} size="icon" variant="ghost" className="h-7 w-7" title="Toggle theme">
+          {theme === 'dark' ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+        </Button>
         <span className="text-xs text-muted-foreground font-mono">{username}</span>
         <Button onClick={onSettings} size="icon" variant="ghost" className="h-7 w-7">
           <Settings className="h-3.5 w-3.5" />

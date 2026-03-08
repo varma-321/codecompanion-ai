@@ -8,48 +8,35 @@
   :root {
     --background: 0 0% 100%;
     --foreground: 220 20% 10%;
-
     --card: 0 0% 99%;
     --card-foreground: 220 20% 10%;
-
     --popover: 0 0% 100%;
     --popover-foreground: 220 20% 10%;
-
     --primary: 217 91% 50%;
     --primary-foreground: 0 0% 100%;
-
     --secondary: 220 14% 96%;
     --secondary-foreground: 220 20% 10%;
-
     --muted: 220 14% 96%;
     --muted-foreground: 220 10% 46%;
-
     --accent: 217 91% 95%;
     --accent-foreground: 217 91% 40%;
-
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-
     --border: 220 13% 91%;
     --input: 220 13% 91%;
     --ring: 217 91% 50%;
-
     --radius: 0.5rem;
-
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
-
     --panel-bg: 220 14% 97%;
     --panel-header: 220 14% 94%;
     --panel-border: 220 13% 89%;
-
     --ide-sidebar: 220 16% 96%;
     --ide-toolbar: 220 14% 98%;
     --ide-active: 217 91% 95%;
     --ide-hover: 220 14% 94%;
-
     --sidebar-background: 220 16% 96%;
     --sidebar-foreground: 220 20% 10%;
     --sidebar-primary: 217 91% 50%;
@@ -58,10 +45,62 @@
     --sidebar-accent-foreground: 217 91% 40%;
     --sidebar-border: 220 13% 89%;
     --sidebar-ring: 217 91% 50%;
-
     --font-mono: 'JetBrains Mono', monospace;
     --font-sans: 'Inter', system-ui, sans-serif;
   }
+
+  .dark {
+    --background: 222 47% 8%;
+    --foreground: 210 40% 94%;
+    --card: 222 47% 10%;
+    --card-foreground: 210 40% 94%;
+    --popover: 222 47% 10%;
+    --popover-foreground: 210 40% 94%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 222 47% 14%;
+    --secondary-foreground: 210 40% 94%;
+    --muted: 222 47% 14%;
+    --muted-foreground: 215 20% 55%;
+    --accent: 217 91% 18%;
+    --accent-foreground: 217 91% 75%;
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 222 47% 18%;
+    --input: 222 47% 18%;
+    --ring: 217 91% 60%;
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --panel-bg: 222 47% 9%;
+    --panel-header: 222 47% 12%;
+    --panel-border: 222 47% 16%;
+    --ide-sidebar: 222 47% 10%;
+    --ide-toolbar: 222 47% 11%;
+    --ide-active: 217 91% 15%;
+    --ide-hover: 222 47% 14%;
+    --sidebar-background: 222 47% 10%;
+    --sidebar-foreground: 210 40% 94%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 217 91% 18%;
+    --sidebar-accent-foreground: 217 91% 75%;
+    --sidebar-border: 222 47% 16%;
+    --sidebar-ring: 217 91% 60%;
+  }
+}
+
+/* Smooth theme transition */
+*, *::before, *::after {
+  transition-property: background-color, border-color, color, box-shadow;
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Disable transitions on Monaco editor internals for perf */
+.monaco-editor *, .monaco-editor *::before, .monaco-editor *::after {
+  transition: none !important;
 }
 
 @layer base {
@@ -81,27 +120,26 @@
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: hsl(var(--panel-bg));
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
   background: hsl(var(--border));
-  border-radius: 4px;
+  border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground));
+  background: hsl(var(--muted-foreground) / 0.5);
 }
 
 /* Panel resize handle */
 .resize-handle {
   background: hsl(var(--panel-border));
-  transition: background 0.2s;
 }
 .resize-handle:hover {
-  background: hsl(var(--primary));
+  background: hsl(var(--primary) / 0.5);
 }
 
 /* Console terminal style */
@@ -117,4 +155,10 @@
 
 .console-output .success {
   color: hsl(var(--success));
+}
+
+/* Focus ring polish */
+:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
 }

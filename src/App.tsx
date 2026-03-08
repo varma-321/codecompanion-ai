@@ -4,7 +4,13 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { UserProvider } from "@/lib/user-context";
+import { ThemeProvider } from "@/lib/theme-context";
 import Index from "./pages/Index";
+import StudyAnalytics from "./pages/StudyAnalytics";
+import ProblemGenerator from "./pages/ProblemGenerator";
+import StriverRoadmap from "./pages/StriverRoadmap";
+import ProblemWorkspace from "./pages/ProblemWorkspace";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -12,16 +18,23 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <UserProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+      <ThemeProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/striver" element={<StriverRoadmap />} />
+              <Route path="/problem/:key" element={<ProblemWorkspace />} />
+              <Route path="/analytics" element={<StudyAnalytics />} />
+              <Route path="/generate" element={<ProblemGenerator />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </ThemeProvider>
     </UserProvider>
   </QueryClientProvider>
 );

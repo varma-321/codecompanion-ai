@@ -93,28 +93,79 @@ export type Database = {
           },
         ]
       }
+      learning_history: {
+        Row: {
+          algorithm: string
+          completed: boolean
+          created_at: string
+          difficulty: string
+          id: string
+          time_spent_seconds: number
+          topic: string
+          user_id: string
+        }
+        Insert: {
+          algorithm: string
+          completed?: boolean
+          created_at?: string
+          difficulty?: string
+          id?: string
+          time_spent_seconds?: number
+          topic: string
+          user_id: string
+        }
+        Update: {
+          algorithm?: string
+          completed?: boolean
+          created_at?: string
+          difficulty?: string
+          id?: string
+          time_spent_seconds?: number
+          topic?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       problems: {
         Row: {
+          bookmarked: boolean
           code: string
           created_at: string
+          difficulty: string
           id: string
+          notes: string
+          solved: boolean
+          time_spent_seconds: number
           title: string
+          topic: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          bookmarked?: boolean
           code?: string
           created_at?: string
+          difficulty?: string
           id?: string
+          notes?: string
+          solved?: boolean
+          time_spent_seconds?: number
           title?: string
+          topic?: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          bookmarked?: boolean
           code?: string
           created_at?: string
+          difficulty?: string
           id?: string
+          notes?: string
+          solved?: boolean
+          time_spent_seconds?: number
           title?: string
+          topic?: string
           updated_at?: string
           user_id?: string
         }
@@ -184,25 +235,34 @@ export type Database = {
       }
       test_cases: {
         Row: {
-          content: string
           created_at: string
+          expected_output: string
           id: string
+          input: string
+          inputs: Json
           problem_id: string
           user_id: string
+          variable_name: string
         }
         Insert: {
-          content: string
           created_at?: string
+          expected_output?: string
           id?: string
+          input?: string
+          inputs?: Json
           problem_id: string
           user_id: string
+          variable_name?: string
         }
         Update: {
-          content?: string
           created_at?: string
+          expected_output?: string
           id?: string
+          input?: string
+          inputs?: Json
           problem_id?: string
           user_id?: string
+          variable_name?: string
         }
         Relationships: [
           {
@@ -213,6 +273,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_problem_progress: {
+        Row: {
+          attempts: number
+          created_at: string
+          id: string
+          last_attempted: string | null
+          marked_for_revision: boolean
+          problem_key: string
+          solved: boolean
+          solved_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          id?: string
+          last_attempted?: string | null
+          marked_for_revision?: boolean
+          problem_key: string
+          solved?: boolean
+          solved_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          id?: string
+          last_attempted?: string | null
+          marked_for_revision?: boolean
+          problem_key?: string
+          solved?: boolean
+          solved_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {

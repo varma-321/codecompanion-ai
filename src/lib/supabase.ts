@@ -16,6 +16,12 @@ export interface DbProblem {
   code: string;
   created_at: string;
   updated_at: string;
+  bookmarked?: boolean;
+  notes?: string;
+  difficulty?: string;
+  topic?: string;
+  solved?: boolean;
+  time_spent_seconds?: number;
 }
 
 export interface DbAnalysis {
@@ -55,7 +61,10 @@ export interface DbTestCase {
   id: string;
   user_id: string;
   problem_id: string;
-  content: string;
+  input: string;
+  expected_output: string;
+  variable_name: string;
+  inputs: Record<string, string>;
   created_at: string;
 }
 
@@ -228,18 +237,41 @@ export async function fetchTestCases(problemId: string): Promise<DbTestCase[]> {
   const { data } = await supabase
     .from('test_cases')
     .select('*')
-    .eq('problem_id', problemId);
-  return (data ?? []) as DbTestCase[];
+    .eq('problem_id', problemId)
+    .order('created_at', { ascending: true });
+  return (data ?? []) as unknown as DbTestCase[];
 }
 
-export async function insertTestCase(userId: string, problemId: string, content: string): Promise<DbTestCase> {
+export async function insertTestCase(userId: string, problemId: string, inputs: Record<string, string>, expectedOutput: string): Promise<DbTestCase> {
+  // Also store in legacy columns for backward compat
+  const keys = Object.keys(inputs);
+  const legacyVarName = keys[0] || 'arr';
+  const legacyInput = keys.length === 1 ? inputs[legacyVarName] : JSON.stringify(inputs);
   const { data, error } = await supabase
     .from('test_cases')
-    .insert({ user_id: userId, problem_id: problemId, content })
+    .insert({ user_id: userId, problem_id: problemId, input: legacyInput, expected_output: expectedOutput, variable_name: legacyVarName, inputs } as any)
     .select()
     .single();
   if (error) throw error;
-  return data as DbTestCase;
+  return data as unknown as DbTestCase;
+}
+
+export async function updateTestCase(id: string, updates: { inputs?: Record<string, string>; expected_output?: string }): Promise<void> {
+  const dbUpdates: any = {};
+  if (updates.expected_output !== undefined) dbUpdates.expected_output = updates.expected_output;
+  if (updates.inputs !== undefined) {
+    dbUpdates.inputs = updates.inputs;
+    const keys = Object.keys(updates.inputs);
+    dbUpdates.variable_name = keys[0] || 'arr';
+    dbUpdates.input = keys.length === 1 ? updates.inputs[keys[0]] : JSON.stringify(updates.inputs);
+  }
+  const { error } = await supabase.from('test_cases').update(dbUpdates).eq('id', id);
+  if (error) throw error;
+}
+
+export async function deleteTestCase(id: string): Promise<void> {
+  const { error } = await supabase.from('test_cases').delete().eq('id', id);
+  if (error) throw error;
 }
 
 export const DEFAULT_CODE = `import java.util.*;
