@@ -824,6 +824,7 @@ const ProblemWorkspace = () => {
                   </div>
                 </ScrollArea>
               )}
+              {bottomTab === 'history' && authUser && key && (
                 <ExecutionHistoryPanel
                   key={historyRefreshKey}
                   userId={authUser.id}
