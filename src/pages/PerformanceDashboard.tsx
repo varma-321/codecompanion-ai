@@ -69,10 +69,10 @@ const PerformanceDashboard = () => {
     const topicMap = new Map<string, { total: number; solved: number }>();
     ALL_ROADMAPS.forEach(topic => {
       topic.problems.forEach(p => {
-        const existing = topicMap.get(topic.topic) || { total: 0, solved: 0 };
+        const existing = topicMap.get(topic.name) || { total: 0, solved: 0 };
         existing.total++;
         if (progressData.find(pr => pr.problem_key === p.key && pr.solved)) existing.solved++;
-        topicMap.set(topic.topic, existing);
+        topicMap.set(topic.name, existing);
       });
     });
     const weakTopics = [...topicMap.entries()]
