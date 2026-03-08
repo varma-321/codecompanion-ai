@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Code2, Terminal, Cpu, Loader2, Mail, Lock, User, ArrowLeft } from 'lucide-react';
+import { Code2, Terminal, Cpu, Loader2, Mail, Lock, User, ArrowLeft, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { signUp, signIn, supabase } from '@/lib/supabase';
@@ -56,87 +56,103 @@ const Login = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="w-full max-w-md animate-fade-in">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-xl bg-primary">
-            <Code2 className="h-8 w-8 text-primary-foreground" />
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="w-full max-w-sm animate-fade-in">
+        {/* Logo */}
+        <div className="mb-10 text-center">
+          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-foreground">
+            <Code2 className="h-7 w-7 text-background" />
           </div>
-          <h1 className="mb-1 text-2xl font-bold tracking-tight text-foreground">AI Java DSA Lab</h1>
-          <p className="text-sm text-muted-foreground">Your personal AI-powered DSA practice environment</p>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">AI Java DSA Lab</h1>
+          <p className="mt-1.5 text-sm text-muted-foreground">Your AI-powered DSA practice environment</p>
         </div>
 
-        <div className="rounded-lg border bg-card p-6 shadow-sm">
-          <div className="mb-6 flex items-center gap-4 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1"><Terminal className="h-3.5 w-3.5" /> Java Runtime</span>
-            <span className="flex items-center gap-1"><Cpu className="h-3.5 w-3.5" /> AI Powered</span>
-            <span className="flex items-center gap-1"><Code2 className="h-3.5 w-3.5" /> Monaco Editor</span>
+        {/* Card */}
+        <div className="rounded-2xl border border-border bg-card p-7" style={{ boxShadow: 'var(--shadow-lg)' }}>
+          {/* Feature badges */}
+          <div className="mb-6 flex items-center justify-center gap-3 text-[11px] text-muted-foreground">
+            <span className="flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1">
+              <Terminal className="h-3 w-3" /> Java
+            </span>
+            <span className="flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1">
+              <Cpu className="h-3 w-3" /> AI
+            </span>
+            <span className="flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1">
+              <Code2 className="h-3 w-3" /> Monaco
+            </span>
           </div>
 
-          <h2 className="mb-4 text-lg font-semibold text-foreground">
-            {mode === 'forgot' ? 'Reset Password' : mode === 'signup' ? 'Create Account' : 'Sign In'}
+          <h2 className="mb-5 text-center text-base font-semibold text-foreground">
+            {mode === 'forgot' ? 'Reset Password' : mode === 'signup' ? 'Create Account' : 'Welcome Back'}
           </h2>
 
           {mode === 'forgot' && (
-            <button onClick={() => { setMode('login'); setError(''); setResetSent(false); }} className="mb-3 flex items-center gap-1 text-xs text-primary hover:underline">
+            <button onClick={() => { setMode('login'); setError(''); setResetSent(false); }} className="mb-4 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
               <ArrowLeft className="h-3 w-3" /> Back to sign in
             </button>
           )}
 
           {resetSent ? (
-            <div className="rounded-md bg-success/10 p-4 text-center">
+            <div className="rounded-xl bg-success/10 p-5 text-center">
               <p className="text-sm font-medium text-success">Reset link sent!</p>
-              <p className="mt-1 text-xs text-muted-foreground">Check your email for a password reset link.</p>
+              <p className="mt-1.5 text-xs text-muted-foreground">Check your email for a password reset link.</p>
             </div>
           ) : (
             <>
               {mode === 'signup' && (
-                <div className="mb-3">
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Username</label>
+                <div className="mb-3.5">
+                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Username</label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input value={username} onChange={e => { setUsername(e.target.value); setError(''); }} placeholder="e.g. dev_coder" className="pl-9 font-mono" disabled={loading} />
+                    <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
+                    <Input value={username} onChange={e => { setUsername(e.target.value); setError(''); }} placeholder="e.g. dev_coder" className="h-10 rounded-xl pl-9 font-mono text-sm" disabled={loading} />
                   </div>
                 </div>
               )}
 
-              <div className="mb-3">
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Email</label>
+              <div className="mb-3.5">
+                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Email</label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input type="email" value={email} onChange={e => { setEmail(e.target.value); setError(''); }} placeholder="you@example.com" className="pl-9" disabled={loading} />
+                  <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
+                  <Input type="email" value={email} onChange={e => { setEmail(e.target.value); setError(''); }} placeholder="you@example.com" className="h-10 rounded-xl pl-9 text-sm" disabled={loading} />
                 </div>
               </div>
 
               {mode !== 'forgot' && (
-                <div className="mb-4">
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Password</label>
+                <div className="mb-5">
+                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Password</label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input type="password" value={password} onChange={e => { setPassword(e.target.value); setError(''); }} onKeyDown={e => e.key === 'Enter' && !loading && handleSubmit()} placeholder="••••••••" className="pl-9" disabled={loading} />
+                    <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
+                    <Input type="password" value={password} onChange={e => { setPassword(e.target.value); setError(''); }} onKeyDown={e => e.key === 'Enter' && !loading && handleSubmit()} placeholder="••••••••" className="h-10 rounded-xl pl-9 text-sm" disabled={loading} />
                   </div>
                 </div>
               )}
 
-              {error && <p className="mb-3 text-xs text-destructive">{error}</p>}
+              {error && (
+                <div className="mb-4 rounded-lg bg-destructive/10 px-3 py-2">
+                  <p className="text-xs text-destructive">{error}</p>
+                </div>
+              )}
 
-              <Button onClick={handleSubmit} className="w-full" disabled={loading}>
+              <Button onClick={handleSubmit} className="w-full h-10 rounded-xl text-sm font-medium" disabled={loading}>
                 {loading ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {mode === 'forgot' ? 'Sending...' : mode === 'signup' ? 'Creating Account...' : 'Signing In...'}</>
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {mode === 'forgot' ? 'Sending...' : mode === 'signup' ? 'Creating...' : 'Signing In...'}</>
                 ) : (
-                  mode === 'forgot' ? 'Send Reset Link' : mode === 'signup' ? 'Create Account' : 'Sign In'
+                  <span className="flex items-center gap-2">
+                    {mode === 'forgot' ? 'Send Reset Link' : mode === 'signup' ? 'Create Account' : 'Sign In'}
+                    <ArrowRight className="h-4 w-4" />
+                  </span>
                 )}
               </Button>
 
-              <div className="mt-4 flex flex-col items-center gap-2">
+              <div className="mt-5 flex flex-col items-center gap-2">
                 {mode === 'login' && (
-                  <button onClick={() => { setMode('forgot'); setError(''); }} className="text-xs text-muted-foreground hover:text-primary hover:underline" disabled={loading}>
+                  <button onClick={() => { setMode('forgot'); setError(''); }} className="text-xs text-muted-foreground hover:text-foreground transition-colors" disabled={loading}>
                     Forgot password?
                   </button>
                 )}
                 <button
                   onClick={() => { setMode(mode === 'signup' ? 'login' : 'signup'); setError(''); }}
-                  className="text-xs text-primary hover:underline"
+                  className="text-xs font-medium text-foreground hover:underline"
                   disabled={loading}
                 >
                   {mode === 'signup' ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
@@ -146,7 +162,7 @@ const Login = () => {
           )}
         </div>
 
-        <p className="mt-4 text-center text-xs text-muted-foreground">
+        <p className="mt-5 text-center text-[11px] text-muted-foreground/60">
           Your problems and solutions are saved securely in the cloud.
         </p>
       </div>
