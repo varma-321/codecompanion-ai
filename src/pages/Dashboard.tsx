@@ -365,7 +365,7 @@ const Dashboard = () => {
           >
             {/* Tab bar */}
             <div className="flex items-center border-b border-panel-border bg-ide-toolbar">
-              {(['console', 'tests', 'results', 'debugger', 'daily'] as const).map(tab => (
+              {(['console', 'tests', 'results', 'debugger', 'notes', 'recursion', 'streak', 'daily'] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => { setBottomTab(tab); setConsoleCollapsed(false); }}
@@ -377,7 +377,9 @@ const Dashboard = () => {
                 >
                   {tab === 'tests' ? `Tests (${testCases.length})` : tab === 'results' && testResults.length > 0
                     ? `Results (${testResults.filter(r => r.status === 'PASSED').length}/${testResults.length})`
-                    : tab === 'debugger' ? '🔍 Debug' : tab === 'daily' ? '📅 Daily' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                    : tab === 'debugger' ? '🔍 Debug' : tab === 'daily' ? '📅 Daily'
+                    : tab === 'notes' ? '📝 Notes' : tab === 'recursion' ? '🌳 Recursion'
+                    : tab === 'streak' ? '🔥 Streak' : tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </button>
               ))}
             </div>
