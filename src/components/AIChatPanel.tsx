@@ -80,6 +80,11 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
   const handleSend = async (customPrompt?: string) => {
     const text = customPrompt || input.trim();
     if (!text || !ollamaOnline || isLoading) return;
+    if (!currentModel) {
+      addMessage('system', '⚠️ Please select an Ollama model before using AI features.');
+      setIsLoading(false);
+      return;
+    }
     if (!customPrompt) setInput('');
 
     setIsLoading(true);
