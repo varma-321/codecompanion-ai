@@ -50,6 +50,7 @@ const MODULES: ModuleCard[] = [
   { id: 'achievements', title: 'Achievements', subtitle: 'XP, levels & badges', icon: <Award className="h-5 w-5" />, route: '/achievements', category: 'social', accent: 'text-yellow-500' },
   { id: 'leaderboard', title: 'Leaderboard', subtitle: 'Compete with others', icon: <Trophy className="h-5 w-5" />, route: '/leaderboard', category: 'social', accent: 'text-amber-500' },
   { id: 'community', title: 'Community Solutions', subtitle: 'Share & learn from others', icon: <Share2 className="h-5 w-5" />, route: '/community', category: 'social', accent: 'text-green-500' },
+  { id: 'discuss', title: 'Discussion Forum', subtitle: 'Per-problem discussions', icon: <MessageSquare className="h-5 w-5" />, route: '/discuss', category: 'social', accent: 'text-blue-500' },
   // Tools & Productivity
   { id: 'planner', title: 'Study Planner', subtitle: 'Daily goals & streaks', icon: <Calendar className="h-5 w-5" />, route: '/study-planner', category: 'tools', accent: 'text-primary' },
   { id: 'weak-topics', title: 'Weak Topic Analyzer', subtitle: 'Find & fix weak areas', icon: <AlertTriangle className="h-5 w-5" />, route: '/weak-topics', category: 'tools', accent: 'text-destructive' },
