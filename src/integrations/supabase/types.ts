@@ -190,6 +190,7 @@ export type Database = {
           input: string
           problem_id: string
           user_id: string
+          variable_name: string
         }
         Insert: {
           created_at?: string
@@ -198,6 +199,7 @@ export type Database = {
           input?: string
           problem_id: string
           user_id: string
+          variable_name?: string
         }
         Update: {
           created_at?: string
@@ -206,6 +208,7 @@ export type Database = {
           input?: string
           problem_id?: string
           user_id?: string
+          variable_name?: string
         }
         Relationships: [
           {
