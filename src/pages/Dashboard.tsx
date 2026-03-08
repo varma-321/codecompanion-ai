@@ -378,7 +378,8 @@ const Dashboard = () => {
                     ? `Results (${testResults.filter(r => r.status === 'PASSED').length}/${testResults.length})`
                     : tab === 'debugger' ? '🔍 Debug' : tab === 'daily' ? '📅 Daily'
                     : tab === 'notes' ? '📝 Notes' : tab === 'recursion' ? '🌳 Recursion'
-                    : tab === 'streak' ? '🔥 Streak' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                    : tab === 'streak' ? '🔥 Streak' : tab === 'snippets' ? '📋 Templates'
+                    : tab === 'solutions' ? '⚡ Solutions' : tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </button>
               ))}
             </div>
