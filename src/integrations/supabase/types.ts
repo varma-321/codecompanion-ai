@@ -133,6 +133,47 @@ export type Database = {
         }
         Relationships: []
       }
+      discussion_posts: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          likes: number
+          parent_id: string | null
+          problem_key: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          id?: string
+          likes?: number
+          parent_id?: string | null
+          problem_key: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          likes?: number
+          parent_id?: string | null
+          problem_key?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discussion_posts_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "discussion_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       execution_history: {
         Row: {
           code_snapshot: string
