@@ -108,9 +108,9 @@ const PerformanceDashboard = () => {
 
   return (
     <div className="flex h-screen flex-col bg-background">
-      <div className="flex items-center gap-3 border-b border-border bg-card px-5 py-3">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/modules')} className="h-8 gap-1.5 text-xs font-medium rounded-lg">
-          <ArrowLeft className="h-3.5 w-3.5" /> Modules
+      <div className="flex items-center gap-2 sm:gap-3 border-b border-border bg-card px-3 sm:px-5 py-3">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/modules')} className="h-8 gap-1.5 text-xs font-medium rounded-lg shrink-0">
+          <ArrowLeft className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Modules</span>
         </Button>
         <div className="h-4 w-px bg-border" />
         <BarChart3 className="h-4 w-4 text-foreground" />
@@ -118,9 +118,9 @@ const PerformanceDashboard = () => {
       </div>
 
       <div className="flex-1 overflow-auto">
-        <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
+        <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-8">
           {/* Hero Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 gap-2 sm:gap-3">
             {[
               { label: 'Solved', value: stats.totalSolved, icon: <Trophy className="h-4 w-4" />, color: 'text-primary' },
               { label: 'Today', value: stats.todaySolved, icon: <Zap className="h-4 w-4" />, color: 'text-warning' },
