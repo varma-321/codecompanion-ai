@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Play, FlaskConical, Loader2, CheckCircle2, XCircle, Brain, ChevronRight, Code2, GitCompare, Cloud, Keyboard, Sparkles, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Play, FlaskConical, Loader2, CheckCircle2, XCircle, Brain, ChevronRight, Code2, GitCompare, Cloud, Keyboard, Sparkles, AlertTriangle, Send } from 'lucide-react';
 import { useAutosave } from '@/hooks/use-autosave';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -83,6 +83,7 @@ const ProblemWorkspace = () => {
   const [consoleEntries, setConsoleEntries] = useState<ConsoleEntry[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [isRunningTests, setIsRunningTests] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [execStatus, setExecStatus] = useState<ExecStatusType>('ready');
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [bottomTab, setBottomTab] = useState<'description' | 'console' | 'results' | 'history' | 'snippets' | 'solutions'>('description');
@@ -239,20 +240,18 @@ const ProblemWorkspace = () => {
     setIsRunning(false);
   };
 
+  // Run Tests: runs only the first 3 sample test cases (like LeetCode "Run")
   const handleRunTests = async () => {
     if (isRunningTests || detail.testCases.length === 0) return;
     setIsRunningTests(true);
     setTestResults([]);
     setBottomTab('console');
-    addConsoleEntry('system', `▶ Running ${detail.testCases.length} test(s)...`);
+    const sampleCases = detail.testCases.slice(0, 3);
+    addConsoleEntry('system', `▶ Running ${sampleCases.length} sample test(s)...`);
     const startTime = Date.now();
 
     const { runAllTests } = await import('@/lib/test-runner');
-
-    const tcInputs = detail.testCases.map(tc => ({
-      inputs: tc.inputs,
-      expected: tc.expected.trim(),
-    }));
+    const tcInputs = sampleCases.map(tc => ({ inputs: tc.inputs, expected: tc.expected.trim() }));
 
     const results = await runAllTests(code, tcInputs, setExecStatus, (idx, r) => {
       addConsoleEntry(
@@ -263,12 +262,82 @@ const ProblemWorkspace = () => {
 
     const execTime = Date.now() - startTime;
     const passed = results.filter(r => r.status === 'PASSED').length;
-    const allPassed = passed === results.length;
-    addConsoleEntry('system', `\n${passed}/${results.length} tests passed (${execTime}ms).`);
+    addConsoleEntry('system', `\n${passed}/${results.length} sample tests passed (${execTime}ms).`);
     setTestResults(results);
     setBottomTab('results');
     setExecStatus('complete');
     setIsRunningTests(false);
+  };
+
+  // Submit: runs ALL test cases (generates comprehensive ones via AI if needed)
+  const handleSubmit = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    setTestResults([]);
+    setBottomTab('console');
+    addConsoleEntry('system', '🚀 Submitting — generating comprehensive test cases...');
+
+    let allTestCases = detail.testCases;
+
+    // If we have fewer than 10 test cases, generate comprehensive ones via AI
+    if (allTestCases.length < 10) {
+      try {
+        addConsoleEntry('info', 'Generating 20 comprehensive test cases via AI...');
+        const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-test-cases`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            code,
+            title: roadmapProblem?.title || '',
+            difficulty: roadmapProblem?.difficulty || 'Medium',
+          }),
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.testCases && data.testCases.length > 0) {
+            // Normalize AI response format
+            const normalized = data.testCases.map((tc: any) => ({
+              inputs: tc.inputs,
+              expected: (tc.expectedOutput || tc.expected || '').trim(),
+            }));
+            allTestCases = normalized;
+            addConsoleEntry('info', `✓ Generated ${allTestCases.length} test cases`);
+          }
+        } else {
+          addConsoleEntry('error', 'Failed to generate extra test cases, running with existing ones...');
+        }
+      } catch (err: any) {
+        addConsoleEntry('error', 'AI generation failed, running with existing test cases...');
+      }
+    }
+
+    addConsoleEntry('system', `▶ Running ${allTestCases.length} test(s)...`);
+    const startTime = Date.now();
+
+    const { runAllTests } = await import('@/lib/test-runner');
+    const tcInputs = allTestCases.map((tc: any) => ({
+      inputs: tc.inputs,
+      expected: (tc.expected || '').trim(),
+    }));
+
+    const results = await runAllTests(code, tcInputs, setExecStatus, (idx, r) => {
+      addConsoleEntry(
+        r.status === 'PASSED' ? 'info' : 'error',
+        `Test ${r.test}/${allTestCases.length} ${r.status}${r.status === 'FAILED' ? ` (expected: ${r.expected}, got: ${r.actual})` : ''}`
+      );
+    });
+
+    const execTime = Date.now() - startTime;
+    const passed = results.filter(r => r.status === 'PASSED').length;
+    const allPassed = passed === results.length;
+    addConsoleEntry('system', `\n${allPassed ? '✅' : '❌'} ${passed}/${results.length} tests passed (${execTime}ms).`);
+    setTestResults(results);
+    setBottomTab('results');
+    setExecStatus('complete');
+    setIsSubmitting(false);
 
     // Save execution history
     if (authUser && key) {
@@ -276,7 +345,7 @@ const ProblemWorkspace = () => {
       setHistoryRefreshKey(prev => prev + 1);
     }
 
-    // Update progress in Supabase
+    // Update progress in Supabase — only on Submit
     if (authUser && key) {
       try {
         const { data: existing } = await supabase
@@ -369,13 +438,17 @@ const ProblemWorkspace = () => {
           <Button variant="ghost" size="sm" onClick={() => setShowShortcuts(true)} className="h-7 w-7 p-0" title="Keyboard Shortcuts (Ctrl+K)">
             <Keyboard className="h-3.5 w-3.5" />
           </Button>
-          <Button onClick={handleRun} disabled={isRunning || isRunningTests} size="sm" className="h-7 gap-1 text-xs">
+          <Button onClick={handleRun} disabled={isRunning || isRunningTests || isSubmitting} size="sm" className="h-7 gap-1 text-xs">
             {isRunning ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
             Run
           </Button>
-          <Button onClick={handleRunTests} disabled={isRunning || isRunningTests || detail.testCases.length === 0} size="sm" variant="outline" className="h-7 gap-1 text-xs">
+          <Button onClick={handleRunTests} disabled={isRunning || isRunningTests || isSubmitting || detail.testCases.length === 0} size="sm" variant="outline" className="h-7 gap-1 text-xs">
             {isRunningTests ? <Loader2 className="h-3 w-3 animate-spin" /> : <FlaskConical className="h-3 w-3" />}
-            Run Tests ({detail.testCases.length})
+            Run Tests
+          </Button>
+          <Button onClick={handleSubmit} disabled={isRunning || isRunningTests || isSubmitting} size="sm" className="h-7 gap-1 text-xs bg-emerald-600 hover:bg-emerald-700 text-white">
+            {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+            Submit
           </Button>
           <ExecutionStatus status={execStatus} />
         </div>
