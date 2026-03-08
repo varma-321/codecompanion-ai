@@ -282,7 +282,7 @@ const ProblemWorkspace = () => {
     const startTime = Date.now();
 
     const { runAllTests } = await import('@/lib/test-runner');
-    const tcInputs = sampleCases.map(tc => ({ inputs: tc.inputs, expected: tc.expected.trim() }));
+    const tcInputs = sampleCases.map(tc => ({ inputs: tc.inputs || {}, expected: (tc.expected || '').trim() }));
 
     const results = await runAllTests(code, tcInputs, setExecStatus, (idx, r) => {
       addConsoleEntry(
