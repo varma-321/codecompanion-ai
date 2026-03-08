@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Brain, Send, Loader2, AlertCircle, Lightbulb, Zap, Code2, Bug, BookOpen, FlaskConical, Sparkles, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   analyzeCode, getHints as getAIHints, getSolution, detectPatterns, detectMistakes,
   chat as aiChat, getExtraInsights, checkOllamaStatus, getOllamaModels,
@@ -53,7 +54,6 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
       if (online) {
         const availableModels = await getOllamaModels();
         setModels(availableModels);
-        // Don't auto-select; let the user choose manually
       }
       setChecking(false);
     };
@@ -61,6 +61,15 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
     const interval = setInterval(check, 15000);
     return () => clearInterval(interval);
   }, []);
+
+  // Listen for explain code trigger from Dashboard
+  useEffect(() => {
+    const handleExplain = () => {
+      handleSend('__analyze__');
+    };
+    window.addEventListener('trigger-explain', handleExplain);
+    return () => window.removeEventListener('trigger-explain', handleExplain);
+  }, [code, ollamaOnline, currentModel]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -129,7 +138,16 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
         addMessage('assistant', response);
       }
     } catch (err: any) {
-      addMessage('assistant', `❌ Error: ${err.message}`);
+      const isRateLimit = err?.message?.includes('429') || err?.message?.toLowerCase().includes('rate');
+      const isTimeout = err?.message?.toLowerCase().includes('timeout') || err?.message?.toLowerCase().includes('abort');
+      
+      if (isRateLimit) {
+        addMessage('system', '⏳ AI service is temporarily busy. Please try again in a few seconds.');
+      } else if (isTimeout) {
+        addMessage('system', '⏱️ AI request timed out. Please try again.');
+      } else {
+        addMessage('system', '⚠️ AI service is temporarily unavailable. Please check your connection and try again.');
+      }
     }
 
     setIsLoading(false);
@@ -148,6 +166,39 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
     setHintLevel(0);
   };
 
+  // Status Badge Component
+  const StatusBadge = () => (
+    <div className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors duration-300 ${
+      checking ? 'bg-secondary text-muted-foreground' :
+      ollamaOnline ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'
+    }`}>
+      <span className={`h-1.5 w-1.5 rounded-full transition-colors duration-300 ${
+        checking ? 'animate-pulse-dot bg-muted-foreground' :
+        ollamaOnline ? 'bg-success' : 'bg-destructive'
+      }`} />
+      {checking ? 'Checking...' : ollamaOnline ? `Ollama (Online)` : 'AI Offline'}
+    </div>
+  );
+
+  // Skeleton Loader for AI thinking
+  const AISkeleton = () => (
+    <div className="mb-3 animate-fade-in space-y-2 rounded-lg border border-panel-border bg-card p-3">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <Loader2 className="h-3 w-3 animate-spin text-primary" />
+        <span>Analyzing Code...</span>
+      </div>
+      <Skeleton className="h-3 w-full" />
+      <Skeleton className="h-3 w-4/5" />
+      <Skeleton className="h-3 w-3/5" />
+      <div className="mt-2 flex gap-2">
+        <Skeleton className="h-6 w-20 rounded-full" />
+        <Skeleton className="h-6 w-16 rounded-full" />
+      </div>
+      <Skeleton className="h-3 w-full" />
+      <Skeleton className="h-3 w-2/3" />
+    </div>
+  );
+
   if (!aiEnabled) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 bg-ide-sidebar p-4">
@@ -164,13 +215,23 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
 
   if (!ollamaOnline && !checking) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 bg-ide-sidebar p-4">
-        <AlertCircle className="h-8 w-8 text-muted-foreground" />
-        <div className="text-center">
-          <p className="text-sm font-medium text-foreground">Ollama Not Connected</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Run <code className="rounded bg-secondary px-1 py-0.5 font-mono text-[11px]">ollama serve</code> in your terminal.
-          </p>
+      <div className="flex h-full flex-col bg-ide-sidebar">
+        {/* Header with status */}
+        <div className="flex items-center justify-between border-b border-panel-border px-3 py-2">
+          <div className="flex items-center gap-2">
+            <Brain className="h-3.5 w-3.5 text-primary" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">AI Code Explanation</span>
+          </div>
+          <StatusBadge />
+        </div>
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 p-4">
+          <AlertCircle className="h-8 w-8 text-muted-foreground" />
+          <div className="text-center">
+            <p className="text-sm font-medium text-foreground">Ollama Not Connected</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Run <code className="rounded bg-secondary px-1 py-0.5 font-mono text-[11px]">ollama serve</code> in your terminal.
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -178,23 +239,14 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
 
   return (
     <div className="flex h-full flex-col bg-ide-sidebar">
-      {/* Header */}
+      {/* Header with Title and Status Badge */}
       <div className="flex items-center justify-between border-b border-panel-border px-3 py-2">
         <div className="flex items-center gap-2">
           <Brain className="h-3.5 w-3.5 text-primary" />
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">AI Assistant</span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">AI Code Explanation</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
-            checking ? 'bg-secondary text-muted-foreground' :
-            ollamaOnline ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'
-          }`}>
-            <span className={`h-1.5 w-1.5 rounded-full ${
-              checking ? 'animate-pulse-dot bg-muted-foreground' :
-              ollamaOnline ? 'bg-success' : 'bg-destructive'
-            }`} />
-            {checking ? '...' : ollamaOnline ? 'Online' : 'Offline'}
-          </div>
+          <StatusBadge />
           {messages.length > 0 && (
             <Button variant="ghost" size="icon" className="h-5 w-5" onClick={clearChat} title="Clear chat">
               <Trash2 className="h-3 w-3" />
@@ -219,25 +271,31 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
         </div>
       )}
 
-      {/* Messages */}
+      {/* Messages Area */}
       <div className="flex-1 overflow-y-auto px-3 py-2">
-        {messages.length === 0 && (
+        {messages.length === 0 && !isLoading && (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
             <Brain className="h-10 w-10 text-muted-foreground/30" />
             <div>
               <p className="text-sm font-medium text-foreground">DSA AI Assistant</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Ask questions about your code or use quick actions below.
+                Click "Explain Code" or use quick actions below.
               </p>
             </div>
           </div>
         )}
 
         {messages.map((msg) => (
-          <div key={msg.id} className={`mb-3 animate-fade-in ${msg.role === 'user' ? 'flex justify-end' : ''}`}>
-            <div className={`max-w-[95%] rounded-lg px-3 py-2 text-xs ${
+          <div
+            key={msg.id}
+            className={`mb-3 animate-fade-in ${msg.role === 'user' ? 'flex justify-end' : ''}`}
+            style={{ animationDuration: '0.4s' }}
+          >
+            <div className={`max-w-[95%] rounded-lg px-3 py-2 text-xs transition-all duration-300 ${
               msg.role === 'user'
                 ? 'bg-primary text-primary-foreground'
+                : msg.role === 'system'
+                ? 'bg-warning/10 text-warning border border-warning/20'
                 : 'bg-card text-card-foreground border border-panel-border'
             }`}>
               {msg.role === 'assistant' ? (
@@ -251,14 +309,7 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
           </div>
         ))}
 
-        {isLoading && (
-          <div className="mb-3 flex items-center gap-2 animate-fade-in">
-            <div className="rounded-lg bg-card border border-panel-border px-3 py-2 text-xs text-muted-foreground flex items-center gap-2">
-              <Loader2 className="h-3 w-3 animate-spin" />
-              Thinking...
-            </div>
-          </div>
-        )}
+        {isLoading && <AISkeleton />}
 
         <div ref={messagesEndRef} />
       </div>

@@ -21,7 +21,7 @@ const ExecutionStatus = ({ status }: ExecutionStatusProps) => {
   const isSpinning = ['sending', 'compiling', 'running'].includes(status);
 
   return (
-    <div className={`flex items-center gap-1.5 px-3 py-1 border-b border-panel-border bg-card ${config.colorClass}`}>
+    <div className={`ml-auto flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 ${config.colorClass} transition-colors duration-300`}>
       <Icon className={`h-3 w-3 ${isSpinning ? 'animate-spin' : ''}`} />
       <span className="text-[11px] font-medium">{config.label}</span>
     </div>
