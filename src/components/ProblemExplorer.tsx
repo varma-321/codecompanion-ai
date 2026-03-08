@@ -19,10 +19,12 @@ const ProblemExplorer = ({ problems, activeProblemId, onSelect, onRefresh }: Pro
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
+  const [showBookmarked, setShowBookmarked] = useState(false);
 
-  const filtered = problems.filter(p =>
-    p.title.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = problems.filter(p => {
+    if (showBookmarked && !(p as any).bookmarked) return false;
+    return p.title.toLowerCase().includes(search.toLowerCase());
+  });
 
   const handleCreate = async () => {
     if (!authUser) return;
