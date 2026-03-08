@@ -43,6 +43,8 @@ import TodayReview from "./pages/TodayReview";
 import GlobalSearch from "./pages/GlobalSearch";
 import StreakCalendar from "./pages/StreakCalendar";
 import BigOVisualizer from "./pages/BigOVisualizer";
+import UserProfile from "./pages/UserProfile";
+import SubmissionHistory from "./pages/SubmissionHistory";
 
 const queryClient = new QueryClient();
 
