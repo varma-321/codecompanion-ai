@@ -427,6 +427,59 @@ const ProblemWorkspace = () => {
     document.addEventListener('mouseup', onUp);
   }, [consoleHeight]);
 
+  // Analyze complexity
+  const handleAnalyze = async () => {
+    if (isAnalyzing || !code.trim()) return;
+    setIsAnalyzing(true);
+    setAnalysisResult(null);
+    setShowFullExplanation(false);
+    setBottomTab('analysis');
+    try {
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-complexity`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ code, executionTimeMs: 0 }),
+      });
+      if (!resp.ok) throw new Error('Analysis failed');
+      const result = await resp.json();
+      setAnalysisResult(result);
+    } catch (err: any) {
+      toast.error('Complexity analysis failed. Try again.');
+    }
+    setIsAnalyzing(false);
+  };
+
+  // Get full explanation
+  const handleFullExplanation = async () => {
+    if (isExplaining || !analysisResult) return;
+    setIsExplaining(true);
+    try {
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-complexity`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          code,
+          executionTimeMs: 0,
+          fullExplanation: true,
+          problemTitle: roadmapProblem?.title || '',
+        }),
+      });
+      if (!resp.ok) throw new Error('Explanation failed');
+      const result = await resp.json();
+      setAnalysisResult(prev => prev ? { ...prev, fullExplanation: result.fullExplanation || result.suggestion } : prev);
+      setShowFullExplanation(true);
+    } catch {
+      toast.error('Could not generate explanation.');
+    }
+    setIsExplaining(false);
+  };
+
   if (!roadmapProblem) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -442,6 +495,7 @@ const ProblemWorkspace = () => {
     { key: 'description' as const, label: 'Tests' },
     { key: 'console' as const, label: 'Console' },
     { key: 'results' as const, label: testResults.length > 0 ? `Results (${testResults.filter(r => r.status === 'PASSED').length}/${testResults.length})` : 'Results' },
+    { key: 'analysis' as const, label: analysisResult ? '📊 Analysis ✓' : '📊 Analysis' },
     { key: 'history' as const, label: '📜 History' },
     { key: 'snippets' as const, label: '📋 Templates' },
     { key: 'solutions' as const, label: '⚡ Solutions' },
