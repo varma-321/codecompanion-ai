@@ -343,9 +343,9 @@ const Dashboard = () => {
         codeIsDirty={codeIsDirty}
       />
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left: Problem Explorer */}
-        <div className="w-56 shrink-0 border-r border-border">
+      <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
+        {/* Left: Problem Explorer - hidden on mobile */}
+        <div className="hidden md:block w-56 shrink-0 border-r border-border">
           <ProblemExplorer
             problems={problems}
             activeProblemId={activeProblem?.id || null}
@@ -361,21 +361,22 @@ const Dashboard = () => {
           </div>
 
           {!consoleFullscreen && (
-            <div className="flex items-center gap-2 border-t border-border bg-card px-4 py-2">
-              <Button onClick={handleRun} disabled={isRunning || isRunningTests} size="sm" className="h-8 gap-1.5 px-4 text-xs font-medium rounded-lg">
+          <div className="flex items-center gap-1 sm:gap-2 border-t border-border bg-card px-2 sm:px-4 py-2 overflow-x-auto scrollbar-none">
+              <Button onClick={handleRun} disabled={isRunning || isRunningTests} size="sm" className="h-8 gap-1.5 px-3 sm:px-4 text-xs font-medium rounded-lg shrink-0">
                 {isRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
-                {isRunning ? 'Running...' : 'Run Code'}
+                {isRunning ? 'Running...' : 'Run'}
               </Button>
-              <Button onClick={handleRunTests} disabled={isRunning || isRunningTests || testCases.length === 0} size="sm" variant="outline" className="h-8 gap-1.5 px-4 text-xs font-medium rounded-lg">
+              <Button onClick={handleRunTests} disabled={isRunning || isRunningTests || testCases.length === 0} size="sm" variant="outline" className="h-8 gap-1.5 px-3 sm:px-4 text-xs font-medium rounded-lg shrink-0">
                 {isRunningTests ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FlaskConical className="h-3.5 w-3.5" />}
-                {isRunningTests ? 'Testing...' : `Run Tests (${testCases.length})`}
+                <span className="hidden sm:inline">{isRunningTests ? 'Testing...' : `Run Tests (${testCases.length})`}</span>
+                <span className="sm:hidden">Test</span>
               </Button>
-              <Button onClick={handleExplain} disabled={isExplaining || !aiEnabled} size="sm" variant="outline" className="h-8 gap-1.5 px-4 text-xs font-medium rounded-lg">
+              <Button onClick={handleExplain} disabled={isExplaining || !aiEnabled} size="sm" variant="outline" className="h-8 gap-1.5 px-3 sm:px-4 text-xs font-medium rounded-lg shrink-0 hidden sm:flex">
                 {isExplaining ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Brain className="h-3.5 w-3.5" />}
                 Explain
               </Button>
-              <div className="h-5 w-px bg-border mx-1" />
-              <ProblemTimer problemId={activeProblem?.id || null} />
+              <div className="h-5 w-px bg-border mx-1 hidden sm:block" />
+              <div className="hidden sm:block"><ProblemTimer problemId={activeProblem?.id || null} /></div>
               <ExecutionStatus status={execStatus} />
             </div>
           )}
@@ -409,7 +410,7 @@ const Dashboard = () => {
 
             <div className="flex h-[calc(100%-32px)]">
               {bottomTab === 'console' && (
-                <div className="flex flex-1">
+                <div className="flex flex-1 flex-col lg:flex-row">
                   <div className="flex-1 overflow-hidden border-r border-panel-border">
                     <ConsolePanel
                       entries={consoleEntries}
@@ -422,7 +423,7 @@ const Dashboard = () => {
                     />
                   </div>
                   {!consoleCollapsed && (
-                    <div className="w-[420px] shrink-0 overflow-hidden">
+                    <div className="hidden lg:block w-[380px] xl:w-[420px] shrink-0 overflow-hidden">
                       <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
                     </div>
                   )}
@@ -430,7 +431,7 @@ const Dashboard = () => {
               )}
 
               {bottomTab === 'tests' && (
-                <div className="flex flex-1">
+                <div className="flex flex-1 flex-col lg:flex-row">
                   <div className="flex-1 overflow-hidden">
                     <TestCasePanel
                       testCases={testCases}
@@ -442,14 +443,14 @@ const Dashboard = () => {
                       isGenerating={isGeneratingTests}
                     />
                   </div>
-                  <div className="w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
+                  <div className="hidden lg:block w-[380px] xl:w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
                     <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
                   </div>
                 </div>
               )}
 
               {bottomTab === 'results' && (
-                <div className="flex flex-1">
+                <div className="flex flex-1 flex-col lg:flex-row">
                   <div className="flex-1 overflow-auto p-3">
                     {testResults.length > 0 ? (
                       <TestResultsTable results={testResults} />
@@ -459,84 +460,84 @@ const Dashboard = () => {
                       </div>
                     )}
                   </div>
-                  <div className="w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
+                  <div className="hidden lg:block w-[380px] xl:w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
                     <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
                   </div>
                 </div>
               )}
 
               {bottomTab === 'debugger' && (
-                <div className="flex flex-1">
+                <div className="flex flex-1 flex-col lg:flex-row">
                   <div className="flex-1 overflow-hidden">
                     <VisualDebugger code={code} isVisible={true} />
                   </div>
-                  <div className="w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
+                  <div className="hidden lg:block w-[380px] xl:w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
                     <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
                   </div>
                 </div>
               )}
 
               {bottomTab === 'daily' && (
-                <div className="flex flex-1">
+                <div className="flex flex-1 flex-col lg:flex-row">
                   <div className="flex-1 overflow-auto p-3">
                     <DailyChallenge />
                   </div>
-                  <div className="w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
+                  <div className="hidden lg:block w-[380px] xl:w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
                     <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
                   </div>
                 </div>
               )}
 
               {bottomTab === 'notes' && (
-                <div className="flex flex-1">
+                <div className="flex flex-1 flex-col lg:flex-row">
                   <div className="flex-1 overflow-hidden">
                     <NotesPanel notes={(activeProblem as any)?.notes || ''} onSave={handleSaveNotes} />
                   </div>
-                  <div className="w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
+                  <div className="hidden lg:block w-[380px] xl:w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
                     <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
                   </div>
                 </div>
               )}
 
               {bottomTab === 'recursion' && (
-                <div className="flex flex-1">
+                <div className="flex flex-1 flex-col lg:flex-row">
                   <div className="flex-1 overflow-hidden">
                     <RecursionTreePanel code={code} />
                   </div>
-                  <div className="w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
+                  <div className="hidden lg:block w-[380px] xl:w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
                     <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
                   </div>
                 </div>
               )}
 
               {bottomTab === 'streak' && (
-                <div className="flex flex-1">
+                <div className="flex flex-1 flex-col lg:flex-row">
                   <div className="flex-1 overflow-auto">
                     <StreakPanel />
                   </div>
-                  <div className="w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
+                  <div className="hidden lg:block w-[380px] xl:w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
                     <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
                   </div>
                 </div>
               )}
 
               {bottomTab === 'snippets' && (
-                <div className="flex flex-1">
+                <div className="flex flex-1 flex-col lg:flex-row">
                   <div className="flex-1 overflow-hidden">
                     <CodeSnippets onInsert={(snippet) => setCode(prev => prev + snippet)} />
                   </div>
-                  <div className="w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
+                  <div className="hidden lg:block w-[380px] xl:w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
                     <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
                   </div>
                 </div>
               )}
 
               {bottomTab === 'solutions' && (
-                <div className="flex flex-1">
+                <div className="flex flex-1 flex-col lg:flex-row">
                   <div className="flex-1 overflow-hidden">
                     <SolutionComparison code={code} problemTitle={activeProblem?.title} />
                   </div>
-                  <div className="w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
+                  <div className="hidden lg:block w-[380px] xl:w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
                     <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
                   </div>
                 </div>

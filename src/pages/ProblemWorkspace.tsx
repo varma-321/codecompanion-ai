@@ -503,19 +503,19 @@ const ProblemWorkspace = () => {
 
   return (
     <div className="flex h-screen flex-col bg-background">
-      {/* Header */}
-      <div className="flex items-center gap-2 border-b border-panel-border bg-ide-toolbar px-3 py-1.5">
-        <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="h-7 gap-1 text-xs">
-          <ArrowLeft className="h-3 w-3" /> Back
+      {/* Header - scrollable on mobile */}
+      <div className="flex items-center gap-1 sm:gap-2 border-b border-panel-border bg-ide-toolbar px-2 sm:px-3 py-1.5 overflow-x-auto scrollbar-none">
+        <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="h-7 gap-1 text-xs shrink-0">
+          <ArrowLeft className="h-3 w-3" /> <span className="hidden sm:inline">Back</span>
         </Button>
-        <ChevronRight className="h-3 w-3 text-muted-foreground" />
-        <Badge variant="outline" className="text-[10px]">{(roadmapProblem as any).topic}</Badge>
-        <span className="text-sm font-bold text-foreground">{roadmapProblem.title}</span>
-        <Badge className={`text-[10px] ${getDifficultyBg(roadmapProblem.difficulty)}`}>
+        <ChevronRight className="h-3 w-3 text-muted-foreground hidden sm:block" />
+        <Badge variant="outline" className="text-[10px] hidden md:inline-flex">{(roadmapProblem as any).topic}</Badge>
+        <span className="text-xs sm:text-sm font-bold text-foreground truncate max-w-[120px] sm:max-w-none">{roadmapProblem.title}</span>
+        <Badge className={`text-[10px] shrink-0 ${getDifficultyBg(roadmapProblem.difficulty)}`}>
           {roadmapProblem.difficulty}
         </Badge>
-        <div className="ml-auto flex items-center gap-2">
-          <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+        <div className="ml-auto flex items-center gap-1 sm:gap-2 shrink-0">
+          <span className="text-[10px] text-muted-foreground items-center gap-1 hidden md:flex">
             {wsAutoSaving ? (
               <><Loader2 className="h-3 w-3 animate-spin" /> Saving...</>
             ) : wsCodeDirty ? (
@@ -524,39 +524,40 @@ const ProblemWorkspace = () => {
               <><Cloud className="h-3 w-3 text-green-500" /> Auto-saved</>
             )}
           </span>
-          <div className="h-4 w-px bg-panel-border" />
-          <ProblemTimer problemId={key || null} onTimeUpdate={setTimeSpent} />
-          <div className="h-4 w-px bg-panel-border" />
+          <div className="h-4 w-px bg-panel-border hidden sm:block" />
+          <div className="hidden sm:block"><ProblemTimer problemId={key || null} onTimeUpdate={setTimeSpent} /></div>
+          <div className="h-4 w-px bg-panel-border hidden sm:block" />
           <Button variant="ghost" size="sm" onClick={() => setFocusMode(!focusMode)} className={`h-7 w-7 p-0 ${focusMode ? 'text-primary' : ''}`} title="Focus Mode">
             {focusMode ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => setShowShortcuts(true)} className="h-7 w-7 p-0" title="Keyboard Shortcuts (Ctrl+K)">
+          <Button variant="ghost" size="sm" onClick={() => setShowShortcuts(true)} className="h-7 w-7 p-0 hidden sm:flex" title="Keyboard Shortcuts (Ctrl+K)">
             <Keyboard className="h-3.5 w-3.5" />
           </Button>
           <Button onClick={handleRun} disabled={isRunning || isRunningTests} size="sm" className="h-7 gap-1 text-xs">
             {isRunning ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
             Run
           </Button>
-          <Button onClick={handleRunTests} disabled={isRunning || isRunningTests || detail.testCases.length === 0} size="sm" variant="outline" className="h-7 gap-1 text-xs">
+          <Button onClick={handleRunTests} disabled={isRunning || isRunningTests || detail.testCases.length === 0} size="sm" variant="outline" className="h-7 gap-1 text-xs hidden sm:flex">
             {isRunningTests ? <Loader2 className="h-3 w-3 animate-spin" /> : <FlaskConical className="h-3 w-3" />}
-            Run Tests ({detail.testCases.length})
+            <span className="hidden md:inline">Run Tests ({detail.testCases.length})</span>
+            <span className="md:hidden">Test</span>
           </Button>
-          <Button onClick={handleAnalyze} disabled={isAnalyzing || !code.trim()} size="sm" variant="outline" className="h-7 gap-1 text-xs">
+          <Button onClick={handleAnalyze} disabled={isAnalyzing || !code.trim()} size="sm" variant="outline" className="h-7 gap-1 text-xs hidden md:flex">
             {isAnalyzing ? <Loader2 className="h-3 w-3 animate-spin" /> : <BarChart3 className="h-3 w-3" />}
             Analyze
           </Button>
-          <Button onClick={() => navigate(`/discuss?problem=${key}`)} size="sm" variant="ghost" className="h-7 gap-1 text-xs">
+          <Button onClick={() => navigate(`/discuss?problem=${key}`)} size="sm" variant="ghost" className="h-7 gap-1 text-xs hidden lg:flex">
             <MessageSquare className="h-3 w-3" /> Discuss
           </Button>
           <ExecutionStatus status={execStatus} />
         </div>
       </div>
 
-      {/* Main layout: 3 columns */}
-      <div className="flex flex-1 overflow-hidden">
+      {/* Main layout: responsive columns */}
+      <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
         {/* Left: Problem Description */}
         {showDescription && !focusMode && (
-          <div className="w-[380px] shrink-0 border-r border-panel-border overflow-hidden flex flex-col">
+          <div className="hidden md:flex w-[340px] lg:w-[380px] shrink-0 border-r border-panel-border overflow-hidden flex-col">
             <div className="flex items-center justify-between border-b border-panel-border bg-ide-toolbar px-3 py-1.5">
               <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Problem</span>
               <Button variant="ghost" size="sm" onClick={() => setShowDescription(false)} className="h-5 text-[10px]">
@@ -847,7 +848,7 @@ const ProblemWorkspace = () => {
 
         {/* Right: AI Assistant */}
         {!focusMode && (
-          <div className="w-[360px] shrink-0 border-l border-panel-border overflow-hidden">
+          <div className="hidden lg:block w-[320px] xl:w-[360px] shrink-0 border-l border-panel-border overflow-hidden">
             <AIChatPanel code={code} problemId={null} aiEnabled={true} />
           </div>
         )}

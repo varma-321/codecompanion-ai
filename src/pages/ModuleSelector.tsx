@@ -103,38 +103,38 @@ const ModuleSelector = () => {
 
   return (
     <div className="flex h-screen flex-col bg-background">
-      <div className="flex items-center gap-3 border-b border-border bg-card px-5 py-3">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/')} className="h-8 gap-1.5 text-xs font-medium rounded-lg">
-          <ArrowLeft className="h-3.5 w-3.5" /> Back to IDE
+      <div className="flex items-center gap-2 sm:gap-3 border-b border-border bg-card px-3 sm:px-5 py-3 overflow-x-auto scrollbar-none">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/')} className="h-8 gap-1.5 text-xs font-medium rounded-lg shrink-0">
+          <ArrowLeft className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Back to IDE</span><span className="sm:hidden">Back</span>
         </Button>
         <div className="h-4 w-px bg-border" />
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <TrendingUp className="h-4 w-4 text-foreground" />
           <span className="text-sm font-semibold tracking-tight">Feature Hub</span>
         </div>
       </div>
 
       <div className="flex-1 overflow-auto">
-        <div className="max-w-5xl mx-auto px-6 py-10 space-y-10">
+        <div className="max-w-5xl mx-auto px-3 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-10">
           {/* Hero Stats */}
-          <div className="flex flex-wrap items-end gap-6">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-end gap-4 sm:gap-6">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">Welcome back</h1>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">Welcome back</h1>
               <p className="text-sm text-muted-foreground mt-1">{MODULES.length} modules · {categories.length} categories</p>
             </div>
-            <div className="ml-auto flex items-center gap-5">
+            <div className="sm:ml-auto flex items-center gap-4 sm:gap-5">
               <div className="text-center">
-                <p className="text-2xl font-bold text-foreground tabular-nums">{solvedCount}</p>
+                <p className="text-xl sm:text-2xl font-bold text-foreground tabular-nums">{solvedCount}</p>
                 <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Solved</p>
               </div>
               <div className="h-8 w-px bg-border" />
               <div className="text-center">
-                <p className="text-2xl font-bold text-foreground tabular-nums">{totalProblems}</p>
+                <p className="text-xl sm:text-2xl font-bold text-foreground tabular-nums">{totalProblems}</p>
                 <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Total</p>
               </div>
               <div className="h-8 w-px bg-border" />
               <div className="text-center flex flex-col items-center">
-                <p className="text-2xl font-bold text-foreground tabular-nums">{streak}</p>
+                <p className="text-xl sm:text-2xl font-bold text-foreground tabular-nums">{streak}</p>
                 <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider flex items-center gap-0.5"><Flame className="h-3 w-3" /> Streak</p>
               </div>
             </div>
@@ -148,7 +148,7 @@ const ModuleSelector = () => {
           {categories.map(cat => (
             <div key={cat}>
               <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">{CATEGORY_INFO[cat].label}</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3">
                 {MODULES.filter(m => m.category === cat).map(mod => (
                   <div
                     key={mod.id}

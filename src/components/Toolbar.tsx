@@ -26,34 +26,28 @@ const Toolbar = ({ onRun, onSave, onAnalyze, onSettings, onLogout, username, isR
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <div className="flex items-center justify-between border-b border-border bg-card px-4 py-2">
-      <div className="flex items-center gap-2 flex-1 min-w-0">
-        {/* Logo */}
-        <span className="text-sm font-semibold tracking-tight text-foreground mr-1">DSA Lab</span>
-        <div className="h-4 w-px bg-border" />
+    <div className="flex items-center justify-between border-b border-border bg-card px-2 sm:px-4 py-2 gap-1 overflow-x-auto scrollbar-none">
+      <div className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0">
+        <span className="text-sm font-semibold tracking-tight text-foreground mr-1 hidden sm:inline">DSA Lab</span>
+        <div className="h-4 w-px bg-border hidden sm:block" />
 
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate('/modules')}
-          className="h-8 gap-1.5 text-xs font-medium shrink-0"
-        >
+        <Button variant="ghost" size="sm" onClick={() => navigate('/modules')} className="h-8 gap-1 sm:gap-1.5 text-xs font-medium shrink-0">
           <BookOpen className="h-3.5 w-3.5" />
-          Modules
+          <span className="hidden xs:inline">Modules</span>
         </Button>
 
-        <div className="h-4 w-px bg-border" />
+        <div className="h-4 w-px bg-border hidden sm:block" />
 
-        <Button onClick={onRun} disabled={isRunning || runDisabled} size="sm" className="h-8 gap-1.5 text-xs font-medium shrink-0 rounded-lg">
+        <Button onClick={onRun} disabled={isRunning || runDisabled} size="sm" className="h-8 gap-1 sm:gap-1.5 text-xs font-medium shrink-0 rounded-lg">
           {isRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
           Run
         </Button>
-        <Button onClick={onSave} disabled={isSaving} size="sm" variant="outline" className="h-8 gap-1.5 text-xs font-medium shrink-0 rounded-lg">
+        <Button onClick={onSave} disabled={isSaving} size="sm" variant="outline" className="h-8 gap-1 sm:gap-1.5 text-xs font-medium shrink-0 rounded-lg">
           {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-          Save
+          <span className="hidden sm:inline">Save</span>
         </Button>
 
-        <span className="text-[11px] text-muted-foreground flex items-center gap-1.5 ml-1 shrink-0">
+        <span className="text-[11px] text-muted-foreground items-center gap-1.5 ml-1 shrink-0 hidden md:flex">
           {isAutoSaving ? (
             <><Loader2 className="h-3 w-3 animate-spin" /> Saving...</>
           ) : codeIsDirty ? (
@@ -67,14 +61,14 @@ const Toolbar = ({ onRun, onSave, onAnalyze, onSettings, onLogout, username, isR
           )}
         </span>
 
-        <div className="h-4 w-px bg-border ml-1" />
+        <div className="h-4 w-px bg-border ml-1 hidden sm:block" />
 
-        <Button onClick={onAnalyze} disabled={!aiEnabled} size="sm" variant="ghost" className="h-8 gap-1.5 text-xs font-medium shrink-0">
+        <Button onClick={onAnalyze} disabled={!aiEnabled} size="sm" variant="ghost" className="h-8 gap-1 sm:gap-1.5 text-xs font-medium shrink-0">
           <Zap className="h-3.5 w-3.5" />
-          AI
+          <span className="hidden sm:inline">AI</span>
         </Button>
 
-        <div className="flex items-center gap-2 rounded-lg border border-border bg-secondary/50 px-2.5 py-1 shrink-0">
+        <div className="items-center gap-2 rounded-lg border border-border bg-secondary/50 px-2.5 py-1 shrink-0 hidden md:flex">
           <Label htmlFor="ai-toggle" className="text-[11px] font-medium text-muted-foreground cursor-pointer select-none">
             AI
           </Label>
@@ -91,8 +85,8 @@ const Toolbar = ({ onRun, onSave, onAnalyze, onSettings, onLogout, username, isR
         <Button onClick={toggleTheme} size="icon" variant="ghost" className="h-8 w-8 rounded-lg" title="Toggle theme">
           {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>
-        <div className="h-4 w-px bg-border mx-0.5" />
-        <span className="text-xs text-muted-foreground font-medium px-1">{username}</span>
+        <div className="h-4 w-px bg-border mx-0.5 hidden sm:block" />
+        <span className="text-xs text-muted-foreground font-medium px-1 hidden lg:inline">{username}</span>
         <Button onClick={onSettings} size="icon" variant="ghost" className="h-8 w-8 rounded-lg">
           <Settings className="h-4 w-4" />
         </Button>
