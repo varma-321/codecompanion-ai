@@ -99,9 +99,21 @@ const Dashboard = () => {
     try { setProblems(await fetchProblems(userId)); } catch {}
   }, [userId]);
 
+  // Autosave code
+  const autosaveCode = useCallback(async (val: string) => {
+    if (!activeProblem) return;
+    await updateProblem(activeProblem.id, { code: val });
+  }, [activeProblem]);
+
+  const { isDirty: codeIsDirty, isSaving: isAutoSaving, lastSaved, resetSavedValue } = useAutosave(code, autosaveCode, {
+    delay: 2000,
+    enabled: !!activeProblem && !!userId,
+  });
+
   const handleSelectProblem = (problem: DbProblem) => {
     setActiveProblem(problem);
     setCode(problem.code);
+    resetSavedValue(problem.code);
   };
 
   const addConsoleEntry = (type: ConsoleEntry['type'], text: string) => {

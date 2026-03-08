@@ -53,9 +53,30 @@ const ProblemWorkspace = () => {
   const [showDescription, setShowDescription] = useState(true);
   const [timeSpent, setTimeSpent] = useState(0);
 
+  // Autosave code to user_problem_progress or a problems entry
+  const autosaveWorkspaceCode = useCallback(async (val: string) => {
+    if (!authUser || !key) return;
+    // Save code to user_problem_progress (we'll store in localStorage as backup)
+    try {
+      localStorage.setItem(`workspace-code-${key}`, val);
+    } catch {}
+  }, [authUser, key]);
+
+  const { isDirty: wsCodeDirty, isSaving: wsAutoSaving, resetSavedValue: wsResetSaved } = useAutosave(code, autosaveWorkspaceCode, {
+    delay: 1500,
+    enabled: !!key,
+  });
+
   // Reset code when problem changes
   useEffect(() => {
-    setCode(detail.starterCode);
+    // Try to restore saved code from localStorage
+    const saved = localStorage.getItem(`workspace-code-${key}`);
+    if (saved && saved !== detail.starterCode) {
+      setCode(saved);
+    } else {
+      setCode(detail.starterCode);
+    }
+    wsResetSaved(saved || detail.starterCode);
     setConsoleEntries([]);
     setTestResults([]);
     setBottomTab('description');
