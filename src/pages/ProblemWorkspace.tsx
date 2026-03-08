@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Play, FlaskConical, Loader2, CheckCircle2, XCircle, Brain, ChevronRight, Code2, GitCompare } from 'lucide-react';
+import { ArrowLeft, Play, FlaskConical, Loader2, CheckCircle2, XCircle, Brain, ChevronRight, Code2, GitCompare, Cloud } from 'lucide-react';
+import { useAutosave } from '@/hooks/use-autosave';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -52,9 +53,30 @@ const ProblemWorkspace = () => {
   const [showDescription, setShowDescription] = useState(true);
   const [timeSpent, setTimeSpent] = useState(0);
 
+  // Autosave code to user_problem_progress or a problems entry
+  const autosaveWorkspaceCode = useCallback(async (val: string) => {
+    if (!authUser || !key) return;
+    // Save code to user_problem_progress (we'll store in localStorage as backup)
+    try {
+      localStorage.setItem(`workspace-code-${key}`, val);
+    } catch {}
+  }, [authUser, key]);
+
+  const { isDirty: wsCodeDirty, isSaving: wsAutoSaving, resetSavedValue: wsResetSaved } = useAutosave(code, autosaveWorkspaceCode, {
+    delay: 1500,
+    enabled: !!key,
+  });
+
   // Reset code when problem changes
   useEffect(() => {
-    setCode(detail.starterCode);
+    // Try to restore saved code from localStorage
+    const saved = localStorage.getItem(`workspace-code-${key}`);
+    if (saved && saved !== detail.starterCode) {
+      setCode(saved);
+    } else {
+      setCode(detail.starterCode);
+    }
+    wsResetSaved(saved || detail.starterCode);
     setConsoleEntries([]);
     setTestResults([]);
     setBottomTab('description');
@@ -182,6 +204,16 @@ const ProblemWorkspace = () => {
           {roadmapProblem.difficulty}
         </Badge>
         <div className="ml-auto flex items-center gap-2">
+          <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+            {wsAutoSaving ? (
+              <><Loader2 className="h-3 w-3 animate-spin" /> Saving...</>
+            ) : wsCodeDirty ? (
+              <span className="text-yellow-500">● Unsaved</span>
+            ) : (
+              <><Cloud className="h-3 w-3 text-green-500" /> Auto-saved</>
+            )}
+          </span>
+          <div className="h-4 w-px bg-panel-border" />
           <ProblemTimer problemId={key || null} onTimeUpdate={setTimeSpent} />
           <div className="h-4 w-px bg-panel-border" />
           <Button onClick={handleRun} disabled={isRunning || isRunningTests} size="sm" className="h-7 gap-1 text-xs">

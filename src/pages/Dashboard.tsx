@@ -1,6 +1,7 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
-import { Play, Brain, Loader2, FlaskConical, Bug, Zap } from 'lucide-react';
+import { Play, Brain, Loader2, FlaskConical, Bug, Zap, CloudOff, Cloud } from 'lucide-react';
+import { useAutosave } from '@/hooks/use-autosave';
 import { Button } from '@/components/ui/button';
 import ProblemExplorer from '@/components/ProblemExplorer';
 import CodeEditor from '@/components/CodeEditor';
@@ -98,9 +99,21 @@ const Dashboard = () => {
     try { setProblems(await fetchProblems(userId)); } catch {}
   }, [userId]);
 
+  // Autosave code
+  const autosaveCode = useCallback(async (val: string) => {
+    if (!activeProblem) return;
+    await updateProblem(activeProblem.id, { code: val });
+  }, [activeProblem]);
+
+  const { isDirty: codeIsDirty, isSaving: isAutoSaving, lastSaved, resetSavedValue } = useAutosave(code, autosaveCode, {
+    delay: 2000,
+    enabled: !!activeProblem && !!userId,
+  });
+
   const handleSelectProblem = (problem: DbProblem) => {
     setActiveProblem(problem);
     setCode(problem.code);
+    resetSavedValue(problem.code);
   };
 
   const addConsoleEntry = (type: ConsoleEntry['type'], text: string) => {
@@ -313,6 +326,8 @@ const Dashboard = () => {
         runDisabled={false}
         aiEnabled={aiEnabled}
         onAIToggle={setAiEnabled}
+        isAutoSaving={isAutoSaving}
+        codeIsDirty={codeIsDirty}
       />
 
       <div className="flex flex-1 overflow-hidden">

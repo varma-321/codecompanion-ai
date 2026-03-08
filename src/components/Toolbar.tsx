@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Play, Save, Zap, Settings, LogOut, Loader2, BookOpen, BarChart3, Wand2, Moon, Sun, Map, Route } from 'lucide-react';
+import { Play, Save, Zap, Settings, LogOut, Loader2, BookOpen, BarChart3, Wand2, Moon, Sun, Map, Route, Cloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -17,9 +17,11 @@ interface ToolbarProps {
   runDisabled?: boolean;
   aiEnabled: boolean;
   onAIToggle: (enabled: boolean) => void;
+  isAutoSaving?: boolean;
+  codeIsDirty?: boolean;
 }
 
-const Toolbar = ({ onRun, onSave, onAnalyze, onSettings, onLogout, username, isRunning, isSaving, runDisabled, aiEnabled, onAIToggle }: ToolbarProps) => {
+const Toolbar = ({ onRun, onSave, onAnalyze, onSettings, onLogout, username, isRunning, isSaving, runDisabled, aiEnabled, onAIToggle, isAutoSaving, codeIsDirty }: ToolbarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
@@ -58,6 +60,18 @@ const Toolbar = ({ onRun, onSave, onAnalyze, onSettings, onLogout, username, isR
           {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
           Save
         </Button>
+        
+        {/* Autosave indicator */}
+        <span className="text-[10px] text-muted-foreground flex items-center gap-1 ml-1">
+          {isAutoSaving ? (
+            <><Loader2 className="h-3 w-3 animate-spin" /> Saving...</>
+          ) : codeIsDirty ? (
+            <span className="text-yellow-500">● Unsaved</span>
+          ) : (
+            <><Cloud className="h-3 w-3 text-green-500" /> Auto-saved</>
+          )}
+        </span>
+
         <Button onClick={onAnalyze} disabled={!aiEnabled} size="sm" variant="outline" className="h-7 gap-1 text-xs">
           <Zap className="h-3 w-3" />
           Analyze
