@@ -16,6 +16,9 @@ import StreakPanel from '@/components/StreakPanel';
 import RecursionTreePanel from '@/components/RecursionTreePanel';
 import Toolbar from '@/components/Toolbar';
 import ExecutionStatus from '@/components/ExecutionStatus';
+import ProblemTimer from '@/components/ProblemTimer';
+import CodeSnippets from '@/components/CodeSnippets';
+import SolutionComparison from '@/components/SolutionComparison';
 import SettingsDialog from '@/components/SettingsDialog';
 import { useUser } from '@/lib/user-context';
 import {
