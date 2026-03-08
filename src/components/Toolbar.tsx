@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Play, Save, Zap, Settings, LogOut, Loader2, BookOpen, BarChart3, Moon, Sun, Cloud, Timer, Brain, Trophy, Code2, Award, MessageSquare, Plus, Share2, Layers, Building2, Target, Clock, Bookmark, BookMarked, Terminal, Download } from 'lucide-react';
+import { Play, Save, Zap, Settings, LogOut, Loader2, BookOpen, Moon, Sun, Cloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
