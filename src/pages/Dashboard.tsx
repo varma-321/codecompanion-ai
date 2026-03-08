@@ -163,11 +163,15 @@ const Dashboard = () => {
 
     for (let i = 0; i < testCases.length; i++) {
       const tc = testCases[i];
+      // Build multi-variable test input
+      const inputs = (tc.inputs && Object.keys(tc.inputs).length > 0)
+        ? tc.inputs
+        : { [tc.variable_name || 'arr']: tc.input || '' };
       try {
         const response = await fetch(`${API_BASE_URL}/api/run-java`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code, testInput: tc.input }),
+          body: JSON.stringify({ code, testInputs: inputs, testInput: tc.input }),
           signal: AbortSignal.timeout(15000),
         });
         const data = await response.json();
