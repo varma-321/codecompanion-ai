@@ -184,8 +184,8 @@ export function buildTestWrapper(
   const classMatch = cleanCode.match(/(?:public\s+)?class\s+\w+\s*\{([\s\S]*)\}\s*$/);
   if (classMatch) {
     cleanCode = classMatch[1].trim();
-    // Remove any existing main method
-    cleanCode = cleanCode.replace(/public\s+static\s+void\s+main\s*\([^)]*\)\s*\{[\s\S]*?\n\s*\}/g, '').trim();
+    // Remove any existing main method using brace-counting
+    cleanCode = removeMainMethod(cleanCode);
   }
 
   return `${imports}
