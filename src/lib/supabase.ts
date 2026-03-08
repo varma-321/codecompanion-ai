@@ -235,17 +235,17 @@ export async function fetchTestCases(problemId: string): Promise<DbTestCase[]> {
   return (data ?? []) as unknown as DbTestCase[];
 }
 
-export async function insertTestCase(userId: string, problemId: string, input: string, expectedOutput: string): Promise<DbTestCase> {
+export async function insertTestCase(userId: string, problemId: string, input: string, expectedOutput: string, variableName: string = 'arr'): Promise<DbTestCase> {
   const { data, error } = await supabase
     .from('test_cases')
-    .insert({ user_id: userId, problem_id: problemId, input, expected_output: expectedOutput })
+    .insert({ user_id: userId, problem_id: problemId, input, expected_output: expectedOutput, variable_name: variableName })
     .select()
     .single();
   if (error) throw error;
   return data as unknown as DbTestCase;
 }
 
-export async function updateTestCase(id: string, updates: { input?: string; expected_output?: string }): Promise<void> {
+export async function updateTestCase(id: string, updates: { input?: string; expected_output?: string; variable_name?: string }): Promise<void> {
   const { error } = await supabase.from('test_cases').update(updates).eq('id', id);
   if (error) throw error;
 }
