@@ -180,9 +180,13 @@ const ProblemWorkspace = () => {
         };
         setCachedDetail(key, enhanced);
         setDetail(enhanced);
-        // Update code only if user hasn't written anything
-        if (!localStorage.getItem(`workspace-code-${key}`) && generated.starterCode) {
-          setCode(generated.starterCode);
+        // Update codes only if user hasn't written anything for any approach
+        if (generated.starterCode) {
+          setCodes(prev => ({
+            brute: localStorage.getItem(`workspace-code-${key}__brute`) ? prev.brute : generated.starterCode,
+            better: localStorage.getItem(`workspace-code-${key}__better`) ? prev.better : generated.starterCode,
+            optimal: localStorage.getItem(`workspace-code-${key}__optimal`) ? prev.optimal : generated.starterCode,
+          }));
         }
       }
     } catch (err: any) {
