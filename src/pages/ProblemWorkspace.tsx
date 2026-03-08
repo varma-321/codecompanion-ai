@@ -204,6 +204,16 @@ const ProblemWorkspace = () => {
           {roadmapProblem.difficulty}
         </Badge>
         <div className="ml-auto flex items-center gap-2">
+          <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+            {wsAutoSaving ? (
+              <><Loader2 className="h-3 w-3 animate-spin" /> Saving...</>
+            ) : wsCodeDirty ? (
+              <span className="text-yellow-500">● Unsaved</span>
+            ) : (
+              <><Cloud className="h-3 w-3 text-green-500" /> Auto-saved</>
+            )}
+          </span>
+          <div className="h-4 w-px bg-panel-border" />
           <ProblemTimer problemId={key || null} onTimeUpdate={setTimeSpent} />
           <div className="h-4 w-px bg-panel-border" />
           <Button onClick={handleRun} disabled={isRunning || isRunningTests} size="sm" className="h-7 gap-1 text-xs">
