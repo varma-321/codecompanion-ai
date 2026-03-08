@@ -239,6 +239,7 @@ export type Database = {
           expected_output: string
           id: string
           input: string
+          inputs: Json
           problem_id: string
           user_id: string
           variable_name: string
@@ -248,6 +249,7 @@ export type Database = {
           expected_output?: string
           id?: string
           input?: string
+          inputs?: Json
           problem_id: string
           user_id: string
           variable_name?: string
@@ -257,6 +259,7 @@ export type Database = {
           expected_output?: string
           id?: string
           input?: string
+          inputs?: Json
           problem_id?: string
           user_id?: string
           variable_name?: string
