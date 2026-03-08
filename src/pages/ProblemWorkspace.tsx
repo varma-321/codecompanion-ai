@@ -117,6 +117,7 @@ const ProblemWorkspace = () => {
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
   const [showCelebration, setShowCelebration] = useState(false);
   const [celebrationTime, setCelebrationTime] = useState<number | undefined>();
+  const [focusMode, setFocusMode] = useState(false);
 
   // Autosave active approach code to Supabase + localStorage
   const autosaveWorkspaceCode = useCallback(async (val: string) => {
