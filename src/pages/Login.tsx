@@ -1,29 +1,39 @@
 import { useState } from 'react';
-import { Code2, Terminal, Cpu, Loader2 } from 'lucide-react';
+import { Code2, Terminal, Cpu, Loader2, Mail, Lock, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { loginOrCreateUser } from '@/lib/supabase';
-import { useUser } from '@/lib/user-context';
+import { signUp, signIn } from '@/lib/supabase';
 
 const Login = () => {
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { setUser } = useUser();
 
-  const handleLogin = async () => {
-    const trimmed = username.trim();
-    if (!trimmed) { setError('Username is required'); return; }
-    if (trimmed.length < 3) { setError('Username must be at least 3 characters'); return; }
-    if (!/^[a-zA-Z0-9_]+$/.test(trimmed)) { setError('Username can only contain letters, numbers, and underscores'); return; }
+  const handleSubmit = async () => {
+    setError('');
+    if (!email.trim()) { setError('Email is required'); return; }
+    if (!password.trim()) { setError('Password is required'); return; }
+    if (password.length < 6) { setError('Password must be at least 6 characters'); return; }
+
+    if (isSignUp) {
+      const trimmedUsername = username.trim();
+      if (!trimmedUsername) { setError('Username is required'); return; }
+      if (trimmedUsername.length < 3) { setError('Username must be at least 3 characters'); return; }
+      if (!/^[a-zA-Z0-9_]+$/.test(trimmedUsername)) { setError('Username can only contain letters, numbers, and underscores'); return; }
+    }
 
     setLoading(true);
-    setError('');
     try {
-      const user = await loginOrCreateUser(trimmed);
-      setUser(user);
+      if (isSignUp) {
+        await signUp(email.trim(), password, username.trim());
+      } else {
+        await signIn(email.trim(), password);
+      }
     } catch (err: any) {
-      setError(err?.message || 'Login failed. Please try again.');
+      setError(err?.message || 'Authentication failed. Please try again.');
     }
     setLoading(false);
   };
@@ -56,22 +66,76 @@ const Login = () => {
             </span>
           </div>
 
-          <label className="mb-2 block text-sm font-medium text-foreground">
-            Choose your username
-          </label>
-          <Input
-            value={username}
-            onChange={(e) => { setUsername(e.target.value); setError(''); }}
-            onKeyDown={(e) => e.key === 'Enter' && !loading && handleLogin()}
-            placeholder="e.g. dev_coder"
-            className="mb-2 font-mono"
-            autoFocus
-            disabled={loading}
-          />
+          <h2 className="mb-4 text-lg font-semibold text-foreground">
+            {isSignUp ? 'Create Account' : 'Sign In'}
+          </h2>
+
+          {isSignUp && (
+            <div className="mb-3">
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Username</label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={username}
+                  onChange={(e) => { setUsername(e.target.value); setError(''); }}
+                  placeholder="e.g. dev_coder"
+                  className="pl-9 font-mono"
+                  disabled={loading}
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="mb-3">
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Email</label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); setError(''); }}
+                placeholder="you@example.com"
+                className="pl-9"
+                disabled={loading}
+              />
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Password</label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="password"
+                value={password}
+                onChange={(e) => { setPassword(e.target.value); setError(''); }}
+                onKeyDown={(e) => e.key === 'Enter' && !loading && handleSubmit()}
+                placeholder="••••••••"
+                className="pl-9"
+                disabled={loading}
+              />
+            </div>
+          </div>
+
           {error && <p className="mb-3 text-xs text-destructive">{error}</p>}
-          <Button onClick={handleLogin} className="w-full" disabled={loading}>
-            {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Signing in...</> : 'Enter Lab'}
+
+          <Button onClick={handleSubmit} className="w-full" disabled={loading}>
+            {loading ? (
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {isSignUp ? 'Creating Account...' : 'Signing In...'}</>
+            ) : (
+              isSignUp ? 'Create Account' : 'Sign In'
+            )}
           </Button>
+
+          <div className="mt-4 text-center">
+            <button
+              onClick={() => { setIsSignUp(!isSignUp); setError(''); }}
+              className="text-xs text-primary hover:underline"
+              disabled={loading}
+            >
+              {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+            </button>
+          </div>
         </div>
 
         <p className="mt-4 text-center text-xs text-muted-foreground">

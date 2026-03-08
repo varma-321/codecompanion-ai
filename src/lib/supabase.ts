@@ -1,9 +1,9 @@
 import { supabase } from '@/integrations/supabase/client';
+import type { User } from '@supabase/supabase-js';
 
 export { supabase };
 
-// User types matching Supabase schema
-export interface DbUser {
+export interface Profile {
   id: string;
   username: string;
   created_at: string;
@@ -61,25 +61,34 @@ export interface DbTestCase {
 
 // ── Auth ──────────────────────────────────────────────────
 
-export async function loginOrCreateUser(username: string): Promise<DbUser> {
-  // Try to find existing user
-  const { data: existing } = await supabase
-    .from('users')
+export async function signUp(email: string, password: string, username: string) {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { data: { username } },
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function signIn(email: string, password: string) {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+  return data;
+}
+
+export async function signOut() {
+  const { error } = await supabase.auth.signOut();
+  if (error) throw error;
+}
+
+export async function getProfile(userId: string): Promise<Profile | null> {
+  const { data } = await supabase
+    .from('profiles')
     .select('*')
-    .eq('username', username)
+    .eq('id', userId)
     .maybeSingle();
-
-  if (existing) return existing as DbUser;
-
-  // Create new user
-  const { data: created, error } = await supabase
-    .from('users')
-    .insert({ username })
-    .select()
-    .single();
-
-  if (error) throw new Error(error.message);
-  return created as DbUser;
+  return data as Profile | null;
 }
 
 // ── Problems ──────────────────────────────────────────────
@@ -90,7 +99,6 @@ export async function fetchProblems(userId: string): Promise<DbProblem[]> {
     .select('*')
     .eq('user_id', userId)
     .order('updated_at', { ascending: false });
-
   if (error) throw error;
   return (data ?? []) as DbProblem[];
 }
@@ -101,7 +109,6 @@ export async function createProblem(userId: string, title: string, code: string)
     .insert({ user_id: userId, title, code })
     .select()
     .single();
-
   if (error) throw error;
   return data as DbProblem;
 }
@@ -113,7 +120,6 @@ export async function updateProblem(id: string, updates: Partial<Pick<DbProblem,
     .eq('id', id)
     .select()
     .single();
-
   if (error) throw error;
   return data as DbProblem;
 }
@@ -131,14 +137,12 @@ export async function fetchAnalysis(problemId: string): Promise<DbAnalysis | nul
     .select('*')
     .eq('problem_id', problemId)
     .maybeSingle();
-
   return data as DbAnalysis | null;
 }
 
 export async function upsertAnalysis(userId: string, problemId: string, analysis: {
   algorithm?: string; time_complexity?: string; space_complexity?: string; summary?: string; optimizations?: string[];
 }): Promise<DbAnalysis> {
-  // Check for existing
   const existing = await fetchAnalysis(problemId);
   if (existing) {
     const { data, error } = await supabase
@@ -150,7 +154,6 @@ export async function upsertAnalysis(userId: string, problemId: string, analysis
     if (error) throw error;
     return data as DbAnalysis;
   }
-
   const { data, error } = await supabase
     .from('analyses')
     .insert({ user_id: userId, problem_id: problemId, ...analysis })
@@ -168,7 +171,6 @@ export async function fetchHints(problemId: string): Promise<DbHint[]> {
     .select('*')
     .eq('problem_id', problemId)
     .order('hint_level', { ascending: true });
-
   return (data ?? []) as DbHint[];
 }
 
@@ -189,7 +191,6 @@ export async function fetchSolutions(problemId: string): Promise<DbSolution[]> {
     .from('solutions')
     .select('*')
     .eq('problem_id', problemId);
-
   return (data ?? []) as DbSolution[];
 }
 
@@ -202,7 +203,6 @@ export async function upsertSolution(userId: string, problemId: string, sol: {
     .eq('problem_id', problemId)
     .eq('solution_type', sol.solution_type)
     .maybeSingle();
-
   if (existing) {
     const { data, error } = await supabase
       .from('solutions')
@@ -213,7 +213,6 @@ export async function upsertSolution(userId: string, problemId: string, sol: {
     if (error) throw error;
     return data as DbSolution;
   }
-
   const { data, error } = await supabase
     .from('solutions')
     .insert({ user_id: userId, problem_id: problemId, ...sol })
@@ -230,7 +229,6 @@ export async function fetchTestCases(problemId: string): Promise<DbTestCase[]> {
     .from('test_cases')
     .select('*')
     .eq('problem_id', problemId);
-
   return (data ?? []) as DbTestCase[];
 }
 
