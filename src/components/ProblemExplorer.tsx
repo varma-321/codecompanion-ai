@@ -1,18 +1,20 @@
 import { useState } from 'react';
 import { Plus, Search, Trash2, FileCode, Pencil, Check, X } from 'lucide-react';
-import { Problem, createProblem, deleteProblem, updateProblem, DEFAULT_CODE } from '@/lib/store';
+import { DbProblem, createProblem, deleteProblem as dbDeleteProblem, updateProblem as dbUpdateProblem, DEFAULT_CODE } from '@/lib/supabase';
+import { useUser } from '@/lib/user-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { formatDistanceToNow } from 'date-fns';
 
 interface ProblemExplorerProps {
-  problems: Problem[];
+  problems: DbProblem[];
   activeProblemId: string | null;
-  onSelect: (problem: Problem) => void;
+  onSelect: (problem: DbProblem) => void;
   onRefresh: () => void;
 }
 
 const ProblemExplorer = ({ problems, activeProblemId, onSelect, onRefresh }: ProblemExplorerProps) => {
+  const { user } = useUser();
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
@@ -21,28 +23,35 @@ const ProblemExplorer = ({ problems, activeProblemId, onSelect, onRefresh }: Pro
     p.title.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleCreate = () => {
-    const problem = createProblem('New Problem', DEFAULT_CODE);
-    onRefresh();
-    onSelect(problem);
+  const handleCreate = async () => {
+    if (!user) return;
+    try {
+      const problem = await createProblem(user.id, 'New Problem', DEFAULT_CODE);
+      onRefresh();
+      onSelect(problem);
+    } catch { /* silent */ }
   };
 
-  const handleDelete = (id: string, e: React.MouseEvent) => {
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    deleteProblem(id);
-    onRefresh();
+    try {
+      await dbDeleteProblem(id);
+      onRefresh();
+    } catch { /* silent */ }
   };
 
-  const handleRenameStart = (p: Problem, e: React.MouseEvent) => {
+  const handleRenameStart = (p: DbProblem, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingId(p.id);
     setEditTitle(p.title);
   };
 
-  const handleRenameConfirm = (id: string) => {
+  const handleRenameConfirm = async (id: string) => {
     if (editTitle.trim()) {
-      updateProblem(id, { title: editTitle.trim() });
-      onRefresh();
+      try {
+        await dbUpdateProblem(id, { title: editTitle.trim() });
+        onRefresh();
+      } catch { /* silent */ }
     }
     setEditingId(null);
   };
@@ -107,7 +116,7 @@ const ProblemExplorer = ({ problems, activeProblemId, onSelect, onRefresh }: Pro
                 <>
                   <div className="truncate text-xs font-medium">{p.title}</div>
                   <div className="text-[10px] text-muted-foreground">
-                    {formatDistanceToNow(new Date(p.updatedAt), { addSuffix: true })}
+                    {formatDistanceToNow(new Date(p.updated_at), { addSuffix: true })}
                   </div>
                 </>
               )}
