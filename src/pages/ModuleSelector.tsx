@@ -38,6 +38,7 @@ const MODULES: ModuleCard[] = [
   { id: 'playground', title: 'Code Playground', subtitle: 'Free-form Java sandbox', icon: <Zap className="h-5 w-5" />, route: '/playground', category: 'practice', accent: 'text-cyan-500' },
   { id: 'generator', title: 'Problem Generator', subtitle: 'AI-generated challenges', icon: <Dices className="h-5 w-5" />, route: '/generator', category: 'practice', accent: 'text-pink-500' },
   { id: 'custom', title: 'Custom Problems', subtitle: 'Create your own problems', icon: <Plus className="h-5 w-5" />, route: '/custom-problems', category: 'practice', accent: 'text-indigo-500' },
+  { id: 'code-review', title: 'AI Code Review', subtitle: 'Quality & best practices', icon: <Zap className="h-5 w-5" />, route: '/code-review', category: 'practice', accent: 'text-amber-500' },
   // Study
   { id: 'flashcards', title: 'Flashcards', subtitle: '30+ DSA concept cards', icon: <Layers className="h-5 w-5" />, route: '/flashcards', category: 'study', accent: 'text-orange-500' },
   { id: 'cheatsheet', title: 'Cheat Sheet', subtitle: 'Quick algorithm reference', icon: <BookOpen className="h-5 w-5" />, route: '/cheatsheet', category: 'study', accent: 'text-teal-500' },
