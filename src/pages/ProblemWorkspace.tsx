@@ -47,9 +47,10 @@ const ProblemWorkspace = () => {
   const [isRunningTests, setIsRunningTests] = useState(false);
   const [execStatus, setExecStatus] = useState<ExecStatusType>('ready');
   const [testResults, setTestResults] = useState<TestResult[]>([]);
-  const [bottomTab, setBottomTab] = useState<'description' | 'console' | 'results'>('description');
+  const [bottomTab, setBottomTab] = useState<'description' | 'console' | 'results' | 'snippets' | 'solutions'>('description');
   const [consoleHeight, setConsoleHeight] = useState(320);
   const [showDescription, setShowDescription] = useState(true);
+  const [timeSpent, setTimeSpent] = useState(0);
 
   // Reset code when problem changes
   useEffect(() => {
