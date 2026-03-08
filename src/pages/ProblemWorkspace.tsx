@@ -181,7 +181,9 @@ const ProblemWorkspace = () => {
         <Badge className={`text-[10px] ${getDifficultyBg(roadmapProblem.difficulty)}`}>
           {roadmapProblem.difficulty}
         </Badge>
-        <div className="ml-auto flex items-center gap-1.5">
+        <div className="ml-auto flex items-center gap-2">
+          <ProblemTimer problemId={key || null} onTimeUpdate={setTimeSpent} />
+          <div className="h-4 w-px bg-panel-border" />
           <Button onClick={handleRun} disabled={isRunning || isRunningTests} size="sm" className="h-7 gap-1 text-xs">
             {isRunning ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
             Run
