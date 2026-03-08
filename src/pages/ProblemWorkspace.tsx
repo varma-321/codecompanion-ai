@@ -565,6 +565,31 @@ const ProblemWorkspace = () => {
               📄 Show
             </Button>
           )}
+
+          {/* Approach Tabs */}
+          <div className="flex items-center gap-0 border-b border-panel-border bg-ide-toolbar px-1">
+            {APPROACHES.map(approach => (
+              <button
+                key={approach.key}
+                onClick={() => {
+                  setActiveApproach(approach.key);
+                  wsResetSaved(codes[approach.key]);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors border-b-2 ${
+                  activeApproach === approach.key
+                    ? `${approach.color} border-current`
+                    : 'text-muted-foreground border-transparent hover:text-foreground'
+                }`}
+              >
+                {approach.icon}
+                {approach.label}
+              </button>
+            ))}
+            <span className="ml-auto text-[10px] text-muted-foreground pr-2">
+              {APPROACHES.find(a => a.key === activeApproach)?.label} approach
+            </span>
+          </div>
+
           <div className="flex-1 overflow-hidden">
             <CodeEditor code={code} onChange={setCode} />
           </div>
