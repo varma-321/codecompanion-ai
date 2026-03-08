@@ -53,10 +53,7 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
       if (online) {
         const availableModels = await getOllamaModels();
         setModels(availableModels);
-        if (availableModels.length > 0 && !availableModels.includes(currentModel)) {
-          setCurrentModel(availableModels[0]);
-          setSelectedModel(availableModels[0]);
-        }
+        // Don't auto-select; let the user choose manually
       }
       setChecking(false);
     };
@@ -83,6 +80,11 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
   const handleSend = async (customPrompt?: string) => {
     const text = customPrompt || input.trim();
     if (!text || !ollamaOnline || isLoading) return;
+    if (!currentModel) {
+      addMessage('system', '⚠️ Please select an Ollama model before using AI features.');
+      setIsLoading(false);
+      return;
+    }
     if (!customPrompt) setInput('');
 
     setIsLoading(true);

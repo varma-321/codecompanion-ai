@@ -2,7 +2,7 @@
 
 const OLLAMA_URL = 'http://127.0.0.1:11434';
 
-let selectedModel = localStorage.getItem('ollama_selected_model') || 'llama3.2';
+let selectedModel = localStorage.getItem('ollama_selected_model') || '';
 
 export function getSelectedModel(): string {
   return selectedModel;
