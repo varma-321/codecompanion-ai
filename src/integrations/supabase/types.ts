@@ -94,6 +94,45 @@ export type Database = {
         }
         Relationships: []
       }
+      custom_problems: {
+        Row: {
+          created_at: string
+          description: string
+          difficulty: string
+          id: string
+          is_public: boolean
+          starter_code: string
+          test_cases: Json
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          difficulty?: string
+          id?: string
+          is_public?: boolean
+          starter_code?: string
+          test_cases?: Json
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          difficulty?: string
+          id?: string
+          is_public?: boolean
+          starter_code?: string
+          test_cases?: Json
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       execution_history: {
         Row: {
           code_snapshot: string
@@ -164,6 +203,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      interview_results: {
+        Row: {
+          ai_feedback: string | null
+          code_snapshot: string
+          created_at: string
+          difficulty: string
+          id: string
+          problem_title: string
+          score: number
+          time_taken_seconds: number
+          user_id: string
+        }
+        Insert: {
+          ai_feedback?: string | null
+          code_snapshot?: string
+          created_at?: string
+          difficulty?: string
+          id?: string
+          problem_title: string
+          score?: number
+          time_taken_seconds?: number
+          user_id: string
+        }
+        Update: {
+          ai_feedback?: string | null
+          code_snapshot?: string
+          created_at?: string
+          difficulty?: string
+          id?: string
+          problem_title?: string
+          score?: number
+          time_taken_seconds?: number
+          user_id?: string
+        }
+        Relationships: []
       }
       learning_history: {
         Row: {
@@ -261,6 +336,39 @@ export type Database = {
         }
         Relationships: []
       }
+      shared_solutions: {
+        Row: {
+          approach: string
+          code: string
+          created_at: string
+          id: string
+          language: string
+          likes: number
+          problem_key: string
+          user_id: string
+        }
+        Insert: {
+          approach?: string
+          code: string
+          created_at?: string
+          id?: string
+          language?: string
+          likes?: number
+          problem_key: string
+          user_id: string
+        }
+        Update: {
+          approach?: string
+          code?: string
+          created_at?: string
+          id?: string
+          language?: string
+          likes?: number
+          problem_key?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       solutions: {
         Row: {
           created_at: string
@@ -345,6 +453,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_achievements: {
+        Row: {
+          achievement_key: string
+          id: string
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          achievement_key: string
+          id?: string
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          achievement_key?: string
+          id?: string
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_problem_progress: {
         Row: {
