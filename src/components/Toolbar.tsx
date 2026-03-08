@@ -1,9 +1,8 @@
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Play, Save, Zap, Settings, LogOut, Loader2, BookOpen, Moon, Sun, Cloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTheme } from '@/lib/theme-context';
 
 interface ToolbarProps {
@@ -24,14 +23,16 @@ interface ToolbarProps {
 
 const Toolbar = ({ onRun, onSave, onAnalyze, onSettings, onLogout, username, isRunning, isSaving, runDisabled, aiEnabled, onAIToggle, isAutoSaving, codeIsDirty }: ToolbarProps) => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { theme, toggleTheme } = useTheme();
 
+  return (
+    <div className="flex items-center justify-between border-b border-panel-border bg-ide-toolbar px-3 py-1.5">
+      <div className="flex items-center gap-1 flex-1 min-w-0">
         <Button
           variant="outline"
           size="sm"
           onClick={() => navigate('/modules')}
-          className="h-7 gap-1 text-xs shrink-0"
+          className="h-7 gap-1 text-xs shrink-0 mr-2"
         >
           <BookOpen className="h-3 w-3" />
           Modules
@@ -45,7 +46,7 @@ const Toolbar = ({ onRun, onSave, onAnalyze, onSettings, onLogout, username, isR
           {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
           Save
         </Button>
-        
+
         <span className="text-[10px] text-muted-foreground flex items-center gap-1 ml-1 shrink-0">
           {isAutoSaving ? (
             <><Loader2 className="h-3 w-3 animate-spin" /> Saving...</>
