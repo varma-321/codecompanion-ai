@@ -146,6 +146,20 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
     setHintLevel(0);
   };
 
+  if (!aiEnabled) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3 bg-ide-sidebar p-4">
+        <AlertCircle className="h-8 w-8 text-muted-foreground" />
+        <div className="text-center">
+          <p className="text-sm font-medium text-foreground">AI Assistant Disabled</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Enable the AI toggle in the toolbar to use AI features.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (!ollamaOnline && !checking) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 bg-ide-sidebar p-4">
