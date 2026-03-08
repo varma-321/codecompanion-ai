@@ -55,7 +55,8 @@ export interface DbTestCase {
   id: string;
   user_id: string;
   problem_id: string;
-  content: string;
+  input: string;
+  expected_output: string;
   created_at: string;
 }
 
