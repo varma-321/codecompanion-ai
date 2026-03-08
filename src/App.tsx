@@ -35,6 +35,10 @@ import StudyPlanner from "./pages/StudyPlanner";
 import WeakTopicAnalyzer from "./pages/WeakTopicAnalyzer";
 import ComplexityTracker from "./pages/ComplexityTracker";
 import NotFound from "./pages/NotFound";
+import PerformanceDashboard from "./pages/PerformanceDashboard";
+import AdaptiveLearningPath from "./pages/AdaptiveLearningPath";
+import CodeReview from "./pages/CodeReview";
+import DiscussionForum from "./pages/DiscussionForum";
 
 const queryClient = new QueryClient();
 
