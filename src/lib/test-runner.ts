@@ -196,12 +196,31 @@ export function buildTestWrapper(
     }
   }
 
-  // Build variable declarations
+  // Build variable declarations using method signature types when available
   const varDecls: string[] = [];
   const varNames: string[] = [];
   
-  for (const [name, value] of Object.entries(safeInputs)) {
-    const jType = inferJavaType(value);
+  // Build a map from param name -> param type from the method signature
+  const paramTypeMap: Record<string, string> = {};
+  if (methodSig) {
+    for (const p of methodSig.params) {
+      paramTypeMap[p.name] = p.type;
+    }
+  }
+
+  // Also build positional mapping: input entries in order -> method params in order
+  const inputEntries = Object.entries(safeInputs);
+  
+  for (let i = 0; i < inputEntries.length; i++) {
+    const [name, value] = inputEntries[i];
+    // Use method signature type if available (by name match or positional match)
+    let jType = paramTypeMap[name];
+    if (!jType && methodSig && i < methodSig.params.length) {
+      jType = methodSig.params[i].type;
+    }
+    if (!jType) {
+      jType = inferJavaType(value);
+    }
     const literal = toJavaLiteral(value, jType);
     varDecls.push(`        ${jType} ${name} = ${literal};`);
     varNames.push(name);
