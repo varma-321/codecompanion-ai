@@ -1,5 +1,7 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
+import { Play, Brain, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import ProblemExplorer from '@/components/ProblemExplorer';
 import CodeEditor from '@/components/CodeEditor';
 import AIChatPanel from '@/components/AIChatPanel';
@@ -23,10 +25,10 @@ const Dashboard = ({ username, onLogout }: DashboardProps) => {
   const [consoleEntries, setConsoleEntries] = useState<ConsoleEntry[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isExplaining, setIsExplaining] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [aiEnabled, setAiEnabled] = useState(true);
   const [execStatus, setExecStatus] = useState<ExecStatusType>('ready');
-  
 
   const refreshProblems = useCallback(() => {
     setProblems(getProblems());
@@ -103,6 +105,18 @@ const Dashboard = ({ username, onLogout }: DashboardProps) => {
     setIsSaving(false);
   };
 
+  const handleExplain = () => {
+    if (!aiEnabled) {
+      toast.error('AI Assistant is disabled. Enable it in the toolbar.');
+      return;
+    }
+    setIsExplaining(true);
+    // The AIChatPanel will handle this via a custom event
+    window.dispatchEvent(new CustomEvent('trigger-explain', { detail: { code } }));
+    // Reset after a short delay (the panel manages its own loading)
+    setTimeout(() => setIsExplaining(false), 1000);
+  };
+
   const handleAnalyze = async () => {
     if (!activeProblem) {
       toast.error('No problem selected');
@@ -132,6 +146,7 @@ const Dashboard = ({ username, onLogout }: DashboardProps) => {
       />
 
       <div className="flex flex-1 overflow-hidden">
+        {/* Problem Explorer Sidebar */}
         <div className="w-56 shrink-0 border-r border-panel-border">
           <ProblemExplorer
             problems={problems}
@@ -141,22 +156,53 @@ const Dashboard = ({ username, onLogout }: DashboardProps) => {
           />
         </div>
 
+        {/* Main Content Area */}
         <div className="flex flex-1 flex-col overflow-hidden">
+          {/* Code Editor */}
           <div className="flex-1 overflow-hidden">
             <CodeEditor code={code} onChange={setCode} />
           </div>
-          <ExecutionStatus status={execStatus} />
-          <div className="h-48 shrink-0 border-t border-panel-border">
-            <ConsolePanel
-              entries={consoleEntries}
-              isRunning={isRunning}
-              onClear={() => setConsoleEntries([])}
-            />
-          </div>
-        </div>
 
-        <div className="w-80 shrink-0 border-l border-panel-border">
-          <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
+          {/* Action Buttons Bar */}
+          <div className="flex items-center gap-2 border-t border-panel-border bg-ide-toolbar px-4 py-2">
+            <Button
+              onClick={handleRun}
+              disabled={isRunning}
+              size="sm"
+              className="h-8 gap-1.5 px-4 text-xs font-semibold"
+            >
+              {isRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+              {isRunning ? 'Running...' : 'Run Code'}
+            </Button>
+            <Button
+              onClick={handleExplain}
+              disabled={isExplaining || !aiEnabled}
+              size="sm"
+              variant="outline"
+              className="h-8 gap-1.5 px-4 text-xs font-semibold"
+            >
+              {isExplaining ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Brain className="h-3.5 w-3.5" />}
+              {isExplaining ? 'Analyzing Code...' : 'Explain Code'}
+            </Button>
+            <ExecutionStatus status={execStatus} />
+          </div>
+
+          {/* Bottom Split: Console + AI Panel */}
+          <div className="flex h-72 shrink-0 border-t border-panel-border">
+            {/* Console Panel - Left */}
+            <div className="flex-1 overflow-hidden border-r border-panel-border">
+              <ConsolePanel
+                entries={consoleEntries}
+                isRunning={isRunning}
+                onClear={() => setConsoleEntries([])}
+              />
+            </div>
+
+            {/* AI Explanation Panel - Right */}
+            <div className="w-[420px] shrink-0 overflow-hidden">
+              <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
+            </div>
+          </div>
         </div>
       </div>
 
