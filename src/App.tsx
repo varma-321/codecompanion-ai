@@ -10,6 +10,7 @@ import LearningMode from "./pages/LearningMode";
 import StudyAnalytics from "./pages/StudyAnalytics";
 import ProblemGenerator from "./pages/ProblemGenerator";
 import DSARoadmap from "./pages/DSARoadmap";
+import StriverRoadmap from "./pages/StriverRoadmap";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
@@ -29,6 +30,7 @@ const App = () => (
               <Route path="/analytics" element={<StudyAnalytics />} />
               <Route path="/generate" element={<ProblemGenerator />} />
               <Route path="/roadmap" element={<DSARoadmap />} />
+              <Route path="/striver" element={<StriverRoadmap />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

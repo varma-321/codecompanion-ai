@@ -271,6 +271,45 @@ export type Database = {
           },
         ]
       }
+      user_problem_progress: {
+        Row: {
+          attempts: number
+          created_at: string
+          id: string
+          last_attempted: string | null
+          marked_for_revision: boolean
+          problem_key: string
+          solved: boolean
+          solved_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          id?: string
+          last_attempted?: string | null
+          marked_for_revision?: boolean
+          problem_key: string
+          solved?: boolean
+          solved_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          id?: string
+          last_attempted?: string | null
+          marked_for_revision?: boolean
+          problem_key?: string
+          solved?: boolean
+          solved_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
