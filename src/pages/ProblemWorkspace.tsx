@@ -112,7 +112,8 @@ const ProblemWorkspace = () => {
     if (!roadmapProblem || !key || hasHardcodedDetail) return;
     // Check cache
     const cached = getCachedDetail(key);
-    if (cached && cached.testCases.length > 0) {
+    // Re-generate if cached version has fewer than 10 test cases (old format)
+    if (cached && cached.testCases.length >= 10) {
       setDetail(cached);
       if (!localStorage.getItem(`workspace-code-${key}`)) setCode(cached.starterCode);
       return;
