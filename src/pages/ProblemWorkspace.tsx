@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Play, FlaskConical, Loader2, CheckCircle2, XCircle, Brain, ChevronRight, Code2, GitCompare, Cloud, Keyboard } from 'lucide-react';
+import { ArrowLeft, Play, FlaskConical, Loader2, CheckCircle2, XCircle, Brain, ChevronRight, Code2, GitCompare, Cloud, Keyboard, Sparkles, AlertTriangle } from 'lucide-react';
 import { useAutosave } from '@/hooks/use-autosave';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,13 +22,33 @@ import { supabase } from '@/integrations/supabase/client';
 import { STRIVER_ROADMAP, getDifficultyBg, type RoadmapProblem } from '@/lib/striver-roadmap-data';
 import { NEETCODE_ROADMAP } from '@/lib/neetcode-roadmap-data';
 import { LEETCODE_TOP150_ROADMAP } from '@/lib/leetcode-top150-data';
-import { getProblemDetail, type ProblemDetail } from '@/lib/striver-problem-details';
+import { getProblemDetail, PROBLEM_DETAILS, type ProblemDetail } from '@/lib/striver-problem-details';
 import { executeJavaCode, type ExecutionStatus as ExecStatusType } from '@/lib/executor';
 import { API_BASE_URL } from '@/lib/api';
 import ReactMarkdown from 'react-markdown';
 
 // Build a lookup for all problems across all modules
 const ALL_ROADMAPS = [...STRIVER_ROADMAP, ...NEETCODE_ROADMAP, ...LEETCODE_TOP150_ROADMAP];
+
+interface EnhancedDetail extends ProblemDetail {
+  constraints?: string[];
+  hints?: string[];
+  approach?: string;
+}
+
+function getCachedDetail(key: string): EnhancedDetail | null {
+  try {
+    const cached = localStorage.getItem(`problem-detail-${key}`);
+    if (cached) return JSON.parse(cached);
+  } catch {}
+  return null;
+}
+
+function setCachedDetail(key: string, detail: EnhancedDetail) {
+  try {
+    localStorage.setItem(`problem-detail-${key}`, JSON.stringify(detail));
+  } catch {}
+}
 
 const ProblemWorkspace = () => {
   const { key } = useParams<{ key: string }>();
@@ -44,10 +64,19 @@ const ProblemWorkspace = () => {
     return null;
   }, [key]);
 
-  const detail: ProblemDetail = useMemo(() => {
+  const hasHardcodedDetail = key ? !!PROBLEM_DETAILS[key] : false;
+
+  const [detail, setDetail] = useState<EnhancedDetail>(() => {
     if (!roadmapProblem) return getProblemDetail('', 'Unknown', 'Medium');
+    // Check cache first
+    if (key) {
+      const cached = getCachedDetail(key);
+      if (cached) return cached;
+    }
     return getProblemDetail(roadmapProblem.key, roadmapProblem.title, roadmapProblem.difficulty);
-  }, [roadmapProblem]);
+  });
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState('');
 
   const [code, setCode] = useState(detail.starterCode);
   const [consoleEntries, setConsoleEntries] = useState<ConsoleEntry[]>([]);
@@ -75,6 +104,60 @@ const ProblemWorkspace = () => {
     enabled: !!key,
   });
 
+  // Auto-generate full problem details if not hardcoded
+  const generateFullDetail = useCallback(async () => {
+    if (!roadmapProblem || !key || hasHardcodedDetail) return;
+    // Check cache
+    const cached = getCachedDetail(key);
+    if (cached && cached.testCases.length > 0) {
+      setDetail(cached);
+      if (!localStorage.getItem(`workspace-code-${key}`)) setCode(cached.starterCode);
+      return;
+    }
+    setIsGenerating(true);
+    setGenerateError('');
+    try {
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-problem-detail`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          title: roadmapProblem.title,
+          difficulty: roadmapProblem.difficulty,
+          topic: (roadmapProblem as any).topic || '',
+        }),
+      });
+      if (!resp.ok) throw new Error('Failed to generate');
+      const { detail: generated } = await resp.json();
+      if (generated) {
+        const enhanced: EnhancedDetail = {
+          key,
+          description: generated.description,
+          examples: generated.examples || [],
+          starterCode: generated.starterCode || detail.starterCode,
+          testCases: generated.testCases || [],
+          functionName: generated.functionName || 'solve',
+          returnType: generated.returnType || 'void',
+          params: generated.params || [],
+          constraints: generated.constraints,
+          hints: generated.hints,
+          approach: generated.approach,
+        };
+        setCachedDetail(key, enhanced);
+        setDetail(enhanced);
+        // Update code only if user hasn't written anything
+        if (!localStorage.getItem(`workspace-code-${key}`) && generated.starterCode) {
+          setCode(generated.starterCode);
+        }
+      }
+    } catch (err: any) {
+      setGenerateError('Could not auto-generate problem details. You can still code!');
+    }
+    setIsGenerating(false);
+  }, [key, roadmapProblem, hasHardcodedDetail]);
+
   // Reset code when problem changes
   useEffect(() => {
     const saved = localStorage.getItem(`workspace-code-${key}`);
@@ -87,6 +170,10 @@ const ProblemWorkspace = () => {
     setConsoleEntries([]);
     setTestResults([]);
     setBottomTab('description');
+    // Auto-generate if no hardcoded detail
+    if (!hasHardcodedDetail) {
+      generateFullDetail();
+    }
   }, [key]);
 
   // Keyboard shortcuts
@@ -301,8 +388,26 @@ const ProblemWorkspace = () => {
               <div className="p-4 space-y-4">
                 <div>
                   <h2 className="text-lg font-bold text-foreground">{roadmapProblem.title}</h2>
-                  <Badge className={`mt-1 text-[10px] ${getDifficultyBg(roadmapProblem.difficulty)}`}>{roadmapProblem.difficulty}</Badge>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge className={`text-[10px] ${getDifficultyBg(roadmapProblem.difficulty)}`}>{roadmapProblem.difficulty}</Badge>
+                    <Badge variant="outline" className="text-[10px]">{(roadmapProblem as any).topic}</Badge>
+                  </div>
                 </div>
+
+                {isGenerating && (
+                  <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
+                    <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+                    <span className="text-xs text-primary font-medium">Generating full problem details...</span>
+                  </div>
+                )}
+
+                {generateError && (
+                  <div className="flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3">
+                    <AlertTriangle className="h-4 w-4 text-destructive" />
+                    <span className="text-xs text-destructive">{generateError}</span>
+                    <Button size="sm" variant="outline" className="ml-auto h-6 text-[10px]" onClick={generateFullDetail}>Retry</Button>
+                  </div>
+                )}
 
                 <div className="prose prose-sm max-w-none dark:prose-invert [&_p]:text-foreground [&_li]:text-foreground">
                   <ReactMarkdown>{detail.description}</ReactMarkdown>
@@ -322,6 +427,46 @@ const ProblemWorkspace = () => {
                       </div>
                     ))}
                   </div>
+                )}
+
+                {(detail as EnhancedDetail).constraints && (detail as EnhancedDetail).constraints!.length > 0 && (
+                  <div className="space-y-2">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Constraints</h3>
+                    <ul className="space-y-1">
+                      {(detail as EnhancedDetail).constraints!.map((c, i) => (
+                        <li key={i} className="text-xs text-foreground font-mono flex items-start gap-2">
+                          <span className="text-muted-foreground mt-0.5">•</span>
+                          <code className="bg-secondary/50 px-1.5 py-0.5 rounded text-[11px]">{c}</code>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {(detail as EnhancedDetail).hints && (detail as EnhancedDetail).hints!.length > 0 && (
+                  <details className="group">
+                    <summary className="text-xs font-bold uppercase tracking-wider text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
+                      💡 Hints ({(detail as EnhancedDetail).hints!.length})
+                    </summary>
+                    <div className="mt-2 space-y-2">
+                      {(detail as EnhancedDetail).hints!.map((h, i) => (
+                        <div key={i} className="rounded border border-panel-border bg-primary/5 p-2 text-xs text-foreground">
+                          <span className="font-semibold text-primary">Hint {i + 1}:</span> {h}
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                )}
+
+                {(detail as EnhancedDetail).approach && (
+                  <details className="group">
+                    <summary className="text-xs font-bold uppercase tracking-wider text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
+                      🧠 Approach & Complexity
+                    </summary>
+                    <div className="mt-2 rounded border border-panel-border bg-secondary/20 p-3 text-xs text-foreground">
+                      <ReactMarkdown>{(detail as EnhancedDetail).approach!}</ReactMarkdown>
+                    </div>
+                  </details>
                 )}
 
                 {detail.testCases.length > 0 && (
