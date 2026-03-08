@@ -18,6 +18,10 @@ import PatternsLibrary from "./pages/PatternsLibrary";
 import Leaderboard from "./pages/Leaderboard";
 import ProblemWorkspace from "./pages/ProblemWorkspace";
 import ResetPassword from "./pages/ResetPassword";
+import Achievements from "./pages/Achievements";
+import InterviewSimulator from "./pages/InterviewSimulator";
+import CustomProblemCreator from "./pages/CustomProblemCreator";
+import CommunitySolutions from "./pages/CommunitySolutions";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +47,10 @@ const App = () => (
               <Route path="/problem/:key" element={<ProblemWorkspace />} />
               <Route path="/analytics" element={<StudyAnalytics />} />
               <Route path="/generate" element={<ProblemGenerator />} />
+              <Route path="/achievements" element={<Achievements />} />
+              <Route path="/interview" element={<InterviewSimulator />} />
+              <Route path="/create" element={<CustomProblemCreator />} />
+              <Route path="/community" element={<CommunitySolutions />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

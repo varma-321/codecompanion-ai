@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Play, Save, Zap, Settings, LogOut, Loader2, BookOpen, BarChart3, Wand2, Moon, Sun, Map, Route, Cloud, Timer, Brain, Trophy, Code2 } from 'lucide-react';
+import { Play, Save, Zap, Settings, LogOut, Loader2, BookOpen, BarChart3, Wand2, Moon, Sun, Map, Route, Cloud, Timer, Brain, Trophy, Code2, Award, MessageSquare, Plus, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -33,6 +33,10 @@ const Toolbar = ({ onRun, onSave, onAnalyze, onSettings, onLogout, username, isR
     { path: '/review', label: 'Review', icon: Brain },
     { path: '/patterns', label: 'Patterns', icon: Code2 },
     { path: '/leaderboard', label: 'Board', icon: Trophy },
+    { path: '/achievements', label: 'Badges', icon: Award },
+    { path: '/interview', label: 'Interview', icon: MessageSquare },
+    { path: '/create', label: 'Create', icon: Plus },
+    { path: '/community', label: 'Community', icon: Share2 },
     { path: '/analytics', label: 'Analytics', icon: BarChart3 },
   ];
 
