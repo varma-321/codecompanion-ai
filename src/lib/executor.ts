@@ -102,7 +102,7 @@ export async function executeJavaCode(
     if (isConnectionError) {
       return {
         stdout: null,
-        stderr: 'Cannot connect to local backend. Make sure the FastAPI server is running at http://127.0.0.1:8000',
+        stderr: 'Server is waking up or temporarily unavailable. Please try again.',
         status: { id: 11, description: 'Connection Error' },
       };
     }
