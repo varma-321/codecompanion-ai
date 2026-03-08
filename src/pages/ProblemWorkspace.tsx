@@ -91,6 +91,8 @@ const ProblemWorkspace = () => {
   const [timeSpent, setTimeSpent] = useState(0);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [celebrationTime, setCelebrationTime] = useState<number | undefined>();
 
   // Autosave code to localStorage
   const autosaveWorkspaceCode = useCallback(async (val: string) => {
