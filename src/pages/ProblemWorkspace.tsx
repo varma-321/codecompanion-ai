@@ -79,7 +79,29 @@ const ProblemWorkspace = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateError, setGenerateError] = useState('');
 
-  const [code, setCode] = useState(detail.starterCode);
+  // Approach tabs
+  type Approach = 'brute' | 'better' | 'optimal';
+  const APPROACHES: { key: Approach; label: string; icon: React.ReactNode; color: string }[] = [
+    { key: 'brute', label: 'Brute Force', icon: <Zap className="h-3 w-3" />, color: 'text-orange-500' },
+    { key: 'better', label: 'Better', icon: <TrendingUp className="h-3 w-3" />, color: 'text-blue-500' },
+    { key: 'optimal', label: 'Optimal', icon: <Trophy className="h-3 w-3" />, color: 'text-emerald-500' },
+  ];
+  const [activeApproach, setActiveApproach] = useState<Approach>('brute');
+  const [codes, setCodes] = useState<Record<Approach, string>>({
+    brute: detail.starterCode,
+    better: detail.starterCode,
+    optimal: detail.starterCode,
+  });
+
+  // Convenience: active code getter/setter
+  const code = codes[activeApproach];
+  const setCode = useCallback((valOrFn: string | ((prev: string) => string)) => {
+    setCodes(prev => ({
+      ...prev,
+      [activeApproach]: typeof valOrFn === 'function' ? valOrFn(prev[activeApproach]) : valOrFn,
+    }));
+  }, [activeApproach]);
+
   const [consoleEntries, setConsoleEntries] = useState<ConsoleEntry[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [isRunningTests, setIsRunningTests] = useState(false);
@@ -94,21 +116,20 @@ const ProblemWorkspace = () => {
   const [showCelebration, setShowCelebration] = useState(false);
   const [celebrationTime, setCelebrationTime] = useState<number | undefined>();
 
-  // Autosave code to Supabase + localStorage fallback
+  // Autosave active approach code to Supabase + localStorage
   const autosaveWorkspaceCode = useCallback(async (val: string) => {
     if (!authUser || !key) return;
-    // localStorage fallback for instant load
-    try { localStorage.setItem(`workspace-code-${key}`, val); } catch {}
-    // Persist to database
+    const saveKey = `${key}__${activeApproach}`;
+    try { localStorage.setItem(`workspace-code-${saveKey}`, val); } catch {}
     try {
       await supabase.from('user_code_saves').upsert({
         user_id: authUser.id,
-        problem_key: key,
+        problem_key: saveKey,
         code: val,
         language: 'java',
       } as any, { onConflict: 'user_id,problem_key' });
     } catch {}
-  }, [authUser, key]);
+  }, [authUser, key, activeApproach]);
 
   const { isDirty: wsCodeDirty, isSaving: wsAutoSaving, resetSavedValue: wsResetSaved } = useAutosave(code, autosaveWorkspaceCode, {
     delay: 2000,
