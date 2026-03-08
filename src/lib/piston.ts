@@ -81,13 +81,31 @@ export async function executeJavaCode(
   });
 
   if (!response.ok) {
-    onStatus?.('failed');
     const err = await response.text();
     let message = `Piston API error: ${response.status}`;
+
     try {
       const parsed = JSON.parse(err);
       if (parsed.message) message = parsed.message;
-    } catch {}
+    } catch {
+      if (err) message = err;
+    }
+
+    const isRestricted = response.status === 401 || /whitelist only|unavailable|restricted/i.test(message);
+
+    if (isRestricted) {
+      onStatus?.('failed');
+      return {
+        stdout: null,
+        stderr: 'Piston API is currently unavailable or restricted.',
+        compile_output: null,
+        status: { id: 11, description: 'API Unavailable' },
+        time: null,
+        memory: null,
+      };
+    }
+
+    onStatus?.('failed');
     throw new Error(message);
   }
 

@@ -73,7 +73,17 @@ const Dashboard = ({ username, onLogout }: DashboardProps) => {
         }
       }
     } catch (err: any) {
-      addConsoleEntry('error', err.message);
+      const errorMessage = err?.message || 'Execution failed';
+      const restricted = /whitelist only|unavailable|restricted|401/i.test(errorMessage);
+
+      if (restricted) {
+        addConsoleEntry('error', 'Piston API is currently unavailable or restricted.');
+        setRunDisabled(true);
+        setTimeout(() => setRunDisabled(false), 30000);
+      } else {
+        addConsoleEntry('error', errorMessage);
+      }
+
       setExecStatus('failed');
     }
     setIsRunning(false);
