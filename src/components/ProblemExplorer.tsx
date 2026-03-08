@@ -102,9 +102,9 @@ const ProblemExplorer = ({ problems, activeProblemId, onSelect, onRefresh }: Pro
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-1">
+      <div className="flex-1 overflow-y-auto px-1.5">
         {filtered.length === 0 && (
-          <p className="px-3 py-6 text-center text-xs text-muted-foreground">
+          <p className="px-3 py-8 text-center text-xs text-muted-foreground">
             No problems yet. Click + to create one.
           </p>
         )}
@@ -112,8 +112,8 @@ const ProblemExplorer = ({ problems, activeProblemId, onSelect, onRefresh }: Pro
           <div
             key={p.id}
             onClick={() => onSelect(p)}
-            className={`group flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors ${
-              activeProblemId === p.id ? 'bg-ide-active text-accent-foreground' : 'hover:bg-ide-hover'
+            className={`group flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-sm transition-colors mb-0.5 ${
+              activeProblemId === p.id ? 'bg-secondary text-foreground' : 'hover:bg-secondary/50'
             }`}
           >
             <FileCode className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
