@@ -263,7 +263,7 @@ const RoadmapPage = ({ title, icon, roadmap, backPath = '/modules' }: RoadmapPag
 
         {/* Main content */}
         <ScrollArea className="flex-1">
-          <div className="p-6 max-w-4xl mx-auto space-y-3">
+          <div className="p-3 sm:p-6 max-w-4xl mx-auto space-y-3">
             {loading ? (
               <div className="flex justify-center py-20">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
