@@ -463,6 +463,39 @@ const Dashboard = () => {
                   </div>
                 </div>
               )}
+
+              {bottomTab === 'notes' && (
+                <div className="flex flex-1">
+                  <div className="flex-1 overflow-hidden">
+                    <NotesPanel notes={(activeProblem as any)?.notes || ''} onSave={handleSaveNotes} />
+                  </div>
+                  <div className="w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
+                    <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
+                  </div>
+                </div>
+              )}
+
+              {bottomTab === 'recursion' && (
+                <div className="flex flex-1">
+                  <div className="flex-1 overflow-hidden">
+                    <RecursionTreePanel code={code} />
+                  </div>
+                  <div className="w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
+                    <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
+                  </div>
+                </div>
+              )}
+
+              {bottomTab === 'streak' && (
+                <div className="flex flex-1">
+                  <div className="flex-1 overflow-auto">
+                    <StreakPanel />
+                  </div>
+                  <div className="w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
+                    <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
