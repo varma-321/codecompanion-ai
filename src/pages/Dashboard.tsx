@@ -344,6 +344,46 @@ const Dashboard = () => {
         codeIsDirty={codeIsDirty}
       />
 
+      {/* Mobile action bar for hidden panels */}
+      <div className="flex md:hidden items-center gap-2 border-b border-border bg-card px-3 py-2">
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
+              <FolderOpen className="h-3.5 w-3.5" /> Files
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-72 p-0">
+            <SheetHeader className="px-4 pt-4 pb-2">
+              <SheetTitle className="text-sm">Problem Explorer</SheetTitle>
+            </SheetHeader>
+            <div className="h-[calc(100%-60px)] overflow-auto">
+              <ProblemExplorer
+                problems={problems}
+                activeProblemId={activeProblem?.id || null}
+                onSelect={handleSelectProblem}
+                onRefresh={refreshProblems}
+              />
+            </div>
+          </SheetContent>
+        </Sheet>
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
+              <MessageSquare className="h-3.5 w-3.5" /> AI Chat
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-[85vw] sm:max-w-md p-0">
+            <SheetHeader className="px-4 pt-4 pb-2">
+              <SheetTitle className="text-sm">AI Assistant</SheetTitle>
+            </SheetHeader>
+            <div className="h-[calc(100%-60px)] overflow-auto">
+              <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
+            </div>
+          </SheetContent>
+        </Sheet>
+        {activeProblem && <span className="text-xs text-muted-foreground truncate ml-1">{activeProblem.title}</span>}
+      </div>
+
       <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
         {/* Left: Problem Explorer - hidden on mobile */}
         <div className="hidden md:block w-56 shrink-0 border-r border-border">
