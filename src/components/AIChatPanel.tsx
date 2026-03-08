@@ -37,6 +37,7 @@ const quickActions = [
 
 const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) => {
   const [ollamaOnline, setOllamaOnline] = useState(false);
+  const [backendOnline, setBackendOnline] = useState(true);
   const [checking, setChecking] = useState(true);
   const [models, setModels] = useState<string[]>([]);
   const [currentModel, setCurrentModel] = useState(getSelectedModel());
