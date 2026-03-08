@@ -6,11 +6,10 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { UserProvider } from "@/lib/user-context";
 import { ThemeProvider } from "@/lib/theme-context";
 import Index from "./pages/Index";
-import LearningMode from "./pages/LearningMode";
 import StudyAnalytics from "./pages/StudyAnalytics";
 import ProblemGenerator from "./pages/ProblemGenerator";
-import DSARoadmap from "./pages/DSARoadmap";
 import StriverRoadmap from "./pages/StriverRoadmap";
+import ProblemWorkspace from "./pages/ProblemWorkspace";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
