@@ -800,12 +800,12 @@ const ProblemWorkspace = () => {
 
           {/* Bottom panel */}
           <div className="shrink-0 border-t border-panel-border" style={{ height: consoleHeight }}>
-            <div className="flex items-center border-b border-panel-border bg-ide-toolbar">
+            <div className="flex items-center border-b border-panel-border bg-ide-toolbar overflow-x-auto scrollbar-none">
               {tabItems.map(tab => (
                 <button
                   key={tab.key}
                   onClick={() => setBottomTab(tab.key)}
-                  className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                  className={`px-2 sm:px-3 py-1.5 text-[10px] sm:text-xs font-semibold uppercase tracking-wider transition-colors whitespace-nowrap shrink-0 ${
                     bottomTab === tab.key ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >

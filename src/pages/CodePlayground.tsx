@@ -164,32 +164,32 @@ const CodePlayground = () => {
 
   return (
     <div className="flex h-screen flex-col bg-background">
-      <div className="flex items-center gap-2 border-b border-panel-border bg-ide-toolbar px-3 py-1.5">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/modules')} className="h-7 gap-1 text-xs">
-          <ArrowLeft className="h-3 w-3" /> Back
+      <div className="flex items-center gap-1 sm:gap-2 border-b border-panel-border bg-ide-toolbar px-2 sm:px-3 py-1.5 overflow-x-auto scrollbar-none">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/modules')} className="h-7 gap-1 text-xs shrink-0">
+          <ArrowLeft className="h-3 w-3" /> <span className="hidden sm:inline">Back</span>
         </Button>
-        <span className="font-bold text-foreground">⚡ Code Playground</span>
-        <Badge variant="outline" className="text-[10px]">Java</Badge>
+        <span className="font-bold text-foreground text-sm shrink-0">⚡ <span className="hidden sm:inline">Code Playground</span></span>
+        <Badge variant="outline" className="text-[10px] shrink-0">Java</Badge>
         
-        <div className="ml-2 flex items-center gap-1">
-          <Layers className="h-3 w-3 text-muted-foreground" />
+        <div className="flex items-center gap-1 shrink-0">
+          <Layers className="h-3 w-3 text-muted-foreground hidden sm:block" />
           <Select onValueChange={(v) => setCode(TEMPLATES[v] || code)}>
-            <SelectTrigger className="h-7 w-36 text-[10px]"><SelectValue placeholder="Templates..." /></SelectTrigger>
+            <SelectTrigger className="h-7 w-28 sm:w-36 text-[10px]"><SelectValue placeholder="Templates..." /></SelectTrigger>
             <SelectContent>
               {Object.keys(TEMPLATES).map(t => <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
 
-        <div className="ml-auto flex items-center gap-1.5">
-          {execTime !== null && <span className="text-[10px] text-muted-foreground">{execTime}ms</span>}
+        <div className="ml-auto flex items-center gap-1 sm:gap-1.5 shrink-0">
+          {execTime !== null && <span className="text-[10px] text-muted-foreground hidden sm:inline">{execTime}ms</span>}
           <Button size="sm" variant="ghost" onClick={handleCopy} className="h-7 w-7 p-0">
             {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
           </Button>
-          <Button size="sm" variant="outline" onClick={handleDownload} className="h-7 gap-1 text-xs">
+          <Button size="sm" variant="outline" onClick={handleDownload} className="h-7 gap-1 text-xs hidden sm:flex">
             <Download className="h-3 w-3" /> Save
           </Button>
-          <Button size="sm" variant="outline" onClick={() => { setCode(TEMPLATES['Hello World']); setOutput([]); }} className="h-7 gap-1 text-xs">
+          <Button size="sm" variant="outline" onClick={() => { setCode(TEMPLATES['Hello World']); setOutput([]); }} className="h-7 gap-1 text-xs hidden sm:flex">
             <Trash2 className="h-3 w-3" /> Reset
           </Button>
           <Button size="sm" onClick={handleRun} disabled={running} className="h-7 gap-1 text-xs">
