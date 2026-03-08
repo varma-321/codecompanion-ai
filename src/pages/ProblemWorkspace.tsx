@@ -1,7 +1,7 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Play, FlaskConical, Loader2, CheckCircle2, XCircle, Brain, ChevronRight, Code2, GitCompare, Cloud, Keyboard, Sparkles, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Play, FlaskConical, Loader2, CheckCircle2, XCircle, Brain, ChevronRight, Code2, GitCompare, Cloud, Keyboard, Sparkles, AlertTriangle, Zap, TrendingUp, Trophy } from 'lucide-react';
 import { useAutosave } from '@/hooks/use-autosave';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -79,7 +79,29 @@ const ProblemWorkspace = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateError, setGenerateError] = useState('');
 
-  const [code, setCode] = useState(detail.starterCode);
+  // Approach tabs
+  type Approach = 'brute' | 'better' | 'optimal';
+  const APPROACHES: { key: Approach; label: string; icon: React.ReactNode; color: string }[] = [
+    { key: 'brute', label: 'Brute Force', icon: <Zap className="h-3 w-3" />, color: 'text-orange-500' },
+    { key: 'better', label: 'Better', icon: <TrendingUp className="h-3 w-3" />, color: 'text-blue-500' },
+    { key: 'optimal', label: 'Optimal', icon: <Trophy className="h-3 w-3" />, color: 'text-emerald-500' },
+  ];
+  const [activeApproach, setActiveApproach] = useState<Approach>('brute');
+  const [codes, setCodes] = useState<Record<Approach, string>>({
+    brute: detail.starterCode,
+    better: detail.starterCode,
+    optimal: detail.starterCode,
+  });
+
+  // Convenience: active code getter/setter
+  const code = codes[activeApproach];
+  const setCode = useCallback((valOrFn: string | ((prev: string) => string)) => {
+    setCodes(prev => ({
+      ...prev,
+      [activeApproach]: typeof valOrFn === 'function' ? valOrFn(prev[activeApproach]) : valOrFn,
+    }));
+  }, [activeApproach]);
+
   const [consoleEntries, setConsoleEntries] = useState<ConsoleEntry[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [isRunningTests, setIsRunningTests] = useState(false);
@@ -94,21 +116,20 @@ const ProblemWorkspace = () => {
   const [showCelebration, setShowCelebration] = useState(false);
   const [celebrationTime, setCelebrationTime] = useState<number | undefined>();
 
-  // Autosave code to Supabase + localStorage fallback
+  // Autosave active approach code to Supabase + localStorage
   const autosaveWorkspaceCode = useCallback(async (val: string) => {
     if (!authUser || !key) return;
-    // localStorage fallback for instant load
-    try { localStorage.setItem(`workspace-code-${key}`, val); } catch {}
-    // Persist to database
+    const saveKey = `${key}__${activeApproach}`;
+    try { localStorage.setItem(`workspace-code-${saveKey}`, val); } catch {}
     try {
       await supabase.from('user_code_saves').upsert({
         user_id: authUser.id,
-        problem_key: key,
+        problem_key: saveKey,
         code: val,
         language: 'java',
       } as any, { onConflict: 'user_id,problem_key' });
     } catch {}
-  }, [authUser, key]);
+  }, [authUser, key, activeApproach]);
 
   const { isDirty: wsCodeDirty, isSaving: wsAutoSaving, resetSavedValue: wsResetSaved } = useAutosave(code, autosaveWorkspaceCode, {
     delay: 2000,
@@ -159,9 +180,13 @@ const ProblemWorkspace = () => {
         };
         setCachedDetail(key, enhanced);
         setDetail(enhanced);
-        // Update code only if user hasn't written anything
-        if (!localStorage.getItem(`workspace-code-${key}`) && generated.starterCode) {
-          setCode(generated.starterCode);
+        // Update codes only if user hasn't written anything for any approach
+        if (generated.starterCode) {
+          setCodes(prev => ({
+            brute: localStorage.getItem(`workspace-code-${key}__brute`) ? prev.brute : generated.starterCode,
+            better: localStorage.getItem(`workspace-code-${key}__better`) ? prev.better : generated.starterCode,
+            optimal: localStorage.getItem(`workspace-code-${key}__optimal`) ? prev.optimal : generated.starterCode,
+          }));
         }
       }
     } catch (err: any) {
@@ -170,41 +195,54 @@ const ProblemWorkspace = () => {
     setIsGenerating(false);
   }, [key, roadmapProblem, hasHardcodedDetail]);
 
-  // Load saved code from DB (with localStorage fallback)
+  // Load saved code for ALL approaches from DB (with localStorage fallback)
   useEffect(() => {
     let cancelled = false;
-    const loadCode = async () => {
-      let savedCode: string | null = null;
-      // Try DB first
-      if (authUser && key) {
-        try {
-          const { data } = await supabase
-            .from('user_code_saves')
-            .select('code')
-            .eq('user_id', authUser.id)
-            .eq('problem_key', key)
-            .maybeSingle();
-          if (data && (data as any).code) savedCode = (data as any).code;
-        } catch {}
-      }
-      // Fallback to localStorage
-      if (!savedCode) {
-        savedCode = localStorage.getItem(`workspace-code-${key}`);
+    const loadAllCodes = async () => {
+      const approaches: Approach[] = ['brute', 'better', 'optimal'];
+      const loaded: Record<string, string> = {};
+      for (const approach of approaches) {
+        const saveKey = `${key}__${approach}`;
+        let savedCode: string | null = null;
+        if (authUser && key) {
+          try {
+            const { data } = await supabase
+              .from('user_code_saves')
+              .select('code')
+              .eq('user_id', authUser.id)
+              .eq('problem_key', saveKey)
+              .maybeSingle();
+            if (data && (data as any).code) savedCode = (data as any).code;
+          } catch {}
+        }
+        if (!savedCode) {
+          savedCode = localStorage.getItem(`workspace-code-${saveKey}`);
+        }
+        // Also check legacy key (no approach suffix) for brute force migration
+        if (!savedCode && approach === 'brute') {
+          if (authUser && key) {
+            try {
+              const { data } = await supabase
+                .from('user_code_saves')
+                .select('code')
+                .eq('user_id', authUser.id)
+                .eq('problem_key', key)
+                .maybeSingle();
+              if (data && (data as any).code) savedCode = (data as any).code;
+            } catch {}
+          }
+          if (!savedCode) savedCode = localStorage.getItem(`workspace-code-${key}`);
+        }
+        loaded[approach] = savedCode && savedCode !== detail.starterCode ? savedCode : detail.starterCode;
       }
       if (cancelled) return;
-      if (savedCode && savedCode !== detail.starterCode) {
-        setCode(savedCode);
-        wsResetSaved(savedCode);
-      } else {
-        setCode(detail.starterCode);
-        wsResetSaved(detail.starterCode);
-      }
+      setCodes({ brute: loaded.brute, better: loaded.better, optimal: loaded.optimal });
+      wsResetSaved(loaded[activeApproach] || detail.starterCode);
       setConsoleEntries([]);
       setTestResults([]);
       setBottomTab('description');
     };
-    loadCode();
-    // Auto-generate if no hardcoded detail
+    loadAllCodes();
     if (!hasHardcodedDetail) {
       generateFullDetail();
     }
@@ -531,6 +569,31 @@ const ProblemWorkspace = () => {
               📄 Show
             </Button>
           )}
+
+          {/* Approach Tabs */}
+          <div className="flex items-center gap-0 border-b border-panel-border bg-ide-toolbar px-1">
+            {APPROACHES.map(approach => (
+              <button
+                key={approach.key}
+                onClick={() => {
+                  setActiveApproach(approach.key);
+                  wsResetSaved(codes[approach.key]);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors border-b-2 ${
+                  activeApproach === approach.key
+                    ? `${approach.color} border-current`
+                    : 'text-muted-foreground border-transparent hover:text-foreground'
+                }`}
+              >
+                {approach.icon}
+                {approach.label}
+              </button>
+            ))}
+            <span className="ml-auto text-[10px] text-muted-foreground pr-2">
+              {APPROACHES.find(a => a.key === activeApproach)?.label} approach
+            </span>
+          </div>
+
           <div className="flex-1 overflow-hidden">
             <CodeEditor code={code} onChange={setCode} />
           </div>
