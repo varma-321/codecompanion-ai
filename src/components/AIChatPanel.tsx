@@ -19,6 +19,7 @@ interface ChatMessage {
 interface AIChatPanelProps {
   code: string;
   problemId: string | null;
+  aiEnabled?: boolean;
 }
 
 const quickActions = [
