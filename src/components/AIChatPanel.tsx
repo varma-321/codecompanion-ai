@@ -1,14 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { Brain, Send, Loader2, AlertCircle, Lightbulb, Zap, Code2, Bug, BookOpen, FlaskConical, Sparkles, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   analyzeCode, getHints as getAIHints, getSolution, detectPatterns, detectMistakes,
-  chat as aiChat, getExtraInsights, checkOllamaStatus, getOllamaModels,
-  getSelectedModel, setSelectedModel
-} from '@/lib/ollama';
-import { explainCodeViaBackend } from '@/lib/explain';
+  chat as aiChat, getExtraInsights, checkBackendStatus, explainCode
+} from '@/lib/ai-backend';
 import ReactMarkdown from 'react-markdown';
 
 interface ChatMessage {
@@ -36,11 +33,8 @@ const quickActions = [
 ];
 
 const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) => {
-  const [ollamaOnline, setOllamaOnline] = useState(false);
   const [backendOnline, setBackendOnline] = useState(true);
   const [checking, setChecking] = useState(true);
-  const [models, setModels] = useState<string[]>([]);
-  const [currentModel, setCurrentModel] = useState(getSelectedModel());
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -51,25 +45,8 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
   useEffect(() => {
     const check = async () => {
       setChecking(true);
-      // Check Ollama
-      const online = await checkOllamaStatus();
-      setOllamaOnline(online);
-      if (online) {
-        const availableModels = await getOllamaModels();
-        setModels(availableModels);
-      }
-      // Check backend
-      try {
-        const res = await fetch(`${(await import('@/lib/api')).API_BASE_URL}/api/explain-code`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code: '' }),
-          signal: AbortSignal.timeout(5000),
-        });
-        setBackendOnline(true);
-      } catch {
-        setBackendOnline(false);
-      }
+      const online = await checkBackendStatus();
+      setBackendOnline(online);
       setChecking(false);
     };
     check();
@@ -77,14 +54,13 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
     return () => clearInterval(interval);
   }, []);
 
-  // Listen for explain code trigger from Dashboard
   useEffect(() => {
     const handleExplain = () => {
       handleSend('__analyze__');
     };
     window.addEventListener('trigger-explain', handleExplain);
     return () => window.removeEventListener('trigger-explain', handleExplain);
-  }, [code, ollamaOnline, currentModel]);
+  }, [code, backendOnline]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -96,81 +72,56 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
     return msg;
   };
 
-  const handleModelChange = (model: string) => {
-    setCurrentModel(model);
-    setSelectedModel(model);
-  };
-
   const handleSend = async (customPrompt?: string) => {
     const text = customPrompt || input.trim();
     if (!text || isLoading) return;
 
-    // If Ollama is online but no model selected, warn (except for backend-only features)
-    const useOllama = ollamaOnline && !!currentModel;
-
-    if (!useOllama && !backendOnline) {
-      addMessage('system', '⚠️ No AI service available. Please check your connection.');
+    if (!backendOnline) {
+      addMessage('system', '⚠️ AI service is unavailable. Server may be waking up. Please try again in a moment.');
       return;
     }
 
     if (!customPrompt) setInput('');
-
     setIsLoading(true);
 
     try {
       if (text === '__analyze__') {
         addMessage('user', '🔍 Analyze this code');
-        if (useOllama) {
-          const result = await analyzeCode(code);
-          const md = `### Analysis Results\n\n**Problem:** ${result.problemName}\n**Algorithm:** ${result.algorithmUsed}\n\n| Metric | Value |\n|--------|-------|\n| Time Complexity | \`${result.timeComplexity}\` |\n| Space Complexity | \`${result.spaceComplexity}\` |\n\n**Summary:** ${result.summary}\n\n${result.optimizations.length > 0 ? '**Optimizations:**\n' + result.optimizations.map(o => `- ${o}`).join('\n') : ''}`;
-          addMessage('assistant', md);
-        } else {
-          const explanation = await explainCodeViaBackend(code);
-          addMessage('assistant', explanation);
-        }
+        const result = await analyzeCode(code);
+        const md = `### Analysis Results\n\n**Problem:** ${result.problemName}\n**Algorithm:** ${result.algorithmUsed}\n\n| Metric | Value |\n|--------|-------|\n| Time Complexity | \`${result.timeComplexity}\` |\n| Space Complexity | \`${result.spaceComplexity}\` |\n\n**Summary:** ${result.summary}\n\n${result.optimizations.length > 0 ? '**Optimizations:**\n' + result.optimizations.map(o => `- ${o}`).join('\n') : ''}`;
+        addMessage('assistant', md);
       } else if (text === '__hints__') {
-        if (!useOllama) { addMessage('system', '⚠️ Hints require Ollama. Please select a model.'); setIsLoading(false); return; }
         const nextLevel = Math.min(hintLevel + 1, 4);
         addMessage('user', `💡 Give me hint ${nextLevel}`);
         const hint = await getAIHints(code, nextLevel);
         addMessage('assistant', `### Hint ${nextLevel} of 4\n\n${hint}`);
         setHintLevel(nextLevel);
       } else if (text.startsWith('__solution_')) {
-        if (!useOllama) { addMessage('system', '⚠️ Solutions require Ollama. Please select a model.'); setIsLoading(false); return; }
         const type = text.replace('__solution_', '').replace('__', '') as 'brute' | 'better' | 'optimal';
         addMessage('user', `📝 Generate ${type} solution`);
         const sol = await getSolution(code, type);
         const md = `### ${type.charAt(0).toUpperCase() + type.slice(1)} Solution\n\n| Metric | Value |\n|--------|-------|\n| Time | \`${sol.timeComplexity}\` |\n| Space | \`${sol.spaceComplexity}\` |\n\n**Explanation:** ${sol.explanation}\n\n\`\`\`java\n${sol.code}\n\`\`\``;
         addMessage('assistant', md);
       } else if (text === '__mistakes__') {
-        if (!useOllama) { addMessage('system', '⚠️ Mistake detection requires Ollama. Please select a model.'); setIsLoading(false); return; }
         addMessage('user', '🐛 Find mistakes in my code');
         const result = await detectMistakes(code);
         addMessage('assistant', result);
       } else if (text === '__patterns__') {
-        if (!useOllama) { addMessage('system', '⚠️ Pattern detection requires Ollama. Please select a model.'); setIsLoading(false); return; }
         addMessage('user', '📚 Detect algorithm patterns');
         const result = await detectPatterns(code);
         addMessage('assistant', result);
       } else if (text === '__edgecases__') {
-        if (!useOllama) { addMessage('system', '⚠️ Edge cases require Ollama. Please select a model.'); setIsLoading(false); return; }
         addMessage('user', '⚠️ Find edge cases');
         const result = await getExtraInsights(code, 'edgecases');
         addMessage('assistant', result);
       } else if (text === '__testcases__') {
-        if (!useOllama) { addMessage('system', '⚠️ Test cases require Ollama. Please select a model.'); setIsLoading(false); return; }
         addMessage('user', '🧪 Generate test cases');
         const result = await getExtraInsights(code, 'testcases');
         addMessage('assistant', result);
       } else {
         addMessage('user', text);
-        if (useOllama) {
-          const response = await aiChat(code, text);
-          addMessage('assistant', response);
-        } else {
-          const explanation = await explainCodeViaBackend(code);
-          addMessage('assistant', explanation);
-        }
+        const response = await aiChat(code, text);
+        addMessage('assistant', response);
       }
     } catch (err: any) {
       const isRateLimit = err?.message?.includes('429') || err?.message?.toLowerCase().includes('rate');
@@ -181,7 +132,7 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
       } else if (isTimeout) {
         addMessage('system', '⏱️ AI request timed out. Please try again.');
       } else {
-        addMessage('system', '⚠️ AI service is temporarily unavailable. Please check your connection and try again.');
+        addMessage('system', '⚠️ AI service is temporarily unavailable. Please try again.');
       }
     }
 
@@ -201,27 +152,23 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
     setHintLevel(0);
   };
 
-  // Status Badge Component
   const StatusBadge = () => {
-    const isAnyOnline = ollamaOnline || backendOnline;
     const label = checking ? 'Checking...' :
-      ollamaOnline && currentModel ? `Ollama (${currentModel})` :
       backendOnline ? 'Groq Cloud (Online)' : 'AI Offline';
     return (
       <div className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors duration-300 ${
         checking ? 'bg-secondary text-muted-foreground' :
-        isAnyOnline ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'
+        backendOnline ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'
       }`}>
         <span className={`h-1.5 w-1.5 rounded-full transition-colors duration-300 ${
           checking ? 'animate-pulse-dot bg-muted-foreground' :
-          isAnyOnline ? 'bg-success' : 'bg-destructive'
+          backendOnline ? 'bg-success' : 'bg-destructive'
         }`} />
         {label}
       </div>
     );
   };
 
-  // Skeleton Loader for AI thinking
   const AISkeleton = () => (
     <div className="mb-3 animate-fade-in space-y-2 rounded-lg border border-panel-border bg-card p-3">
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -254,10 +201,9 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
     );
   }
 
-  if (!ollamaOnline && !checking) {
+  if (!backendOnline && !checking) {
     return (
       <div className="flex h-full flex-col bg-ide-sidebar">
-        {/* Header with status */}
         <div className="flex items-center justify-between border-b border-panel-border px-3 py-2">
           <div className="flex items-center gap-2">
             <Brain className="h-3.5 w-3.5 text-primary" />
@@ -268,9 +214,9 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
         <div className="flex flex-1 flex-col items-center justify-center gap-3 p-4">
           <AlertCircle className="h-8 w-8 text-muted-foreground" />
           <div className="text-center">
-            <p className="text-sm font-medium text-foreground">Ollama Not Connected</p>
+            <p className="text-sm font-medium text-foreground">AI Service Unavailable</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Run <code className="rounded bg-secondary px-1 py-0.5 font-mono text-[11px]">ollama serve</code> in your terminal.
+              Server may be waking up. Please try again in a moment.
             </p>
           </div>
         </div>
@@ -280,7 +226,6 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
 
   return (
     <div className="flex h-full flex-col bg-ide-sidebar">
-      {/* Header with Title and Status Badge */}
       <div className="flex items-center justify-between border-b border-panel-border px-3 py-2">
         <div className="flex items-center gap-2">
           <Brain className="h-3.5 w-3.5 text-primary" />
@@ -295,22 +240,6 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
           )}
         </div>
       </div>
-
-      {/* Model Selector */}
-      {ollamaOnline && models.length > 0 && (
-        <div className="border-b border-panel-border px-3 py-1.5">
-          <Select value={currentModel} onValueChange={handleModelChange}>
-            <SelectTrigger className="h-6 text-[11px]">
-              <SelectValue placeholder="Select model" />
-            </SelectTrigger>
-            <SelectContent>
-              {models.map(model => (
-                <SelectItem key={model} value={model} className="text-xs">{model}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto px-3 py-2">
@@ -351,7 +280,6 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
         ))}
 
         {isLoading && <AISkeleton />}
-
         <div ref={messagesEndRef} />
       </div>
 

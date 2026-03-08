@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getOllamaModels, getSelectedModel, setSelectedModel, checkOllamaStatus } from '@/lib/ollama';
+import { checkBackendStatus } from '@/lib/ai-backend';
 
 interface SettingsDialogProps {
   open: boolean;
@@ -10,25 +9,13 @@ interface SettingsDialogProps {
 }
 
 const SettingsDialog = ({ open, onClose }: SettingsDialogProps) => {
-  const [models, setModels] = useState<string[]>([]);
-  const [currentModel, setCurrentModel] = useState(getSelectedModel());
-  const [ollamaOnline, setOllamaOnline] = useState(false);
+  const [backendOnline, setBackendOnline] = useState(false);
 
   useEffect(() => {
     if (open) {
-      checkOllamaStatus().then(online => {
-        setOllamaOnline(online);
-        if (online) {
-          getOllamaModels().then(setModels);
-        }
-      });
+      checkBackendStatus().then(setBackendOnline);
     }
   }, [open]);
-
-  const handleModelChange = (model: string) => {
-    setCurrentModel(model);
-    setSelectedModel(model);
-  };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -48,29 +35,15 @@ const SettingsDialog = ({ open, onClose }: SettingsDialogProps) => {
           </div>
 
           <div>
-            <Label className="text-sm font-medium">Ollama AI</Label>
+            <Label className="text-sm font-medium">AI Service</Label>
             <p className="mb-2 text-xs text-muted-foreground">
-              Run <code className="rounded bg-secondary px-1 py-0.5 font-mono text-[11px]">ollama serve</code> locally.
-              {ollamaOnline ? (
-                <span className="ml-1 text-success font-medium">● Connected</span>
+              All AI features are powered by <strong>Groq Cloud</strong> via the deployed backend.
+              {backendOnline ? (
+                <span className="ml-1 text-success font-medium">● Online</span>
               ) : (
                 <span className="ml-1 text-destructive font-medium">● Offline</span>
               )}
             </p>
-            {ollamaOnline && models.length > 0 && (
-              <Select value={currentModel} onValueChange={handleModelChange}>
-                <SelectTrigger className="text-xs">
-                  <SelectValue placeholder="Select model" />
-                </SelectTrigger>
-                <SelectContent>
-                  {models.map(model => (
-                    <SelectItem key={model} value={model} className="text-xs">
-                      {model}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
           </div>
 
           <div>

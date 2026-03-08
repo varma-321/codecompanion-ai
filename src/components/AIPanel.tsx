@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { Brain, Lightbulb, Code2, Zap, ChevronRight, Loader2, AlertCircle, BookOpen, Bug, FlaskConical, FileInput, GraduationCap, MessageSquareText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { analyzeCode, getHints as getAIHints, getSolution, checkOllamaStatus, getOllamaModels, getSelectedModel, setSelectedModel, getExtraInsights } from '@/lib/ollama';
+import {
+  analyzeCode, getHints as getAIHints, getSolution, checkBackendStatus, getExtraInsights
+} from '@/lib/ai-backend';
 import { Analysis, saveAnalysis, getAnalysisForProblem, saveHint, getHints as getStoredHints, saveSolution, getSolutions, saveTestCases, getTestCases } from '@/lib/store';
 import ReactMarkdown from 'react-markdown';
 
@@ -13,10 +14,8 @@ interface AIPanelProps {
 }
 
 const AIPanel = ({ code, problemId }: AIPanelProps) => {
-  const [ollamaOnline, setOllamaOnline] = useState(false);
+  const [backendOnline, setBackendOnline] = useState(false);
   const [checking, setChecking] = useState(true);
-  const [models, setModels] = useState<string[]>([]);
-  const [currentModel, setCurrentModel] = useState(getSelectedModel());
 
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
@@ -36,16 +35,8 @@ const AIPanel = ({ code, problemId }: AIPanelProps) => {
   useEffect(() => {
     const check = async () => {
       setChecking(true);
-      const online = await checkOllamaStatus();
-      setOllamaOnline(online);
-      if (online) {
-        const availableModels = await getOllamaModels();
-        setModels(availableModels);
-        if (availableModels.length > 0 && !availableModels.includes(currentModel)) {
-          setCurrentModel(availableModels[0]);
-          setSelectedModel(availableModels[0]);
-        }
-      }
+      const online = await checkBackendStatus();
+      setBackendOnline(online);
       setChecking(false);
     };
     check();
@@ -71,13 +62,8 @@ const AIPanel = ({ code, problemId }: AIPanelProps) => {
     setActiveExtraTab('');
   }, [problemId]);
 
-  const handleModelChange = (model: string) => {
-    setCurrentModel(model);
-    setSelectedModel(model);
-  };
-
   const handleAnalyze = async () => {
-    if (!ollamaOnline || !problemId) return;
+    if (!backendOnline || !problemId) return;
     setAnalyzing(true);
     try {
       const result = await analyzeCode(code);
@@ -97,7 +83,7 @@ const AIPanel = ({ code, problemId }: AIPanelProps) => {
   };
 
   const handleNextHint = async () => {
-    if (!ollamaOnline || hintLevel >= 4) return;
+    if (!backendOnline || hintLevel >= 4) return;
     const nextLevel = hintLevel + 1;
     setLoadingHint(true);
     try {
@@ -112,7 +98,7 @@ const AIPanel = ({ code, problemId }: AIPanelProps) => {
   };
 
   const handleSolution = async (type: 'brute' | 'better' | 'optimal') => {
-    if (!ollamaOnline) return;
+    if (!backendOnline) return;
     setLoadingSolution(true);
     setSolutionType(type);
     try {
@@ -135,7 +121,7 @@ const AIPanel = ({ code, problemId }: AIPanelProps) => {
   };
 
   const handleExtra = async (type: 'algorithm' | 'edgecases' | 'testcases' | 'examples' | 'explain' | 'learning') => {
-    if (!ollamaOnline) return;
+    if (!backendOnline) return;
     setLoadingExtra(true);
     setActiveExtraTab(type);
     try {
@@ -150,24 +136,24 @@ const AIPanel = ({ code, problemId }: AIPanelProps) => {
   const StatusBadge = () => (
     <div className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium ${
       checking ? 'bg-secondary text-muted-foreground' :
-      ollamaOnline ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'
+      backendOnline ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'
     }`}>
       <span className={`h-1.5 w-1.5 rounded-full ${
         checking ? 'animate-pulse-dot bg-muted-foreground' :
-        ollamaOnline ? 'bg-success' : 'bg-destructive'
+        backendOnline ? 'bg-success' : 'bg-destructive'
       }`} />
-      {checking ? 'Checking...' : ollamaOnline ? 'Online' : 'Offline'}
+      {checking ? 'Checking...' : backendOnline ? 'Groq Cloud (Online)' : 'AI Offline'}
     </div>
   );
 
-  if (!ollamaOnline && !checking) {
+  if (!backendOnline && !checking) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 bg-ide-sidebar p-4">
         <AlertCircle className="h-8 w-8 text-muted-foreground" />
         <div className="text-center">
-          <p className="text-sm font-medium text-foreground">Ollama Not Connected</p>
+          <p className="text-sm font-medium text-foreground">AI Service Unavailable</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Run <code className="rounded bg-secondary px-1 py-0.5 font-mono text-[11px]">ollama serve</code> in your terminal to enable AI features.
+            Server may be waking up. Please try again in a moment.
           </p>
         </div>
         <StatusBadge />
@@ -185,24 +171,6 @@ const AIPanel = ({ code, problemId }: AIPanelProps) => {
         <StatusBadge />
       </div>
 
-      {/* Model Selector */}
-      {ollamaOnline && models.length > 0 && (
-        <div className="border-b border-panel-border px-3 py-2">
-          <Select value={currentModel} onValueChange={handleModelChange}>
-            <SelectTrigger className="h-7 text-xs">
-              <SelectValue placeholder="Select model" />
-            </SelectTrigger>
-            <SelectContent>
-              {models.map(model => (
-                <SelectItem key={model} value={model} className="text-xs">
-                  {model}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-
       <Tabs defaultValue="analysis" className="flex flex-1 flex-col overflow-hidden">
         <TabsList className="mx-2 mt-2 h-auto w-auto flex-wrap gap-0.5">
           <TabsTrigger value="analysis" className="text-[11px] px-2 py-1">Analysis</TabsTrigger>
@@ -214,14 +182,12 @@ const AIPanel = ({ code, problemId }: AIPanelProps) => {
         </TabsList>
 
         <div className="flex-1 overflow-y-auto p-3">
-          {/* Analysis Tab */}
           <TabsContent value="analysis" className="mt-0">
             <Button onClick={handleAnalyze} disabled={analyzing || !problemId} size="sm" className="mb-3 w-full text-xs">
               {analyzing ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Zap className="mr-1 h-3 w-3" />}
               {analyzing ? 'Analyzing...' : 'Analyze Code'}
             </Button>
 
-            {/* Extra AI tools */}
             <div className="mb-3 flex gap-1">
               <Button onClick={() => handleExtra('explain')} disabled={loadingExtra} size="sm" variant="outline" className="flex-1 text-[10px] px-1">
                 <MessageSquareText className="mr-0.5 h-3 w-3" /> Explain
@@ -267,7 +233,6 @@ const AIPanel = ({ code, problemId }: AIPanelProps) => {
               </div>
             )}
 
-            {/* Extra content (explain/learn/algo) */}
             {loadingExtra && activeExtraTab && (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-5 w-5 animate-spin text-primary" />
@@ -282,7 +247,6 @@ const AIPanel = ({ code, problemId }: AIPanelProps) => {
             )}
           </TabsContent>
 
-          {/* Hints Tab */}
           <TabsContent value="hints" className="mt-0">
             <div className="mb-3 text-xs text-muted-foreground">
               Get progressive hints without spoiling the solution.
@@ -308,7 +272,6 @@ const AIPanel = ({ code, problemId }: AIPanelProps) => {
             )}
           </TabsContent>
 
-          {/* Solutions Tab */}
           <TabsContent value="solutions" className="mt-0">
             <div className="mb-3 flex gap-1">
               {(['brute', 'better', 'optimal'] as const).map(type => (
@@ -352,7 +315,6 @@ const AIPanel = ({ code, problemId }: AIPanelProps) => {
             )}
           </TabsContent>
 
-          {/* Optimization Tab */}
           <TabsContent value="optimize" className="mt-0">
             <Button onClick={() => handleExtra('algorithm')} disabled={loadingExtra} size="sm" className="mb-3 w-full text-xs">
               {loadingExtra && activeExtraTab === 'algorithm' ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Zap className="mr-1 h-3 w-3" />}
@@ -367,7 +329,6 @@ const AIPanel = ({ code, problemId }: AIPanelProps) => {
             )}
           </TabsContent>
 
-          {/* Edge Cases Tab */}
           <TabsContent value="edgecases" className="mt-0">
             <Button onClick={() => handleExtra('edgecases')} disabled={loadingExtra} size="sm" className="mb-3 w-full text-xs">
               {loadingExtra && activeExtraTab === 'edgecases' ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Bug className="mr-1 h-3 w-3" />}
@@ -382,7 +343,6 @@ const AIPanel = ({ code, problemId }: AIPanelProps) => {
             )}
           </TabsContent>
 
-          {/* Test Cases Tab */}
           <TabsContent value="testcases" className="mt-0">
             <Button onClick={() => handleExtra('testcases')} disabled={loadingExtra} size="sm" className="mb-3 w-full text-xs">
               {loadingExtra && activeExtraTab === 'testcases' ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <FlaskConical className="mr-1 h-3 w-3" />}
