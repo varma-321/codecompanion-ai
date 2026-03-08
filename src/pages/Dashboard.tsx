@@ -361,21 +361,22 @@ const Dashboard = () => {
           </div>
 
           {!consoleFullscreen && (
-            <div className="flex items-center gap-2 border-t border-border bg-card px-4 py-2">
-              <Button onClick={handleRun} disabled={isRunning || isRunningTests} size="sm" className="h-8 gap-1.5 px-4 text-xs font-medium rounded-lg">
+          <div className="flex items-center gap-1 sm:gap-2 border-t border-border bg-card px-2 sm:px-4 py-2 overflow-x-auto scrollbar-none">
+              <Button onClick={handleRun} disabled={isRunning || isRunningTests} size="sm" className="h-8 gap-1.5 px-3 sm:px-4 text-xs font-medium rounded-lg shrink-0">
                 {isRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
-                {isRunning ? 'Running...' : 'Run Code'}
+                {isRunning ? 'Running...' : 'Run'}
               </Button>
-              <Button onClick={handleRunTests} disabled={isRunning || isRunningTests || testCases.length === 0} size="sm" variant="outline" className="h-8 gap-1.5 px-4 text-xs font-medium rounded-lg">
+              <Button onClick={handleRunTests} disabled={isRunning || isRunningTests || testCases.length === 0} size="sm" variant="outline" className="h-8 gap-1.5 px-3 sm:px-4 text-xs font-medium rounded-lg shrink-0">
                 {isRunningTests ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FlaskConical className="h-3.5 w-3.5" />}
-                {isRunningTests ? 'Testing...' : `Run Tests (${testCases.length})`}
+                <span className="hidden sm:inline">{isRunningTests ? 'Testing...' : `Run Tests (${testCases.length})`}</span>
+                <span className="sm:hidden">Test</span>
               </Button>
-              <Button onClick={handleExplain} disabled={isExplaining || !aiEnabled} size="sm" variant="outline" className="h-8 gap-1.5 px-4 text-xs font-medium rounded-lg">
+              <Button onClick={handleExplain} disabled={isExplaining || !aiEnabled} size="sm" variant="outline" className="h-8 gap-1.5 px-3 sm:px-4 text-xs font-medium rounded-lg shrink-0 hidden sm:flex">
                 {isExplaining ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Brain className="h-3.5 w-3.5" />}
                 Explain
               </Button>
-              <div className="h-5 w-px bg-border mx-1" />
-              <ProblemTimer problemId={activeProblem?.id || null} />
+              <div className="h-5 w-px bg-border mx-1 hidden sm:block" />
+              <div className="hidden sm:block"><ProblemTimer problemId={activeProblem?.id || null} /></div>
               <ExecutionStatus status={execStatus} />
             </div>
           )}
