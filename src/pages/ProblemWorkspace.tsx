@@ -92,6 +92,8 @@ const ProblemWorkspace = () => {
     better: detail.starterCode,
     optimal: detail.starterCode,
   });
+  // Track whether codes have been loaded from DB to prevent generateFullDetail from overwriting
+  const codesLoadedFromDb = useRef(false);
 
   // Convenience: active code getter/setter
   const code = codes[activeApproach];
@@ -122,29 +124,45 @@ const ProblemWorkspace = () => {
     const saveKey = `${key}__${activeApproach}`;
     try { localStorage.setItem(`workspace-code-${saveKey}`, val); } catch {}
     try {
-      await supabase.from('user_code_saves').upsert({
+      const { error } = await supabase.from('user_code_saves').upsert({
         user_id: authUser.id,
         problem_key: saveKey,
         code: val,
         language: 'java',
       } as any, { onConflict: 'user_id,problem_key' });
-    } catch {}
+      if (error) console.error('Autosave DB error:', error);
+    } catch (e) {
+      console.error('Autosave exception:', e);
+    }
   }, [authUser, key, activeApproach]);
 
   const { isDirty: wsCodeDirty, isSaving: wsAutoSaving, resetSavedValue: wsResetSaved } = useAutosave(code, autosaveWorkspaceCode, {
     delay: 2000,
-    enabled: !!key,
+    enabled: !!key && !!authUser,
   });
+
+  // Reset autosave ref when switching approaches so it doesn't incorrectly detect dirty
+  useEffect(() => {
+    wsResetSaved(codes[activeApproach]);
+  }, [activeApproach]);
 
   // Auto-generate full problem details if not hardcoded
   const generateFullDetail = useCallback(async () => {
     if (!roadmapProblem || !key || hasHardcodedDetail) return;
-    // Check cache
     const cached = getCachedDetail(key);
-    // Re-generate if cached version has fewer than 10 test cases (old format)
     if (cached && cached.testCases.length >= 10) {
       setDetail(cached);
-      if (!localStorage.getItem(`workspace-code-${key}`)) setCode(cached.starterCode);
+      // Only set starter code if codes haven't been loaded from DB yet
+      if (!codesLoadedFromDb.current) {
+        setCodes(prev => {
+          const starter = cached.starterCode;
+          return {
+            brute: prev.brute === detail.starterCode ? starter : prev.brute,
+            better: prev.better === detail.starterCode ? starter : prev.better,
+            optimal: prev.optimal === detail.starterCode ? starter : prev.optimal,
+          };
+        });
+      }
       return;
     }
     setIsGenerating(true);
@@ -180,12 +198,12 @@ const ProblemWorkspace = () => {
         };
         setCachedDetail(key, enhanced);
         setDetail(enhanced);
-        // Update codes only if user hasn't written anything for any approach
-        if (generated.starterCode) {
+        // Only update codes if they haven't been loaded from DB
+        if (generated.starterCode && !codesLoadedFromDb.current) {
           setCodes(prev => ({
-            brute: localStorage.getItem(`workspace-code-${key}__brute`) ? prev.brute : generated.starterCode,
-            better: localStorage.getItem(`workspace-code-${key}__better`) ? prev.better : generated.starterCode,
-            optimal: localStorage.getItem(`workspace-code-${key}__optimal`) ? prev.optimal : generated.starterCode,
+            brute: prev.brute === detail.starterCode ? generated.starterCode : prev.brute,
+            better: prev.better === detail.starterCode ? generated.starterCode : prev.better,
+            optimal: prev.optimal === detail.starterCode ? generated.starterCode : prev.optimal,
           }));
         }
       }
@@ -198,22 +216,25 @@ const ProblemWorkspace = () => {
   // Load saved code for ALL approaches from DB (with localStorage fallback)
   useEffect(() => {
     let cancelled = false;
+    codesLoadedFromDb.current = false;
     const loadAllCodes = async () => {
       const approaches: Approach[] = ['brute', 'better', 'optimal'];
       const loaded: Record<string, string> = {};
+      let anyFromDb = false;
       for (const approach of approaches) {
         const saveKey = `${key}__${approach}`;
         let savedCode: string | null = null;
         if (authUser && key) {
           try {
-            const { data } = await supabase
+            const { data, error } = await supabase
               .from('user_code_saves')
               .select('code')
               .eq('user_id', authUser.id)
               .eq('problem_key', saveKey)
               .maybeSingle();
-            if (data && (data as any).code) savedCode = (data as any).code;
-          } catch {}
+            if (error) console.error('Load code error:', error);
+            if (data && (data as any).code) { savedCode = (data as any).code; anyFromDb = true; }
+          } catch (e) { console.error('Load code exception:', e); }
         }
         if (!savedCode) {
           savedCode = localStorage.getItem(`workspace-code-${saveKey}`);
@@ -228,14 +249,19 @@ const ProblemWorkspace = () => {
                 .eq('user_id', authUser.id)
                 .eq('problem_key', key)
                 .maybeSingle();
-              if (data && (data as any).code) savedCode = (data as any).code;
+              if (data && (data as any).code) { savedCode = (data as any).code; anyFromDb = true; }
             } catch {}
           }
           if (!savedCode) savedCode = localStorage.getItem(`workspace-code-${key}`);
         }
-        loaded[approach] = savedCode && savedCode !== detail.starterCode ? savedCode : detail.starterCode;
+        if (savedCode) {
+          // Also persist to localStorage for faster future loads
+          try { localStorage.setItem(`workspace-code-${saveKey}`, savedCode); } catch {}
+        }
+        loaded[approach] = savedCode || detail.starterCode;
       }
       if (cancelled) return;
+      codesLoadedFromDb.current = anyFromDb;
       setCodes({ brute: loaded.brute, better: loaded.better, optimal: loaded.optimal });
       wsResetSaved(loaded[activeApproach] || detail.starterCode);
       setConsoleEntries([]);
