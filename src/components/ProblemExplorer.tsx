@@ -43,6 +43,15 @@ const ProblemExplorer = ({ problems, activeProblemId, onSelect, onRefresh }: Pro
     } catch { /* silent */ }
   };
 
+  const handleToggleBookmark = async (p: DbProblem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newVal = !(p as any).bookmarked;
+    try {
+      await supabase.from('problems').update({ bookmarked: newVal } as any).eq('id', p.id);
+      onRefresh();
+    } catch {}
+  };
+
   const handleRenameStart = (p: DbProblem, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingId(p.id);
