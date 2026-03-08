@@ -163,11 +163,15 @@ const Dashboard = () => {
 
     for (let i = 0; i < testCases.length; i++) {
       const tc = testCases[i];
+      // Build multi-variable test input
+      const inputs = (tc.inputs && Object.keys(tc.inputs).length > 0)
+        ? tc.inputs
+        : { [tc.variable_name || 'arr']: tc.input || '' };
       try {
         const response = await fetch(`${API_BASE_URL}/api/run-java`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code, testInput: tc.input }),
+          body: JSON.stringify({ code, testInputs: inputs, testInput: tc.input }),
           signal: AbortSignal.timeout(15000),
         });
         const data = await response.json();
@@ -190,18 +194,18 @@ const Dashboard = () => {
     setIsRunningTests(false);
   };
 
-  const handleAddTestCase = async (input: string, expectedOutput: string, variableName: string) => {
+  const handleAddTestCase = async (inputs: Record<string, string>, expectedOutput: string) => {
     if (!activeProblem || !userId) { toast.error('Select a problem first'); return; }
     try {
-      const tc = await insertTestCase(userId, activeProblem.id, input, expectedOutput, variableName);
+      const tc = await insertTestCase(userId, activeProblem.id, inputs, expectedOutput);
       setTestCases(prev => [...prev, tc]);
     } catch { toast.error('Failed to add test case'); }
   };
 
-  const handleUpdateTestCase = async (id: string, input: string, expectedOutput: string, variableName: string) => {
+  const handleUpdateTestCase = async (id: string, inputs: Record<string, string>, expectedOutput: string) => {
     try {
-      await updateTestCase(id, { input, expected_output: expectedOutput, variable_name: variableName });
-      setTestCases(prev => prev.map(tc => tc.id === id ? { ...tc, input, expected_output: expectedOutput, variable_name: variableName } : tc));
+      await updateTestCase(id, { inputs, expected_output: expectedOutput });
+      setTestCases(prev => prev.map(tc => tc.id === id ? { ...tc, inputs, expected_output: expectedOutput } : tc));
     } catch { toast.error('Failed to update'); }
   };
 
@@ -225,7 +229,9 @@ const Dashboard = () => {
 
       const newCases: DbTestCase[] = [];
       for (const tc of generated) {
-        const saved = await insertTestCase(userId, activeProblem.id, tc.input || '', tc.expectedOutput || '', tc.variableName || 'arr');
+        // Support both new multi-input format and legacy single-input format
+        const inputs: Record<string, string> = tc.inputs || { [tc.variableName || 'arr']: tc.input || '' };
+        const saved = await insertTestCase(userId, activeProblem.id, inputs, tc.expectedOutput || '');
         newCases.push(saved);
       }
       setTestCases(prev => [...prev, ...newCases]);
