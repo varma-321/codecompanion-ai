@@ -397,17 +397,13 @@ const ProblemWorkspace = () => {
           <Button variant="ghost" size="sm" onClick={() => setShowShortcuts(true)} className="h-7 w-7 p-0" title="Keyboard Shortcuts (Ctrl+K)">
             <Keyboard className="h-3.5 w-3.5" />
           </Button>
-          <Button onClick={handleRun} disabled={isRunning || isRunningTests || isSubmitting} size="sm" className="h-7 gap-1 text-xs">
+          <Button onClick={handleRun} disabled={isRunning || isRunningTests} size="sm" className="h-7 gap-1 text-xs">
             {isRunning ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
             Run
           </Button>
-          <Button onClick={handleRunTests} disabled={isRunning || isRunningTests || isSubmitting || detail.testCases.length === 0} size="sm" variant="outline" className="h-7 gap-1 text-xs">
+          <Button onClick={handleRunTests} disabled={isRunning || isRunningTests || detail.testCases.length === 0} size="sm" variant="outline" className="h-7 gap-1 text-xs">
             {isRunningTests ? <Loader2 className="h-3 w-3 animate-spin" /> : <FlaskConical className="h-3 w-3" />}
-            Run Tests
-          </Button>
-          <Button onClick={handleSubmit} disabled={isRunning || isRunningTests || isSubmitting} size="sm" className="h-7 gap-1 text-xs bg-emerald-600 hover:bg-emerald-700 text-white">
-            {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-            Submit
+            Run Tests ({detail.testCases.length})
           </Button>
           <ExecutionStatus status={execStatus} />
         </div>
