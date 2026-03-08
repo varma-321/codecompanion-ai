@@ -229,18 +229,29 @@ export async function fetchTestCases(problemId: string): Promise<DbTestCase[]> {
   const { data } = await supabase
     .from('test_cases')
     .select('*')
-    .eq('problem_id', problemId);
-  return (data ?? []) as DbTestCase[];
+    .eq('problem_id', problemId)
+    .order('created_at', { ascending: true });
+  return (data ?? []) as unknown as DbTestCase[];
 }
 
-export async function insertTestCase(userId: string, problemId: string, content: string): Promise<DbTestCase> {
+export async function insertTestCase(userId: string, problemId: string, input: string, expectedOutput: string): Promise<DbTestCase> {
   const { data, error } = await supabase
     .from('test_cases')
-    .insert({ user_id: userId, problem_id: problemId, content })
+    .insert({ user_id: userId, problem_id: problemId, input, expected_output: expectedOutput })
     .select()
     .single();
   if (error) throw error;
-  return data as DbTestCase;
+  return data as unknown as DbTestCase;
+}
+
+export async function updateTestCase(id: string, updates: { input?: string; expected_output?: string }): Promise<void> {
+  const { error } = await supabase.from('test_cases').update(updates).eq('id', id);
+  if (error) throw error;
+}
+
+export async function deleteTestCase(id: string): Promise<void> {
+  const { error } = await supabase.from('test_cases').delete().eq('id', id);
+  if (error) throw error;
 }
 
 export const DEFAULT_CODE = `import java.util.*;
