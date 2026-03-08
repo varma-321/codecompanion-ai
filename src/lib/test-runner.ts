@@ -100,13 +100,13 @@ function parseMethodSignature(code: string): MethodSignature | null {
   // Match: public static <return> <name>(<params>)
   // Also match without static, or just the method
   const patterns = [
-    /public\s+static\s+([\w\[\]<>,\s]+?)\s+(\w+)\s*\(([^)]*)\)/,
-    /public\s+([\w\[\]<>,\s]+?)\s+(\w+)\s*\(([^)]*)\)/,
-    /static\s+([\w\[\]<>,\s]+?)\s+(\w+)\s*\(([^)]*)\)/,
+    { regex: /public\s+static\s+([\w\[\]<>,\s]+?)\s+(\w+)\s*\(([^)]*)\)/, isStatic: true },
+    { regex: /public\s+([\w\[\]<>,\s]+?)\s+(\w+)\s*\(([^)]*)\)/, isStatic: false },
+    { regex: /static\s+([\w\[\]<>,\s]+?)\s+(\w+)\s*\(([^)]*)\)/, isStatic: true },
   ];
 
-  for (const pattern of patterns) {
-    const match = code.match(pattern);
+  for (const { regex, isStatic } of patterns) {
+    const match = code.match(regex);
     if (match) {
       const returnType = match[1].trim();
       const name = match[2].trim();
@@ -122,7 +122,7 @@ function parseMethodSignature(code: string): MethodSignature | null {
           }
         }
       }
-      return { name, returnType, params };
+      return { name, returnType, params, isStatic };
     }
   }
   return null;
