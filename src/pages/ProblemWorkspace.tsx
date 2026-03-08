@@ -95,16 +95,24 @@ const ProblemWorkspace = () => {
   const [showCelebration, setShowCelebration] = useState(false);
   const [celebrationTime, setCelebrationTime] = useState<number | undefined>();
 
-  // Autosave code to localStorage
+  // Autosave code to Supabase + localStorage fallback
   const autosaveWorkspaceCode = useCallback(async (val: string) => {
     if (!authUser || !key) return;
+    // localStorage fallback for instant load
+    try { localStorage.setItem(`workspace-code-${key}`, val); } catch {}
+    // Persist to database
     try {
-      localStorage.setItem(`workspace-code-${key}`, val);
+      await supabase.from('user_code_saves').upsert({
+        user_id: authUser.id,
+        problem_key: key,
+        code: val,
+        language: 'java',
+      } as any, { onConflict: 'user_id,problem_key' });
     } catch {}
   }, [authUser, key]);
 
   const { isDirty: wsCodeDirty, isSaving: wsAutoSaving, resetSavedValue: wsResetSaved } = useAutosave(code, autosaveWorkspaceCode, {
-    delay: 1500,
+    delay: 2000,
     enabled: !!key,
   });
 
