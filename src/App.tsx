@@ -43,6 +43,8 @@ import TodayReview from "./pages/TodayReview";
 import GlobalSearch from "./pages/GlobalSearch";
 import StreakCalendar from "./pages/StreakCalendar";
 import BigOVisualizer from "./pages/BigOVisualizer";
+import UserProfile from "./pages/UserProfile";
+import SubmissionHistory from "./pages/SubmissionHistory";
 
 const queryClient = new QueryClient();
 
@@ -96,6 +98,8 @@ const App = () => (
               <Route path="/search" element={<GlobalSearch />} />
               <Route path="/streak-calendar" element={<StreakCalendar />} />
               <Route path="/bigo" element={<BigOVisualizer />} />
+              <Route path="/profile" element={<UserProfile />} />
+              <Route path="/submissions" element={<SubmissionHistory />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
