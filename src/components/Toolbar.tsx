@@ -17,6 +17,8 @@ interface ToolbarProps {
   runDisabled?: boolean;
   aiEnabled: boolean;
   onAIToggle: (enabled: boolean) => void;
+  isAutoSaving?: boolean;
+  codeIsDirty?: boolean;
 }
 
 const Toolbar = ({ onRun, onSave, onAnalyze, onSettings, onLogout, username, isRunning, isSaving, runDisabled, aiEnabled, onAIToggle }: ToolbarProps) => {
