@@ -45,10 +45,11 @@ serve(async (req) => {
                     items: {
                       type: "object",
                       properties: {
+                        variableName: { type: "string" },
                         input: { type: "string" },
                         expectedOutput: { type: "string" }
                       },
-                      required: ["input", "expectedOutput"],
+                      required: ["variableName", "input", "expectedOutput"],
                       additionalProperties: false
                     }
                   }
