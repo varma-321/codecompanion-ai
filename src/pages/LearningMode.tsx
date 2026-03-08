@@ -1,0 +1,188 @@
+import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, BookOpen, Loader2, Sparkles } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { supabase } from '@/integrations/supabase/client';
+import { useUser } from '@/lib/user-context';
+import ReactMarkdown from 'react-markdown';
+
+const TOPICS = [
+  { name: 'Arrays', icon: '📊', algorithms: ['Two Pointers', 'Sliding Window', 'Prefix Sum', 'Kadane\'s Algorithm'] },
+  { name: 'Searching', icon: '🔍', algorithms: ['Binary Search', 'Linear Search', 'Search in Rotated Array'] },
+  { name: 'Sorting', icon: '📈', algorithms: ['Merge Sort', 'Quick Sort', 'Heap Sort', 'Counting Sort'] },
+  { name: 'Hash Maps', icon: '🗂️', algorithms: ['Two Sum Pattern', 'Frequency Counting', 'Group Anagrams'] },
+  { name: 'Linked Lists', icon: '🔗', algorithms: ['Fast & Slow Pointers', 'Reverse Linked List', 'Merge Two Lists'] },
+  { name: 'Stacks & Queues', icon: '📚', algorithms: ['Monotonic Stack', 'Valid Parentheses', 'Next Greater Element'] },
+  { name: 'Trees', icon: '🌳', algorithms: ['DFS', 'BFS', 'Binary Search Tree', 'Tree Traversals'] },
+  { name: 'Graphs', icon: '🕸️', algorithms: ['DFS/BFS', 'Dijkstra', 'Topological Sort', 'Union Find'] },
+  { name: 'Recursion', icon: '🔄', algorithms: ['Backtracking', 'Subset Generation', 'Permutations', 'N-Queens'] },
+  { name: 'Dynamic Programming', icon: '💡', algorithms: ['Fibonacci', 'Knapsack', 'LCS', 'Coin Change', 'Matrix Chain'] },
+  { name: 'Greedy', icon: '🎯', algorithms: ['Activity Selection', 'Fractional Knapsack', 'Huffman Coding'] },
+  { name: 'Strings', icon: '📝', algorithms: ['KMP', 'Rabin-Karp', 'Palindrome Detection', 'Anagram Checking'] },
+];
+
+const LearningMode = () => {
+  const navigate = useNavigate();
+  const { authUser } = useUser();
+  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+  const [selectedAlgorithm, setSelectedAlgorithm] = useState<string | null>(null);
+  const [explanation, setExplanation] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+  }, [explanation]);
+
+  const handleLearn = async (algorithm: string) => {
+    setSelectedAlgorithm(algorithm);
+    setExplanation('');
+    setIsLoading(true);
+
+    try {
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/learn-algorithm`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ algorithm }),
+      });
+
+      if (!resp.ok || !resp.body) throw new Error('Failed to start stream');
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let content = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        let newlineIdx: number;
+        while ((newlineIdx = buffer.indexOf('\n')) !== -1) {
+          let line = buffer.slice(0, newlineIdx);
+          buffer = buffer.slice(newlineIdx + 1);
+          if (line.endsWith('\r')) line = line.slice(0, -1);
+          if (!line.startsWith('data: ')) continue;
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === '[DONE]') break;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const delta = parsed.choices?.[0]?.delta?.content;
+            if (delta) {
+              content += delta;
+              setExplanation(content);
+            }
+          } catch {}
+        }
+      }
+
+      // Save to learning history
+      if (authUser) {
+        const topic = TOPICS.find(t => t.algorithms.includes(algorithm))?.name || 'general';
+        await supabase.from('learning_history').insert({
+          user_id: authUser.id,
+          topic,
+          algorithm,
+          difficulty: 'medium',
+          completed: true,
+        } as any);
+      }
+    } catch (err: any) {
+      setExplanation(`⚠️ Error: ${err.message || 'Failed to load explanation'}`);
+    }
+    setIsLoading(false);
+  };
+
+  return (
+    <div className="flex h-screen flex-col bg-background">
+      {/* Header */}
+      <div className="flex items-center gap-3 border-b border-panel-border bg-ide-toolbar px-4 py-2">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/')} className="h-7 gap-1 text-xs">
+          <ArrowLeft className="h-3 w-3" /> Back to IDE
+        </Button>
+        <div className="flex items-center gap-2">
+          <BookOpen className="h-4 w-4 text-primary" />
+          <span className="text-sm font-bold">Learning Mode</span>
+        </div>
+        {selectedAlgorithm && (
+          <Badge variant="secondary" className="text-xs">{selectedAlgorithm}</Badge>
+        )}
+      </div>
+
+      <div className="flex flex-1 overflow-hidden">
+        {/* Topic sidebar */}
+        <div className="w-72 shrink-0 border-r border-panel-border overflow-auto bg-ide-sidebar">
+          <div className="p-3">
+            <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Topics</h3>
+            {TOPICS.map(topic => (
+              <div key={topic.name} className="mb-2">
+                <button
+                  onClick={() => setSelectedTopic(selectedTopic === topic.name ? null : topic.name)}
+                  className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                    selectedTopic === topic.name ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted'
+                  }`}
+                >
+                  <span>{topic.icon}</span>
+                  <span>{topic.name}</span>
+                </button>
+                {selectedTopic === topic.name && (
+                  <div className="ml-4 mt-1 space-y-0.5">
+                    {topic.algorithms.map(algo => (
+                      <button
+                        key={algo}
+                        onClick={() => handleLearn(algo)}
+                        className={`flex w-full items-center gap-2 rounded px-3 py-1.5 text-xs transition-colors ${
+                          selectedAlgorithm === algo ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                        }`}
+                      >
+                        <Sparkles className="h-3 w-3" />
+                        {algo}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Content area */}
+        <ScrollArea className="flex-1" ref={scrollRef}>
+          <div className="mx-auto max-w-4xl p-6">
+            {!selectedAlgorithm && !isLoading && (
+              <div className="flex h-full flex-col items-center justify-center gap-4 py-20">
+                <BookOpen className="h-16 w-16 text-muted-foreground/20" />
+                <h2 className="text-xl font-bold text-foreground">Choose an Algorithm to Learn</h2>
+                <p className="text-sm text-muted-foreground text-center max-w-md">
+                  Select a topic from the sidebar, then click on an algorithm. The AI tutor will explain it step-by-step with diagrams and code examples.
+                </p>
+              </div>
+            )}
+
+            {isLoading && !explanation && (
+              <div className="flex items-center gap-3 py-20 justify-center">
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                <span className="text-sm text-muted-foreground">Preparing lesson for {selectedAlgorithm}...</span>
+              </div>
+            )}
+
+            {explanation && (
+              <div className="prose prose-sm max-w-none dark:prose-invert [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-secondary [&_pre]:p-4 [&_pre]:font-mono [&_pre]:text-sm [&_code]:rounded [&_code]:bg-secondary [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-xs [&_table]:w-full [&_th]:border [&_th]:border-panel-border [&_th]:px-3 [&_th]:py-2 [&_td]:border [&_td]:border-panel-border [&_td]:px-3 [&_td]:py-2 [&_h1]:text-foreground [&_h2]:text-foreground [&_h3]:text-foreground [&_p]:text-foreground [&_li]:text-foreground [&_strong]:text-foreground">
+                <ReactMarkdown>{explanation}</ReactMarkdown>
+                {isLoading && <Loader2 className="mt-2 h-4 w-4 animate-spin text-primary" />}
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+      </div>
+    </div>
+  );
+};
+
+export default LearningMode;
