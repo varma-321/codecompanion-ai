@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Play, Save, Zap, Settings, LogOut, Loader2, BookOpen, Moon, Sun, Cloud } from 'lucide-react';
+import { Play, Save, Zap, Settings, LogOut, Loader2, BookOpen, Moon, Sun, Cloud, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -86,6 +86,9 @@ const Toolbar = ({ onRun, onSave, onAnalyze, onSettings, onLogout, username, isR
           {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>
         <div className="h-4 w-px bg-border mx-0.5 hidden sm:block" />
+        <Button onClick={() => navigate('/profile')} size="icon" variant="ghost" className="h-8 w-8 rounded-lg" title="Profile">
+          <User className="h-4 w-4" />
+        </Button>
         <span className="text-xs text-muted-foreground font-medium px-1 hidden lg:inline">{username}</span>
         <Button onClick={onSettings} size="icon" variant="ghost" className="h-8 w-8 rounded-lg">
           <Settings className="h-4 w-4" />
