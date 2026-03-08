@@ -24,7 +24,28 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are a test case generator for Java DSA problems. Given a Java function, generate 5 diverse test cases including edge cases. Return ONLY a JSON array of objects with "variableName", "input" and "expectedOutput" fields. The variableName should match the parameter name of the function. The input should be the string representation of the argument value. Example: [{"variableName": "arr", "input": "[1,2,3]", "expectedOutput": "6"}]. No markdown, no explanation, just the JSON array.`
+            content: `You are a test case generator for Java DSA problems. Given a Java function, generate 5 diverse test cases including edge cases.
+
+IMPORTANT: Each test case must have MULTIPLE INPUT VARIABLES matching the function parameters.
+
+For example, if the function is:
+public static int[] twoSum(int[] nums, int target)
+
+Then each test case should have inputs for BOTH "nums" and "target":
+{
+  "inputs": { "nums": "[2,7,11,15]", "target": "9" },
+  "expectedOutput": "[0,1]"
+}
+
+Another example for:
+public static int binarySearch(int[] arr, int target)
+
+{
+  "inputs": { "arr": "[1,3,5,7,9]", "target": "5" },
+  "expectedOutput": "2"
+}
+
+All input values must be STRING representations. Arrays as "[1,2,3]", integers as "5", strings as "hello".`
           },
           {
             role: "user",
@@ -36,7 +57,7 @@ serve(async (req) => {
             type: "function",
             function: {
               name: "return_test_cases",
-              description: "Return generated test cases",
+              description: "Return generated test cases with multi-variable inputs",
               parameters: {
                 type: "object",
                 properties: {
@@ -45,11 +66,13 @@ serve(async (req) => {
                     items: {
                       type: "object",
                       properties: {
-                        variableName: { type: "string" },
-                        input: { type: "string" },
+                        inputs: {
+                          type: "object",
+                          description: "Map of parameter name to string value, e.g. {\"nums\": \"[1,2,3]\", \"target\": \"5\"}"
+                        },
                         expectedOutput: { type: "string" }
                       },
-                      required: ["variableName", "input", "expectedOutput"],
+                      required: ["inputs", "expectedOutput"],
                       additionalProperties: false
                     }
                   }
@@ -84,7 +107,6 @@ serve(async (req) => {
 
     const data = await response.json();
     
-    // Extract from tool call response
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
     if (toolCall) {
       const args = JSON.parse(toolCall.function.arguments);
@@ -93,7 +115,6 @@ serve(async (req) => {
       });
     }
 
-    // Fallback: try to parse content directly
     const content = data.choices?.[0]?.message?.content || "[]";
     const parsed = JSON.parse(content);
     return new Response(JSON.stringify({ testCases: Array.isArray(parsed) ? parsed : [] }), {
