@@ -269,7 +269,7 @@ const ProblemWorkspace = () => {
           {/* Bottom panel */}
           <div className="shrink-0 border-t border-panel-border" style={{ height: consoleHeight }}>
             <div className="flex items-center border-b border-panel-border bg-ide-toolbar">
-              {(['description', 'console', 'results'] as const).map(tab => (
+              {(['description', 'console', 'results', 'snippets', 'solutions'] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => setBottomTab(tab)}
@@ -279,6 +279,8 @@ const ProblemWorkspace = () => {
                 >
                   {tab === 'results' && testResults.length > 0
                     ? `Results (${testResults.filter(r => r.status === 'PASSED').length}/${testResults.length})`
+                    : tab === 'snippets' ? '📋 Templates'
+                    : tab === 'solutions' ? '⚡ Solutions'
                     : tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </button>
               ))}
