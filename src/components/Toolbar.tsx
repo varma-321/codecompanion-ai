@@ -21,7 +21,7 @@ interface ToolbarProps {
   codeIsDirty?: boolean;
 }
 
-const Toolbar = ({ onRun, onSave, onAnalyze, onSettings, onLogout, username, isRunning, isSaving, runDisabled, aiEnabled, onAIToggle }: ToolbarProps) => {
+const Toolbar = ({ onRun, onSave, onAnalyze, onSettings, onLogout, username, isRunning, isSaving, runDisabled, aiEnabled, onAIToggle, isAutoSaving, codeIsDirty }: ToolbarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
