@@ -135,6 +135,32 @@ function hasClassDeclaration(code: string): boolean {
   return /\bclass\s+\w+/.test(code);
 }
 
+// ─── Remove main method using brace-counting ────────────────────
+
+function removeMainMethod(code: string): string {
+  const mainPattern = /public\s+static\s+void\s+main\s*\([^)]*\)\s*\{/;
+  const match = mainPattern.exec(code);
+  if (!match) return code;
+
+  const startIdx = match.index;
+  let braceCount = 0;
+  let endIdx = match.index + match[0].length;
+  braceCount = 1; // We've seen the opening brace
+
+  for (let i = endIdx; i < code.length; i++) {
+    if (code[i] === '{') braceCount++;
+    else if (code[i] === '}') {
+      braceCount--;
+      if (braceCount === 0) {
+        endIdx = i + 1;
+        break;
+      }
+    }
+  }
+
+  return (code.slice(0, startIdx) + code.slice(endIdx)).trim();
+}
+
 // ─── Build wrapped code for a single test case ───────────────────
 
 export function buildTestWrapper(
@@ -184,8 +210,8 @@ export function buildTestWrapper(
   const classMatch = cleanCode.match(/(?:public\s+)?class\s+\w+\s*\{([\s\S]*)\}\s*$/);
   if (classMatch) {
     cleanCode = classMatch[1].trim();
-    // Remove any existing main method
-    cleanCode = cleanCode.replace(/public\s+static\s+void\s+main\s*\([^)]*\)\s*\{[\s\S]*?\n\s*\}/g, '').trim();
+    // Remove any existing main method using brace-counting
+    cleanCode = removeMainMethod(cleanCode);
   }
 
   return `${imports}
