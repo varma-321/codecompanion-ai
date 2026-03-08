@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
-import { Play, Brain, Loader2, FlaskConical, Bug, Zap, CloudOff, Cloud } from 'lucide-react';
+import { Play, Brain, Loader2, FlaskConical, Bug, Zap, CloudOff, Cloud, FolderOpen, MessageSquare } from 'lucide-react';
 import { useAutosave } from '@/hooks/use-autosave';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import ProblemExplorer from '@/components/ProblemExplorer';
 import CodeEditor from '@/components/CodeEditor';
