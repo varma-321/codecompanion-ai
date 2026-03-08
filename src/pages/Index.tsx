@@ -6,6 +6,7 @@ import useNotificationReminders from '@/components/NotificationManager';
 
 const Index = () => {
   const { authUser, loading } = useUser();
+  useNotificationReminders();
 
   if (loading) {
     return (
