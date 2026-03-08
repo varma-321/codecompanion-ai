@@ -179,7 +179,7 @@ const Dashboard = () => {
 
       const newCases: DbTestCase[] = [];
       for (const tc of generated) {
-        const saved = await insertTestCase(userId, activeProblem.id, tc.input || '', tc.expectedOutput || '');
+        const saved = await insertTestCase(userId, activeProblem.id, tc.input || '', tc.expectedOutput || '', tc.variableName || 'arr');
         newCases.push(saved);
       }
       setTestCases(prev => [...prev, ...newCases]);
