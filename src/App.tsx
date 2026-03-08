@@ -84,6 +84,10 @@ const App = () => (
               <Route path="/weak-topics" element={<WeakTopicAnalyzer />} />
               <Route path="/complexity" element={<ComplexityTracker />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/dashboard" element={<PerformanceDashboard />} />
+              <Route path="/learning-path" element={<AdaptiveLearningPath />} />
+              <Route path="/code-review" element={<CodeReview />} />
+              <Route path="/discuss" element={<DiscussionForum />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
