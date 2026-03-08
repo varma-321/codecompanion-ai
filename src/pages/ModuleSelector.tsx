@@ -4,7 +4,7 @@ import {
   ArrowLeft, Map, Code2, BookOpen, TrendingUp, Trophy, Timer, Brain, Target,
   Bookmark, Award, Share2, Plus, MessageSquare, Layers, Building2, Clock,
   FileSpreadsheet, Zap, BarChart3, GraduationCap, Dices, Flame, Calendar,
-  AlertTriangle, Activity
+  AlertTriangle, Activity, Search, RotateCcw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
