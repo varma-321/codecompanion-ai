@@ -541,6 +541,10 @@ const ProblemWorkspace = () => {
             {isRunningTests ? <Loader2 className="h-3 w-3 animate-spin" /> : <FlaskConical className="h-3 w-3" />}
             Run Tests ({detail.testCases.length})
           </Button>
+          <Button onClick={handleAnalyze} disabled={isAnalyzing || !code.trim()} size="sm" variant="outline" className="h-7 gap-1 text-xs">
+            {isAnalyzing ? <Loader2 className="h-3 w-3 animate-spin" /> : <BarChart3 className="h-3 w-3" />}
+            Analyze
+          </Button>
           <ExecutionStatus status={execStatus} />
         </div>
       </div>
