@@ -35,7 +35,7 @@ const KeyboardShortcutsDialog = ({ isOpen, onClose }: KeyboardShortcutsDialogPro
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm" onClick={onClose}>
-      <Card className="w-[420px] max-h-[80vh] shadow-lg" onClick={e => e.stopPropagation()}>
+      <Card className="w-[90vw] max-w-[420px] max-h-[80vh] shadow-lg" onClick={e => e.stopPropagation()}>
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
