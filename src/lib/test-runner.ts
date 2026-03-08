@@ -43,26 +43,82 @@ function toJavaLiteral(value: string, javaType: string): string {
     case 'double':
     case 'boolean':
       return v;
+    case 'long':
+      return v.endsWith('L') ? v : `${v}L`;
+    case 'float':
+      return v.endsWith('f') ? v : `${v}f`;
     case 'char':
-      return `'${v}'`;
+      if (v.startsWith("'")) return v;
+      return `'${v.replace(/^"|"$/g, '')}'`;
     case 'String':
-      // Already quoted
-      if ((v.startsWith('"') && v.endsWith('"'))) return v;
-      if ((v.startsWith("'") && v.endsWith("'"))) return `"${v.slice(1, -1)}"`;
+      if (v.startsWith('"') && v.endsWith('"')) return v;
+      if (v.startsWith("'") && v.endsWith("'")) return `"${v.slice(1, -1)}"`;
       return `"${v}"`;
     case 'int[]':
-      // [1,2,3] → new int[]{1,2,3}
-      return `new int[]${v.replace('[', '{').replace(']', '}')}`;
-    case 'String[]': {
-      // ["a","b"] → new String[]{"a","b"}
-      return `new String[]${v.replace('[', '{').replace(/]$/, '}')}`;
+    case 'long[]':
+    case 'double[]':
+    case 'float[]': {
+      const inner = v.replace(/^\[/, '{').replace(/\]$/, '}');
+      return `new ${javaType}${inner}`;
     }
-    case 'int[][]': {
-      // [[1,2],[3,4]] → new int[][]{{1,2},{3,4}}
+    case 'char[]': {
+      // Parse ["a","b"] or [a,b] into new char[]{'a','b'}
+      try {
+        const items = JSON.parse(v);
+        if (Array.isArray(items)) {
+          return `new char[]{${items.map((c: string) => `'${c}'`).join(', ')}}`;
+        }
+      } catch {}
+      const inner = v.replace(/^\[/, '{').replace(/\]$/, '}');
+      return `new char[]${inner}`;
+    }
+    case 'String[]': {
+      return `new String[]${v.replace('[', '{').replace(/\]$/, '}')}`;
+    }
+    case 'int[][]':
+    case 'long[][]':
+    case 'double[][]': {
       let s = v.replace(/\[/g, '{').replace(/\]/g, '}');
-      return `new int[][]${s}`;
+      return `new ${javaType}${s}`;
+    }
+    case 'char[][]': {
+      let s = v.replace(/\[/g, '{').replace(/\]/g, '}');
+      return `new char[][]${s}`;
+    }
+    case 'List<Integer>':
+    case 'List<String>':
+    case 'List<Long>': {
+      // Convert [1,2,3] to Arrays.asList(1,2,3) or List.of(1,2,3)
+      try {
+        const items = JSON.parse(v);
+        if (Array.isArray(items)) {
+          const literals = items.map((item: any) => {
+            if (javaType === 'List<String>') return `"${item}"`;
+            return String(item);
+          }).join(', ');
+          return `java.util.Arrays.asList(${literals})`;
+        }
+      } catch {}
+      return `java.util.Arrays.asList()`;
+    }
+    case 'List<List<Integer>>': {
+      try {
+        const outer = JSON.parse(v);
+        if (Array.isArray(outer)) {
+          const lists = outer.map((inner: any[]) =>
+            `java.util.Arrays.asList(${inner.join(', ')})`
+          ).join(', ');
+          return `java.util.Arrays.asList(${lists})`;
+        }
+      } catch {}
+      return `java.util.Arrays.asList()`;
     }
     default:
+      // For unknown types, try to infer from value
+      if (v.startsWith('[')) {
+        const inner = v.replace(/^\[/, '{').replace(/\]$/, '}');
+        return `new ${javaType}${inner}`;
+      }
       return `"${v}"`;
   }
 }
