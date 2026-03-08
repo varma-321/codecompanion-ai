@@ -364,7 +364,7 @@ const Dashboard = () => {
           >
             {/* Tab bar */}
             <div className="flex items-center border-b border-panel-border bg-ide-toolbar">
-              {(['console', 'tests', 'results', 'debugger', 'notes', 'recursion', 'streak', 'daily'] as const).map(tab => (
+              {(['console', 'tests', 'results', 'debugger', 'notes', 'recursion', 'snippets', 'solutions', 'streak', 'daily'] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => { setBottomTab(tab); setConsoleCollapsed(false); }}
