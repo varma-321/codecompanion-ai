@@ -1,5 +1,5 @@
 import { Loader2, CheckCircle2, XCircle, AlertTriangle, Circle } from 'lucide-react';
-import type { ExecutionStatus as StatusType } from '@/lib/piston';
+import type { ExecutionStatus as StatusType } from '@/lib/executor';
 
 interface ExecutionStatusProps {
   status: StatusType;
@@ -7,8 +7,8 @@ interface ExecutionStatusProps {
 
 const statusConfig: Record<StatusType, { label: string; icon: React.ElementType; colorClass: string }> = {
   ready: { label: 'Ready', icon: Circle, colorClass: 'text-muted-foreground' },
-  checking: { label: 'Checking Piston', icon: Loader2, colorClass: 'text-warning' },
   sending: { label: 'Sending Code', icon: Loader2, colorClass: 'text-primary' },
+  compiling: { label: 'Compiling', icon: Loader2, colorClass: 'text-warning' },
   running: { label: 'Running', icon: Loader2, colorClass: 'text-primary' },
   complete: { label: 'Execution Complete', icon: CheckCircle2, colorClass: 'text-success' },
   compile_error: { label: 'Compilation Error', icon: AlertTriangle, colorClass: 'text-destructive' },
@@ -18,7 +18,7 @@ const statusConfig: Record<StatusType, { label: string; icon: React.ElementType;
 const ExecutionStatus = ({ status }: ExecutionStatusProps) => {
   const config = statusConfig[status];
   const Icon = config.icon;
-  const isSpinning = ['checking', 'sending', 'running'].includes(status);
+  const isSpinning = ['sending', 'compiling', 'running'].includes(status);
 
   return (
     <div className={`flex items-center gap-1.5 px-3 py-1 border-b border-panel-border bg-card ${config.colorClass}`}>
