@@ -25,11 +25,10 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
-              <Route path="/learn" element={<LearningMode />} />
+              <Route path="/striver" element={<StriverRoadmap />} />
+              <Route path="/problem/:key" element={<ProblemWorkspace />} />
               <Route path="/analytics" element={<StudyAnalytics />} />
               <Route path="/generate" element={<ProblemGenerator />} />
-              <Route path="/roadmap" element={<DSARoadmap />} />
-              <Route path="/striver" element={<StriverRoadmap />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
