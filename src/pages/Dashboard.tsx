@@ -225,7 +225,9 @@ const Dashboard = () => {
 
       const newCases: DbTestCase[] = [];
       for (const tc of generated) {
-        const saved = await insertTestCase(userId, activeProblem.id, tc.input || '', tc.expectedOutput || '', tc.variableName || 'arr');
+        // Support both new multi-input format and legacy single-input format
+        const inputs: Record<string, string> = tc.inputs || { [tc.variableName || 'arr']: tc.input || '' };
+        const saved = await insertTestCase(userId, activeProblem.id, inputs, tc.expectedOutput || '');
         newCases.push(saved);
       }
       setTestCases(prev => [...prev, ...newCases]);
