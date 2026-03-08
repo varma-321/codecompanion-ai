@@ -848,7 +848,7 @@ const ProblemWorkspace = () => {
 
         {/* Right: AI Assistant */}
         {!focusMode && (
-          <div className="w-[360px] shrink-0 border-l border-panel-border overflow-hidden">
+          <div className="hidden lg:block w-[320px] xl:w-[360px] shrink-0 border-l border-panel-border overflow-hidden">
             <AIChatPanel code={code} problemId={null} aiEnabled={true} />
           </div>
         )}
