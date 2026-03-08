@@ -41,11 +41,11 @@ const AdaptiveLearningPath = () => {
     const map = new Map<string, { total: number; solved: number; problems: (RoadmapProblem & { topic: string })[] }>();
     ALL_ROADMAPS.forEach(t => {
       t.problems.forEach(p => {
-        const e = map.get(t.topic) || { total: 0, solved: 0, problems: [] };
+        const e = map.get(t.name) || { total: 0, solved: 0, problems: [] };
         e.total++;
         if (progressData.find(pr => pr.problem_key === p.key && pr.solved)) e.solved++;
-        e.problems.push({ ...p, topic: t.topic });
-        map.set(t.topic, e);
+        e.problems.push({ ...p, topic: t.name });
+        map.set(t.name, e);
       });
     });
     return map;
