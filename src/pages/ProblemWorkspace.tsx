@@ -480,7 +480,7 @@ const ProblemWorkspace = () => {
       {/* Main layout: 3 columns */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left: Problem Description */}
-        {showDescription && (
+        {showDescription && !focusMode && (
           <div className="w-[380px] shrink-0 border-r border-panel-border overflow-hidden flex flex-col">
             <div className="flex items-center justify-between border-b border-panel-border bg-ide-toolbar px-3 py-1.5">
               <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Problem</span>
