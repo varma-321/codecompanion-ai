@@ -14,7 +14,242 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      analyses: {
+        Row: {
+          algorithm: string | null
+          created_at: string
+          id: string
+          optimizations: string[] | null
+          problem_id: string
+          space_complexity: string | null
+          summary: string | null
+          time_complexity: string | null
+          user_id: string
+        }
+        Insert: {
+          algorithm?: string | null
+          created_at?: string
+          id?: string
+          optimizations?: string[] | null
+          problem_id: string
+          space_complexity?: string | null
+          summary?: string | null
+          time_complexity?: string | null
+          user_id: string
+        }
+        Update: {
+          algorithm?: string | null
+          created_at?: string
+          id?: string
+          optimizations?: string[] | null
+          problem_id?: string
+          space_complexity?: string | null
+          summary?: string | null
+          time_complexity?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analyses_problem_id_fkey"
+            columns: ["problem_id"]
+            isOneToOne: false
+            referencedRelation: "problems"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analyses_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hints: {
+        Row: {
+          created_at: string
+          hint_level: number
+          hint_text: string
+          id: string
+          problem_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          hint_level?: number
+          hint_text: string
+          id?: string
+          problem_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          hint_level?: number
+          hint_text?: string
+          id?: string
+          problem_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hints_problem_id_fkey"
+            columns: ["problem_id"]
+            isOneToOne: false
+            referencedRelation: "problems"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hints_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      problems: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          code?: string
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "problems_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      solutions: {
+        Row: {
+          created_at: string
+          explanation: string | null
+          id: string
+          problem_id: string
+          solution_code: string
+          solution_type: string
+          space_complexity: string | null
+          time_complexity: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          problem_id: string
+          solution_code: string
+          solution_type: string
+          space_complexity?: string | null
+          time_complexity?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          problem_id?: string
+          solution_code?: string
+          solution_type?: string
+          space_complexity?: string | null
+          time_complexity?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "solutions_problem_id_fkey"
+            columns: ["problem_id"]
+            isOneToOne: false
+            referencedRelation: "problems"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solutions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      test_cases: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          problem_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          problem_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          problem_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_cases_problem_id_fkey"
+            columns: ["problem_id"]
+            isOneToOne: false
+            referencedRelation: "problems"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_cases_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          created_at: string
+          id: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          username?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
