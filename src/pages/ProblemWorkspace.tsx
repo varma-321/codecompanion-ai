@@ -282,7 +282,7 @@ const ProblemWorkspace = () => {
     const startTime = Date.now();
 
     const { runAllTests } = await import('@/lib/test-runner');
-    const tcInputs = sampleCases.map(tc => ({ inputs: tc.inputs, expected: tc.expected.trim() }));
+    const tcInputs = sampleCases.map(tc => ({ inputs: tc.inputs || {}, expected: (tc.expected || '').trim() }));
 
     const results = await runAllTests(code, tcInputs, setExecStatus, (idx, r) => {
       addConsoleEntry(
@@ -346,12 +346,17 @@ const ProblemWorkspace = () => {
     }
 
     addConsoleEntry('system', `▶ Running ${allTestCases.length} test(s)...`);
+    // Debug: log first test case structure
+    if (allTestCases.length > 0) {
+      console.log('[Submit] First test case:', JSON.stringify(allTestCases[0]));
+      addConsoleEntry('info', `Test case sample: ${JSON.stringify(allTestCases[0]?.inputs || {})}`);
+    }
     const startTime = Date.now();
 
     const { runAllTests } = await import('@/lib/test-runner');
     const tcInputs = allTestCases.map((tc: any) => ({
-      inputs: tc.inputs,
-      expected: (tc.expected || '').trim(),
+      inputs: tc.inputs || {},
+      expected: (tc.expected || tc.expectedOutput || '').trim(),
     }));
 
     const results = await runAllTests(code, tcInputs, setExecStatus, (idx, r) => {
