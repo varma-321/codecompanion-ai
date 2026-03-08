@@ -277,6 +277,12 @@ const Dashboard = () => {
     toast.info('Use the AI chat panel to analyze your code.');
   };
 
+  const handleSaveNotes = useCallback(async (notes: string) => {
+    if (!activeProblem) return;
+    await supabase.from('problems').update({ notes } as any).eq('id', activeProblem.id);
+    toast.success('Notes saved');
+  }, [activeProblem]);
+
   const handleLogout = async () => {
     try { await signOut(); } catch {}
   };
