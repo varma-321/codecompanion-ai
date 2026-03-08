@@ -199,11 +199,11 @@ const CodePlayground = () => {
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
-        <div className="flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
+        <div className="flex-1 overflow-hidden min-h-[200px]">
           <CodeEditor code={code} onChange={setCode} />
         </div>
-        <div className="w-[400px] border-l border-panel-border flex flex-col">
+        <div className="w-full md:w-[400px] border-t md:border-t-0 md:border-l border-panel-border flex flex-col min-h-[150px] md:min-h-0">
           <div className="border-b border-panel-border bg-ide-toolbar px-3 py-1.5 flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Output</span>
             {output.length > 0 && (
