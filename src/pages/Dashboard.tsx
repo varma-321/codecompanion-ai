@@ -126,7 +126,7 @@ const Dashboard = ({ username, onLogout }: DashboardProps) => {
         username={username}
         isRunning={isRunning}
         isSaving={isSaving}
-        runDisabled={runDisabled}
+        runDisabled={false}
         aiEnabled={aiEnabled}
         onAIToggle={setAiEnabled}
       />
