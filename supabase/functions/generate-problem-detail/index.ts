@@ -24,26 +24,48 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are an expert competitive programming problem writer. Generate complete LeetCode-style problem details for Java DSA problems. 
-Return structured JSON via the tool call. Make the problem description detailed and clear like real LeetCode problems.
-- Description should include the full problem statement, what to return, and edge case notes
-- Constraints section should list realistic constraints (e.g., 1 <= nums.length <= 10^5)
-- Include 2-3 examples with input, output, and explanation
-- Provide 3-4 test cases covering edge cases
-- Starter code must be a valid Java class with the correct method signature
+            content: `You are an expert competitive programming problem writer who creates problems identical to real LeetCode problems.
+
+Generate complete LeetCode-style problem details for Java DSA problems with COMPREHENSIVE test cases.
+
+CRITICAL TEST CASE REQUIREMENTS:
+- Generate exactly 20 test cases that thoroughly validate correctness
+- Test cases MUST cover ALL of the following categories:
+
+1. BASIC CASES (3-4): Simple examples that match the problem description
+2. EDGE CASES (4-5): Empty arrays, single elements, null/zero inputs, minimum valid inputs
+3. BOUNDARY CONDITIONS (3-4): Maximum constraints, minimum constraints, off-by-one scenarios
+4. SPECIAL PATTERNS (3-4): All same elements, sorted input, reverse sorted, alternating patterns
+5. NEGATIVE/TRICKY CASES (3-4): Negative numbers, duplicates, no valid answer scenarios
+6. STRESS CASES (2-3): Larger inputs (arrays of 50-100 elements) to test efficiency
+
+Each test case input value must be a STRING representation. Arrays as "[1,2,3]", integers as "5", strings as "\"hello\"".
+The expected output must exactly match what System.out.println() would produce in Java.
+
+For array outputs: use Arrays.toString format like "[1, 2, 3]" 
+For 2D arrays: use Arrays.deepToString format like "[[1, 2], [3, 4]]"
+For lists: use toString format like "[1, 2, 3]"
+For boolean: "true" or "false"
+For strings: just the string without quotes
+
+PROBLEM REQUIREMENTS:
+- Description should be detailed and clear, matching real LeetCode if this problem exists
+- Constraints should list realistic limits
+- Include 2-3 examples with input, output, and explanation  
+- Starter code must be a valid Java class with correct method signature
 - The function name, return type, and parameters must match the starter code exactly`
           },
           {
             role: "user",
             content: `Generate a complete LeetCode-style problem for: "${title}" (Difficulty: ${difficulty}, Topic: ${topic || 'General'}). 
-This should match the real LeetCode problem if it exists. Include full description, constraints, examples with explanations, starter code, and test cases.`
+This should match the REAL LeetCode problem if it exists. Include full description, constraints, examples with explanations, starter code, and 20 comprehensive test cases covering all edge cases, boundaries, and stress scenarios.`
           },
         ],
         tools: [{
           type: "function",
           function: {
             name: "return_problem_detail",
-            description: "Return the complete problem detail",
+            description: "Return the complete problem detail with comprehensive test cases",
             parameters: {
               type: "object",
               properties: {
@@ -82,11 +104,15 @@ This should match the real LeetCode problem if it exists. Include full descripti
                         type: "object",
                         description: "Map of parameter name to value string, e.g. {\"nums\": \"[1,2,3]\", \"target\": \"5\"}"
                       },
-                      expected: { type: "string" }
+                      expected: { type: "string" },
+                      category: { 
+                        type: "string",
+                        description: "Test category: basic, edge, boundary, pattern, tricky, or stress"
+                      }
                     },
                     required: ["inputs", "expected"]
                   },
-                  description: "3-4 test cases including edge cases"
+                  description: "20 comprehensive test cases covering basic, edge, boundary, pattern, tricky, and stress scenarios"
                 },
                 functionName: { type: "string" },
                 returnType: { type: "string" },
@@ -104,7 +130,7 @@ This should match the real LeetCode problem if it exists. Include full descripti
                 hints: {
                   type: "array",
                   items: { type: "string" },
-                  description: "2-3 progressive hints to help solve the problem"
+                  description: "3-4 progressive hints to help solve the problem"
                 },
                 approach: {
                   type: "string",
@@ -125,6 +151,11 @@ This should match the real LeetCode problem if it exists. Include full descripti
       if (status === 429) {
         return new Response(JSON.stringify({ error: "Rate limited. Please try again." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (status === 402) {
+        return new Response(JSON.stringify({ error: "Payment required. Please add credits." }), {
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       const t = await response.text();
