@@ -33,7 +33,7 @@ const quickActions = [
   { label: 'Test Cases', icon: FlaskConical, prompt: '__testcases__' },
 ];
 
-const AIChatPanel = ({ code, problemId }: AIChatPanelProps) => {
+const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) => {
   const [ollamaOnline, setOllamaOnline] = useState(false);
   const [checking, setChecking] = useState(true);
   const [models, setModels] = useState<string[]>([]);
