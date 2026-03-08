@@ -67,9 +67,6 @@ export interface DbTestCase {
   inputs: Record<string, string>;
   created_at: string;
 }
-  variable_name: string;
-  created_at: string;
-}
 
 // ── Auth ──────────────────────────────────────────────────
 
