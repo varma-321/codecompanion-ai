@@ -107,41 +107,57 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
     try {
       if (text === '__analyze__') {
         addMessage('user', '🔍 Analyze this code');
-        const result = await analyzeCode(code);
-        const md = `### Analysis Results\n\n**Problem:** ${result.problemName}\n**Algorithm:** ${result.algorithmUsed}\n\n| Metric | Value |\n|--------|-------|\n| Time Complexity | \`${result.timeComplexity}\` |\n| Space Complexity | \`${result.spaceComplexity}\` |\n\n**Summary:** ${result.summary}\n\n${result.optimizations.length > 0 ? '**Optimizations:**\n' + result.optimizations.map(o => `- ${o}`).join('\n') : ''}`;
-        addMessage('assistant', md);
+        if (useOllama) {
+          const result = await analyzeCode(code);
+          const md = `### Analysis Results\n\n**Problem:** ${result.problemName}\n**Algorithm:** ${result.algorithmUsed}\n\n| Metric | Value |\n|--------|-------|\n| Time Complexity | \`${result.timeComplexity}\` |\n| Space Complexity | \`${result.spaceComplexity}\` |\n\n**Summary:** ${result.summary}\n\n${result.optimizations.length > 0 ? '**Optimizations:**\n' + result.optimizations.map(o => `- ${o}`).join('\n') : ''}`;
+          addMessage('assistant', md);
+        } else {
+          const explanation = await explainCodeViaBackend(code);
+          addMessage('assistant', explanation);
+        }
       } else if (text === '__hints__') {
+        if (!useOllama) { addMessage('system', '⚠️ Hints require Ollama. Please select a model.'); setIsLoading(false); return; }
         const nextLevel = Math.min(hintLevel + 1, 4);
         addMessage('user', `💡 Give me hint ${nextLevel}`);
         const hint = await getAIHints(code, nextLevel);
         addMessage('assistant', `### Hint ${nextLevel} of 4\n\n${hint}`);
         setHintLevel(nextLevel);
       } else if (text.startsWith('__solution_')) {
+        if (!useOllama) { addMessage('system', '⚠️ Solutions require Ollama. Please select a model.'); setIsLoading(false); return; }
         const type = text.replace('__solution_', '').replace('__', '') as 'brute' | 'better' | 'optimal';
         addMessage('user', `📝 Generate ${type} solution`);
         const sol = await getSolution(code, type);
         const md = `### ${type.charAt(0).toUpperCase() + type.slice(1)} Solution\n\n| Metric | Value |\n|--------|-------|\n| Time | \`${sol.timeComplexity}\` |\n| Space | \`${sol.spaceComplexity}\` |\n\n**Explanation:** ${sol.explanation}\n\n\`\`\`java\n${sol.code}\n\`\`\``;
         addMessage('assistant', md);
       } else if (text === '__mistakes__') {
+        if (!useOllama) { addMessage('system', '⚠️ Mistake detection requires Ollama. Please select a model.'); setIsLoading(false); return; }
         addMessage('user', '🐛 Find mistakes in my code');
         const result = await detectMistakes(code);
         addMessage('assistant', result);
       } else if (text === '__patterns__') {
+        if (!useOllama) { addMessage('system', '⚠️ Pattern detection requires Ollama. Please select a model.'); setIsLoading(false); return; }
         addMessage('user', '📚 Detect algorithm patterns');
         const result = await detectPatterns(code);
         addMessage('assistant', result);
       } else if (text === '__edgecases__') {
+        if (!useOllama) { addMessage('system', '⚠️ Edge cases require Ollama. Please select a model.'); setIsLoading(false); return; }
         addMessage('user', '⚠️ Find edge cases');
         const result = await getExtraInsights(code, 'edgecases');
         addMessage('assistant', result);
       } else if (text === '__testcases__') {
+        if (!useOllama) { addMessage('system', '⚠️ Test cases require Ollama. Please select a model.'); setIsLoading(false); return; }
         addMessage('user', '🧪 Generate test cases');
         const result = await getExtraInsights(code, 'testcases');
         addMessage('assistant', result);
       } else {
         addMessage('user', text);
-        const response = await aiChat(code, text);
-        addMessage('assistant', response);
+        if (useOllama) {
+          const response = await aiChat(code, text);
+          addMessage('assistant', response);
+        } else {
+          const explanation = await explainCodeViaBackend(code);
+          addMessage('assistant', explanation);
+        }
       }
     } catch (err: any) {
       const isRateLimit = err?.message?.includes('429') || err?.message?.toLowerCase().includes('rate');
