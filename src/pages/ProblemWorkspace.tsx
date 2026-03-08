@@ -92,6 +92,8 @@ const ProblemWorkspace = () => {
     better: detail.starterCode,
     optimal: detail.starterCode,
   });
+  // Track whether codes have been loaded from DB to prevent generateFullDetail from overwriting
+  const codesLoadedFromDb = useRef(false);
 
   // Convenience: active code getter/setter
   const code = codes[activeApproach];
