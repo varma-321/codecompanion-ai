@@ -184,23 +184,26 @@ export type Database = {
       }
       test_cases: {
         Row: {
-          content: string
           created_at: string
+          expected_output: string
           id: string
+          input: string
           problem_id: string
           user_id: string
         }
         Insert: {
-          content: string
           created_at?: string
+          expected_output?: string
           id?: string
+          input?: string
           problem_id: string
           user_id: string
         }
         Update: {
-          content?: string
           created_at?: string
+          expected_output?: string
           id?: string
+          input?: string
           problem_id?: string
           user_id?: string
         }
