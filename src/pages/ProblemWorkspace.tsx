@@ -220,19 +220,21 @@ const ProblemWorkspace = () => {
     const loadAllCodes = async () => {
       const approaches: Approach[] = ['brute', 'better', 'optimal'];
       const loaded: Record<string, string> = {};
+      let anyFromDb = false;
       for (const approach of approaches) {
         const saveKey = `${key}__${approach}`;
         let savedCode: string | null = null;
         if (authUser && key) {
           try {
-            const { data } = await supabase
+            const { data, error } = await supabase
               .from('user_code_saves')
               .select('code')
               .eq('user_id', authUser.id)
               .eq('problem_key', saveKey)
               .maybeSingle();
-            if (data && (data as any).code) savedCode = (data as any).code;
-          } catch {}
+            if (error) console.error('Load code error:', error);
+            if (data && (data as any).code) { savedCode = (data as any).code; anyFromDb = true; }
+          } catch (e) { console.error('Load code exception:', e); }
         }
         if (!savedCode) {
           savedCode = localStorage.getItem(`workspace-code-${saveKey}`);
@@ -247,14 +249,19 @@ const ProblemWorkspace = () => {
                 .eq('user_id', authUser.id)
                 .eq('problem_key', key)
                 .maybeSingle();
-              if (data && (data as any).code) savedCode = (data as any).code;
+              if (data && (data as any).code) { savedCode = (data as any).code; anyFromDb = true; }
             } catch {}
           }
           if (!savedCode) savedCode = localStorage.getItem(`workspace-code-${key}`);
         }
-        loaded[approach] = savedCode && savedCode !== detail.starterCode ? savedCode : detail.starterCode;
+        if (savedCode) {
+          // Also persist to localStorage for faster future loads
+          try { localStorage.setItem(`workspace-code-${saveKey}`, savedCode); } catch {}
+        }
+        loaded[approach] = savedCode || detail.starterCode;
       }
       if (cancelled) return;
+      codesLoadedFromDb.current = anyFromDb;
       setCodes({ brute: loaded.brute, better: loaded.better, optimal: loaded.optimal });
       wsResetSaved(loaded[activeApproach] || detail.starterCode);
       setConsoleEntries([]);
