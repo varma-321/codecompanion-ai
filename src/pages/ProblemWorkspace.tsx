@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Play, FlaskConical, Loader2, CheckCircle2, XCircle, Brain, ChevronRight, Code2, GitCompare, Cloud, Keyboard } from 'lucide-react';
+import { ArrowLeft, Play, FlaskConical, Loader2, CheckCircle2, XCircle, Brain, ChevronRight, Code2, GitCompare, Cloud, Keyboard, Sparkles, AlertTriangle } from 'lucide-react';
 import { useAutosave } from '@/hooks/use-autosave';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,13 +22,33 @@ import { supabase } from '@/integrations/supabase/client';
 import { STRIVER_ROADMAP, getDifficultyBg, type RoadmapProblem } from '@/lib/striver-roadmap-data';
 import { NEETCODE_ROADMAP } from '@/lib/neetcode-roadmap-data';
 import { LEETCODE_TOP150_ROADMAP } from '@/lib/leetcode-top150-data';
-import { getProblemDetail, type ProblemDetail } from '@/lib/striver-problem-details';
+import { getProblemDetail, PROBLEM_DETAILS, type ProblemDetail } from '@/lib/striver-problem-details';
 import { executeJavaCode, type ExecutionStatus as ExecStatusType } from '@/lib/executor';
 import { API_BASE_URL } from '@/lib/api';
 import ReactMarkdown from 'react-markdown';
 
 // Build a lookup for all problems across all modules
 const ALL_ROADMAPS = [...STRIVER_ROADMAP, ...NEETCODE_ROADMAP, ...LEETCODE_TOP150_ROADMAP];
+
+interface EnhancedDetail extends ProblemDetail {
+  constraints?: string[];
+  hints?: string[];
+  approach?: string;
+}
+
+function getCachedDetail(key: string): EnhancedDetail | null {
+  try {
+    const cached = localStorage.getItem(`problem-detail-${key}`);
+    if (cached) return JSON.parse(cached);
+  } catch {}
+  return null;
+}
+
+function setCachedDetail(key: string, detail: EnhancedDetail) {
+  try {
+    localStorage.setItem(`problem-detail-${key}`, JSON.stringify(detail));
+  } catch {}
+}
 
 const ProblemWorkspace = () => {
   const { key } = useParams<{ key: string }>();
@@ -44,10 +64,19 @@ const ProblemWorkspace = () => {
     return null;
   }, [key]);
 
-  const detail: ProblemDetail = useMemo(() => {
+  const hasHardcodedDetail = key ? !!PROBLEM_DETAILS[key] : false;
+
+  const [detail, setDetail] = useState<EnhancedDetail>(() => {
     if (!roadmapProblem) return getProblemDetail('', 'Unknown', 'Medium');
+    // Check cache first
+    if (key) {
+      const cached = getCachedDetail(key);
+      if (cached) return cached;
+    }
     return getProblemDetail(roadmapProblem.key, roadmapProblem.title, roadmapProblem.difficulty);
-  }, [roadmapProblem]);
+  });
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState('');
 
   const [code, setCode] = useState(detail.starterCode);
   const [consoleEntries, setConsoleEntries] = useState<ConsoleEntry[]>([]);
