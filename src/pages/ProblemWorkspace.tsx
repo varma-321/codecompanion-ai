@@ -505,6 +505,7 @@ const ProblemWorkspace = () => {
   return (
     <div className="flex h-screen flex-col bg-background">
       {/* Header - scrollable on mobile */}
+      {/* Header */}
       <div className="flex items-center gap-1 sm:gap-2 border-b border-panel-border bg-ide-toolbar px-2 sm:px-3 py-1.5 overflow-x-auto scrollbar-none">
         <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="h-7 gap-1 text-xs shrink-0">
           <ArrowLeft className="h-3 w-3" /> <span className="hidden sm:inline">Back</span>
@@ -538,14 +539,14 @@ const ProblemWorkspace = () => {
             {isRunning ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
             Run
           </Button>
-          <Button onClick={handleRunTests} disabled={isRunning || isRunningTests || detail.testCases.length === 0} size="sm" variant="outline" className="h-7 gap-1 text-xs hidden sm:flex">
+          <Button onClick={handleRunTests} disabled={isRunning || isRunningTests || detail.testCases.length === 0} size="sm" variant="outline" className="h-7 gap-1 text-xs">
             {isRunningTests ? <Loader2 className="h-3 w-3 animate-spin" /> : <FlaskConical className="h-3 w-3" />}
             <span className="hidden md:inline">Run Tests ({detail.testCases.length})</span>
             <span className="md:hidden">Test</span>
           </Button>
-          <Button onClick={handleAnalyze} disabled={isAnalyzing || !code.trim()} size="sm" variant="outline" className="h-7 gap-1 text-xs hidden md:flex">
+          <Button onClick={handleAnalyze} disabled={isAnalyzing || !code.trim()} size="sm" variant="outline" className="h-7 gap-1 text-xs hidden sm:flex">
             {isAnalyzing ? <Loader2 className="h-3 w-3 animate-spin" /> : <BarChart3 className="h-3 w-3" />}
-            Analyze
+            <span className="hidden md:inline">Analyze</span>
           </Button>
           <Button onClick={() => navigate(`/discuss?problem=${key}`)} size="sm" variant="ghost" className="h-7 gap-1 text-xs hidden lg:flex">
             <MessageSquare className="h-3 w-3" /> Discuss
@@ -555,7 +556,7 @@ const ProblemWorkspace = () => {
       </div>
 
       {/* Mobile action bar - visible only on small screens */}
-      <div className="flex md:hidden items-center gap-1.5 border-b border-panel-border bg-card px-2 py-1.5 overflow-x-auto scrollbar-none">
+      <div className="flex sm:hidden items-center gap-1.5 border-b border-panel-border bg-card px-2 py-1.5 overflow-x-auto scrollbar-none">
         <Sheet>
           <SheetTrigger asChild>
             <Button variant="outline" size="sm" className="h-7 gap-1 text-[11px] shrink-0">
@@ -638,11 +639,7 @@ const ProblemWorkspace = () => {
           </SheetContent>
         </Sheet>
 
-        <Button onClick={handleRunTests} disabled={isRunning || isRunningTests || detail.testCases.length === 0} size="sm" variant="outline" className="h-7 gap-1 text-[11px] shrink-0 sm:hidden">
-          {isRunningTests ? <Loader2 className="h-3 w-3 animate-spin" /> : <FlaskConical className="h-3 w-3" />}
-          Test
-        </Button>
-        <Button onClick={handleAnalyze} disabled={isAnalyzing || !code.trim()} size="sm" variant="outline" className="h-7 gap-1 text-[11px] shrink-0 md:hidden">
+        <Button onClick={handleAnalyze} disabled={isAnalyzing || !code.trim()} size="sm" variant="outline" className="h-7 gap-1 text-[11px] shrink-0">
           {isAnalyzing ? <Loader2 className="h-3 w-3 animate-spin" /> : <BarChart3 className="h-3 w-3" />}
           Analyze
         </Button>
@@ -803,12 +800,12 @@ const ProblemWorkspace = () => {
 
           {/* Bottom panel */}
           <div className="shrink-0 border-t border-panel-border" style={{ height: consoleHeight }}>
-            <div className="flex items-center border-b border-panel-border bg-ide-toolbar">
+            <div className="flex items-center border-b border-panel-border bg-ide-toolbar overflow-x-auto scrollbar-none">
               {tabItems.map(tab => (
                 <button
                   key={tab.key}
                   onClick={() => setBottomTab(tab.key)}
-                  className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                  className={`px-2 sm:px-3 py-1.5 text-[10px] sm:text-xs font-semibold uppercase tracking-wider transition-colors whitespace-nowrap shrink-0 ${
                     bottomTab === tab.key ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
