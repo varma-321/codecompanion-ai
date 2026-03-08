@@ -9,6 +9,8 @@ import Index from "./pages/Index";
 import LearningMode from "./pages/LearningMode";
 import StudyAnalytics from "./pages/StudyAnalytics";
 import ProblemGenerator from "./pages/ProblemGenerator";
+import DSARoadmap from "./pages/DSARoadmap";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +28,8 @@ const App = () => (
               <Route path="/learn" element={<LearningMode />} />
               <Route path="/analytics" element={<StudyAnalytics />} />
               <Route path="/generate" element={<ProblemGenerator />} />
+              <Route path="/roadmap" element={<DSARoadmap />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
