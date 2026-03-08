@@ -288,7 +288,4 @@ const WeakTopicAnalyzer = () => {
   );
 };
 
-// Need Circle import
-import { Circle } from 'lucide-react';
-
 export default WeakTopicAnalyzer;
