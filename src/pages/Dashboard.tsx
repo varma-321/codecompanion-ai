@@ -346,6 +346,8 @@ const Dashboard = () => {
                 {isExplaining ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Brain className="h-3.5 w-3.5" />}
                 Explain Code
               </Button>
+              <div className="h-5 w-px bg-panel-border mx-1" />
+              <ProblemTimer problemId={activeProblem?.id || null} />
               <ExecutionStatus status={execStatus} />
             </div>
           )}
