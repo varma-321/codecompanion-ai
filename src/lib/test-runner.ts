@@ -135,6 +135,22 @@ function hasClassDeclaration(code: string): boolean {
   return /\bclass\s+\w+/.test(code);
 }
 
+// ─── Default value for a Java type ──────────────────────────────
+
+function getDefaultForType(javaType: string): string {
+  if (javaType.includes('[]')) return 'new ' + javaType + '{}';
+  switch (javaType) {
+    case 'int': return '0';
+    case 'long': return '0L';
+    case 'double': return '0.0';
+    case 'float': return '0.0f';
+    case 'boolean': return 'false';
+    case 'char': return "' '";
+    case 'String': return '""';
+    default: return 'null';
+  }
+}
+
 // ─── Remove main method using brace-counting ────────────────────
 
 function removeMainMethod(code: string): string {
