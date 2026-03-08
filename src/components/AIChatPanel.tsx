@@ -189,18 +189,24 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
   };
 
   // Status Badge Component
-  const StatusBadge = () => (
-    <div className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors duration-300 ${
-      checking ? 'bg-secondary text-muted-foreground' :
-      ollamaOnline ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'
-    }`}>
-      <span className={`h-1.5 w-1.5 rounded-full transition-colors duration-300 ${
-        checking ? 'animate-pulse-dot bg-muted-foreground' :
-        ollamaOnline ? 'bg-success' : 'bg-destructive'
-      }`} />
-      {checking ? 'Checking...' : ollamaOnline ? `Ollama (Online)` : 'AI Offline'}
-    </div>
-  );
+  const StatusBadge = () => {
+    const isAnyOnline = ollamaOnline || backendOnline;
+    const label = checking ? 'Checking...' :
+      ollamaOnline && currentModel ? `Ollama (${currentModel})` :
+      backendOnline ? 'Groq Cloud (Online)' : 'AI Offline';
+    return (
+      <div className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors duration-300 ${
+        checking ? 'bg-secondary text-muted-foreground' :
+        isAnyOnline ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'
+      }`}>
+        <span className={`h-1.5 w-1.5 rounded-full transition-colors duration-300 ${
+          checking ? 'animate-pulse-dot bg-muted-foreground' :
+          isAnyOnline ? 'bg-success' : 'bg-destructive'
+        }`} />
+        {label}
+      </div>
+    );
+  };
 
   // Skeleton Loader for AI thinking
   const AISkeleton = () => (
