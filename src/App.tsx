@@ -22,6 +22,14 @@ import Achievements from "./pages/Achievements";
 import InterviewSimulator from "./pages/InterviewSimulator";
 import CustomProblemCreator from "./pages/CustomProblemCreator";
 import CommunitySolutions from "./pages/CommunitySolutions";
+import Flashcards from "./pages/Flashcards";
+import CompanyTags from "./pages/CompanyTags";
+import WeeklyGoals from "./pages/WeeklyGoals";
+import PomodoroTimer from "./pages/PomodoroTimer";
+import Bookmarks from "./pages/Bookmarks";
+import CheatSheet from "./pages/CheatSheet";
+import CodePlayground from "./pages/CodePlayground";
+import ProgressExport from "./pages/ProgressExport";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,6 +59,14 @@ const App = () => (
               <Route path="/interview" element={<InterviewSimulator />} />
               <Route path="/create" element={<CustomProblemCreator />} />
               <Route path="/community" element={<CommunitySolutions />} />
+              <Route path="/flashcards" element={<Flashcards />} />
+              <Route path="/companies" element={<CompanyTags />} />
+              <Route path="/goals" element={<WeeklyGoals />} />
+              <Route path="/pomodoro" element={<PomodoroTimer />} />
+              <Route path="/bookmarks" element={<Bookmarks />} />
+              <Route path="/cheatsheet" element={<CheatSheet />} />
+              <Route path="/playground" element={<CodePlayground />} />
+              <Route path="/export" element={<ProgressExport />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
