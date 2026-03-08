@@ -30,6 +30,7 @@ import Bookmarks from "./pages/Bookmarks";
 import CheatSheet from "./pages/CheatSheet";
 import CodePlayground from "./pages/CodePlayground";
 import ProgressExport from "./pages/ProgressExport";
+import LearningMode from "./pages/LearningMode";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
