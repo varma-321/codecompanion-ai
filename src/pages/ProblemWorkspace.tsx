@@ -709,9 +709,11 @@ const ProblemWorkspace = () => {
         </div>
 
         {/* Right: AI Assistant */}
-        <div className="w-[360px] shrink-0 border-l border-panel-border overflow-hidden">
-          <AIChatPanel code={code} problemId={null} aiEnabled={true} />
-        </div>
+        {!focusMode && (
+          <div className="w-[360px] shrink-0 border-l border-panel-border overflow-hidden">
+            <AIChatPanel code={code} problemId={null} aiEnabled={true} />
+          </div>
+        )}
       </div>
 
       {/* Keyboard Shortcuts Dialog */}
