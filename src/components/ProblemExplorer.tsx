@@ -14,7 +14,7 @@ interface ProblemExplorerProps {
 }
 
 const ProblemExplorer = ({ problems, activeProblemId, onSelect, onRefresh }: ProblemExplorerProps) => {
-  const { user } = useUser();
+  const { authUser } = useUser();
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
