@@ -459,6 +459,9 @@ const ProblemWorkspace = () => {
           <div className="h-4 w-px bg-panel-border" />
           <ProblemTimer problemId={key || null} onTimeUpdate={setTimeSpent} />
           <div className="h-4 w-px bg-panel-border" />
+          <Button variant="ghost" size="sm" onClick={() => setFocusMode(!focusMode)} className={`h-7 w-7 p-0 ${focusMode ? 'text-primary' : ''}`} title="Focus Mode">
+            {focusMode ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+          </Button>
           <Button variant="ghost" size="sm" onClick={() => setShowShortcuts(true)} className="h-7 w-7 p-0" title="Keyboard Shortcuts (Ctrl+K)">
             <Keyboard className="h-3.5 w-3.5" />
           </Button>
