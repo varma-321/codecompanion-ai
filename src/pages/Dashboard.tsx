@@ -5,9 +5,10 @@ import CodeEditor from '@/components/CodeEditor';
 import AIChatPanel from '@/components/AIChatPanel';
 import ConsolePanel, { ConsoleEntry } from '@/components/ConsolePanel';
 import Toolbar from '@/components/Toolbar';
+import ExecutionStatus from '@/components/ExecutionStatus';
 import SettingsDialog from '@/components/SettingsDialog';
 import { Problem, getProblems, updateProblem, DEFAULT_CODE } from '@/lib/store';
-import { executeJavaCode } from '@/lib/piston';
+import { executeJavaCode, type ExecutionStatus as ExecStatusType } from '@/lib/piston';
 import { detectProblemTitle } from '@/lib/ollama';
 
 interface DashboardProps {
@@ -23,6 +24,9 @@ const Dashboard = ({ username, onLogout }: DashboardProps) => {
   const [isRunning, setIsRunning] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [aiEnabled, setAiEnabled] = useState(true);
+  const [execStatus, setExecStatus] = useState<ExecStatusType>('ready');
+  const [runDisabled, setRunDisabled] = useState(false);
 
   const refreshProblems = useCallback(() => {
     setProblems(getProblems());
@@ -43,25 +47,34 @@ const Dashboard = ({ username, onLogout }: DashboardProps) => {
 
   const handleRun = async () => {
     setIsRunning(true);
+    setExecStatus('checking');
     addConsoleEntry('system', '▶ Compiling and running...');
     try {
-      const result = await executeJavaCode(code);
-      if (result.compile_output) {
-        addConsoleEntry('error', result.compile_output);
-      }
-      if (result.stderr) {
-        addConsoleEntry('error', result.stderr);
-      }
-      if (result.stdout) {
-        addConsoleEntry('output', result.stdout);
-      }
-      if (result.status.id === 3) {
-        addConsoleEntry('info', `✓ Executed in ${result.time}s | Memory: ${result.memory} KB`);
+      const result = await executeJavaCode(code, '', (status) => setExecStatus(status));
+
+      if (result.status.description === 'API Unavailable') {
+        addConsoleEntry('error', result.stderr || 'Piston API is currently unavailable or restricted.');
+        setRunDisabled(true);
+        setTimeout(() => setRunDisabled(false), 30000);
       } else {
-        addConsoleEntry('error', `Status: ${result.status.description}`);
+        if (result.compile_output) {
+          addConsoleEntry('error', result.compile_output);
+        }
+        if (result.stderr) {
+          addConsoleEntry('error', result.stderr);
+        }
+        if (result.stdout) {
+          addConsoleEntry('output', result.stdout);
+        }
+        if (result.status.id === 3) {
+          addConsoleEntry('info', `✓ Executed in ${result.time}s | Memory: ${result.memory} KB`);
+        } else {
+          addConsoleEntry('error', `Status: ${result.status.description}`);
+        }
       }
     } catch (err: any) {
       addConsoleEntry('error', err.message);
+      setExecStatus('failed');
     }
     setIsRunning(false);
   };
@@ -73,7 +86,7 @@ const Dashboard = ({ username, onLogout }: DashboardProps) => {
     }
     setIsSaving(true);
     try {
-      if (activeProblem.title === 'New Problem') {
+      if (activeProblem.title === 'New Problem' && aiEnabled) {
         try {
           const detectedTitle = await detectProblemTitle(code);
           if (detectedTitle && detectedTitle !== 'Unknown Problem') {
@@ -104,7 +117,11 @@ const Dashboard = ({ username, onLogout }: DashboardProps) => {
       toast.error('No problem selected');
       return;
     }
-    toast.info('Use the Analysis tab in the AI panel to analyze your code.');
+    if (!aiEnabled) {
+      toast.error('AI Assistant is disabled. Enable it in the toolbar.');
+      return;
+    }
+    toast.info('Use the AI chat panel to analyze your code.');
   };
 
   return (
@@ -118,6 +135,9 @@ const Dashboard = ({ username, onLogout }: DashboardProps) => {
         username={username}
         isRunning={isRunning}
         isSaving={isSaving}
+        runDisabled={runDisabled}
+        aiEnabled={aiEnabled}
+        onAIToggle={setAiEnabled}
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -134,6 +154,7 @@ const Dashboard = ({ username, onLogout }: DashboardProps) => {
           <div className="flex-1 overflow-hidden">
             <CodeEditor code={code} onChange={setCode} />
           </div>
+          <ExecutionStatus status={execStatus} />
           <div className="h-48 shrink-0 border-t border-panel-border">
             <ConsolePanel
               entries={consoleEntries}
@@ -144,7 +165,7 @@ const Dashboard = ({ username, onLogout }: DashboardProps) => {
         </div>
 
         <div className="w-80 shrink-0 border-l border-panel-border">
-          <AIChatPanel code={code} problemId={activeProblem?.id || null} />
+          <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
         </div>
       </div>
 
