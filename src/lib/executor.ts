@@ -1,6 +1,7 @@
-// Local FastAPI backend for Java code execution
+// Backend for Java code execution
+import { API_BASE_URL } from './api';
 
-const BACKEND_URL = 'http://127.0.0.1:8000/run-java';
+const BACKEND_URL = `${API_BASE_URL}/api/run-java`;
 
 export type ExecutionStatus =
   | 'ready'
