@@ -356,11 +356,11 @@ const Dashboard = () => {
           >
             {/* Tab bar */}
             <div className="flex items-center border-b border-panel-border bg-ide-toolbar">
-              {(['console', 'tests', 'results'] as const).map(tab => (
+              {(['console', 'tests', 'results', 'debugger', 'daily'] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => { setBottomTab(tab); setConsoleCollapsed(false); }}
-                  className={`px-4 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                  className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors ${
                     bottomTab === tab
                       ? 'border-b-2 border-primary text-primary'
                       : 'text-muted-foreground hover:text-foreground'
@@ -368,7 +368,7 @@ const Dashboard = () => {
                 >
                   {tab === 'tests' ? `Tests (${testCases.length})` : tab === 'results' && testResults.length > 0
                     ? `Results (${testResults.filter(r => r.status === 'PASSED').length}/${testResults.length})`
-                    : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                    : tab === 'debugger' ? '🔍 Debug' : tab === 'daily' ? '📅 Daily' : tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </button>
               ))}
             </div>
