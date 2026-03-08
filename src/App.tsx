@@ -6,11 +6,10 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { UserProvider } from "@/lib/user-context";
 import { ThemeProvider } from "@/lib/theme-context";
 import Index from "./pages/Index";
-import LearningMode from "./pages/LearningMode";
 import StudyAnalytics from "./pages/StudyAnalytics";
 import ProblemGenerator from "./pages/ProblemGenerator";
-import DSARoadmap from "./pages/DSARoadmap";
 import StriverRoadmap from "./pages/StriverRoadmap";
+import ProblemWorkspace from "./pages/ProblemWorkspace";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
@@ -26,11 +25,10 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
-              <Route path="/learn" element={<LearningMode />} />
+              <Route path="/striver" element={<StriverRoadmap />} />
+              <Route path="/problem/:key" element={<ProblemWorkspace />} />
               <Route path="/analytics" element={<StudyAnalytics />} />
               <Route path="/generate" element={<ProblemGenerator />} />
-              <Route path="/roadmap" element={<DSARoadmap />} />
-              <Route path="/striver" element={<StriverRoadmap />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
