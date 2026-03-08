@@ -411,18 +411,28 @@ const Dashboard = () => {
                   <div className="w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
                     <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
                   </div>
+              {bottomTab === 'debugger' && (
+                <div className="flex flex-1">
+                  <div className="flex-1 overflow-hidden">
+                    <VisualDebugger code={code} isVisible={true} />
+                  </div>
+                  <div className="w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
+                    <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
+                  </div>
                 </div>
               )}
 
-              {bottomTab === 'results' && (
+              {bottomTab === 'daily' && (
                 <div className="flex flex-1">
                   <div className="flex-1 overflow-auto p-3">
-                    {testResults.length > 0 ? (
-                      <TestResultsTable results={testResults} />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
-                        Run tests to see results
-                      </div>
+                    <DailyChallenge />
+                  </div>
+                  <div className="w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
+                    <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
+                  </div>
+                </div>
+              )}
+            </div>
                     )}
                   </div>
                   <div className="w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
