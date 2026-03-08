@@ -124,19 +124,27 @@ const ProblemWorkspace = () => {
     const saveKey = `${key}__${activeApproach}`;
     try { localStorage.setItem(`workspace-code-${saveKey}`, val); } catch {}
     try {
-      await supabase.from('user_code_saves').upsert({
+      const { error } = await supabase.from('user_code_saves').upsert({
         user_id: authUser.id,
         problem_key: saveKey,
         code: val,
         language: 'java',
       } as any, { onConflict: 'user_id,problem_key' });
-    } catch {}
+      if (error) console.error('Autosave DB error:', error);
+    } catch (e) {
+      console.error('Autosave exception:', e);
+    }
   }, [authUser, key, activeApproach]);
 
   const { isDirty: wsCodeDirty, isSaving: wsAutoSaving, resetSavedValue: wsResetSaved } = useAutosave(code, autosaveWorkspaceCode, {
     delay: 2000,
-    enabled: !!key,
+    enabled: !!key && !!authUser,
   });
+
+  // Reset autosave ref when switching approaches so it doesn't incorrectly detect dirty
+  useEffect(() => {
+    wsResetSaved(codes[activeApproach]);
+  }, [activeApproach]);
 
   // Auto-generate full problem details if not hardcoded
   const generateFullDetail = useCallback(async () => {
