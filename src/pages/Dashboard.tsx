@@ -110,12 +110,31 @@ const Dashboard = () => {
     setExecStatus('sending');
     setConsoleCollapsed(false);
     setBottomTab('console');
+    setExecTimeMs(null);
     addConsoleEntry('system', '▶ Compiling and running...');
+    const startTime = Date.now();
     try {
       const result = await executeJavaCode(code, (status) => setExecStatus(status));
+      const elapsed = Date.now() - startTime;
+      setExecTimeMs(elapsed);
       if (result.success) {
         if (result.output) addConsoleEntry('output', result.output);
-        addConsoleEntry('info', '✓ Execution completed successfully');
+        addConsoleEntry('info', `✓ Execution completed in ${elapsed}ms`);
+        // Analyze complexity in background
+        if (aiEnabled) {
+          setIsAnalyzingComplexity(true);
+          supabase.functions.invoke('analyze-complexity', { body: { code, executionTimeMs: elapsed } })
+            .then(({ data }) => {
+              if (data) {
+                setTimeComplexity(data.timeComplexity || null);
+                setSpaceComplexity(data.spaceComplexity || null);
+                setSuggestion(data.suggestion || null);
+                setOptimizationPossible(data.optimizationPossible || false);
+              }
+            })
+            .catch(() => {})
+            .finally(() => setIsAnalyzingComplexity(false));
+        }
       } else {
         if (result.error) addConsoleEntry('error', result.error);
         if (result.status.description !== 'Compilation Error') {
