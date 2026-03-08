@@ -60,6 +60,7 @@ const MODULES: ModuleCard[] = [
   { id: 'bookmarks', title: 'Bookmarks', subtitle: 'Saved for revision', icon: <Bookmark className="h-5 w-5" />, route: '/bookmarks', category: 'tools', accent: 'text-blue-400' },
   { id: 'export', title: 'Progress Export', subtitle: 'CSV & JSON export', icon: <FileSpreadsheet className="h-5 w-5" />, route: '/export', category: 'tools', accent: 'text-gray-500' },
   { id: 'analytics', title: 'Study Analytics', subtitle: 'Visualize your progress', icon: <BarChart3 className="h-5 w-5" />, route: '/analytics', category: 'tools', accent: 'text-indigo-400' },
+  { id: 'dashboard', title: 'Performance Dashboard', subtitle: 'Unified overview', icon: <TrendingUp className="h-5 w-5" />, route: '/dashboard', category: 'tools', accent: 'text-primary' },
 ];
 
 const CATEGORY_INFO: Record<string, { label: string; icon: React.ReactNode }> = {
