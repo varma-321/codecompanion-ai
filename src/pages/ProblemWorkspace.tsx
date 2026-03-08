@@ -109,7 +109,7 @@ const ProblemWorkspace = () => {
   const [isRunningTests, setIsRunningTests] = useState(false);
   const [execStatus, setExecStatus] = useState<ExecStatusType>('ready');
   const [testResults, setTestResults] = useState<TestResult[]>([]);
-  const [bottomTab, setBottomTab] = useState<'description' | 'console' | 'results' | 'history' | 'snippets' | 'solutions'>('description');
+  const [bottomTab, setBottomTab] = useState<'description' | 'console' | 'results' | 'history' | 'snippets' | 'solutions' | 'analysis'>('description');
   const [consoleHeight, setConsoleHeight] = useState(320);
   const [showDescription, setShowDescription] = useState(true);
   const [timeSpent, setTimeSpent] = useState(0);
@@ -118,6 +118,20 @@ const ProblemWorkspace = () => {
   const [showCelebration, setShowCelebration] = useState(false);
   const [celebrationTime, setCelebrationTime] = useState<number | undefined>();
   const [focusMode, setFocusMode] = useState(false);
+
+  // Complexity analysis state
+  interface ComplexityResult {
+    timeComplexity: string;
+    spaceComplexity: string;
+    suggestion: string;
+    optimizationPossible?: boolean;
+    betterApproach?: string;
+    fullExplanation?: string;
+  }
+  const [analysisResult, setAnalysisResult] = useState<ComplexityResult | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isExplaining, setIsExplaining] = useState(false);
+  const [showFullExplanation, setShowFullExplanation] = useState(false);
 
   // Autosave active approach code to Supabase + localStorage
   const autosaveWorkspaceCode = useCallback(async (val: string) => {
