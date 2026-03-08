@@ -191,41 +191,54 @@ const ProblemWorkspace = () => {
     setIsGenerating(false);
   }, [key, roadmapProblem, hasHardcodedDetail]);
 
-  // Load saved code from DB (with localStorage fallback)
+  // Load saved code for ALL approaches from DB (with localStorage fallback)
   useEffect(() => {
     let cancelled = false;
-    const loadCode = async () => {
-      let savedCode: string | null = null;
-      // Try DB first
-      if (authUser && key) {
-        try {
-          const { data } = await supabase
-            .from('user_code_saves')
-            .select('code')
-            .eq('user_id', authUser.id)
-            .eq('problem_key', key)
-            .maybeSingle();
-          if (data && (data as any).code) savedCode = (data as any).code;
-        } catch {}
-      }
-      // Fallback to localStorage
-      if (!savedCode) {
-        savedCode = localStorage.getItem(`workspace-code-${key}`);
+    const loadAllCodes = async () => {
+      const approaches: Approach[] = ['brute', 'better', 'optimal'];
+      const loaded: Record<string, string> = {};
+      for (const approach of approaches) {
+        const saveKey = `${key}__${approach}`;
+        let savedCode: string | null = null;
+        if (authUser && key) {
+          try {
+            const { data } = await supabase
+              .from('user_code_saves')
+              .select('code')
+              .eq('user_id', authUser.id)
+              .eq('problem_key', saveKey)
+              .maybeSingle();
+            if (data && (data as any).code) savedCode = (data as any).code;
+          } catch {}
+        }
+        if (!savedCode) {
+          savedCode = localStorage.getItem(`workspace-code-${saveKey}`);
+        }
+        // Also check legacy key (no approach suffix) for brute force migration
+        if (!savedCode && approach === 'brute') {
+          if (authUser && key) {
+            try {
+              const { data } = await supabase
+                .from('user_code_saves')
+                .select('code')
+                .eq('user_id', authUser.id)
+                .eq('problem_key', key)
+                .maybeSingle();
+              if (data && (data as any).code) savedCode = (data as any).code;
+            } catch {}
+          }
+          if (!savedCode) savedCode = localStorage.getItem(`workspace-code-${key}`);
+        }
+        loaded[approach] = savedCode && savedCode !== detail.starterCode ? savedCode : detail.starterCode;
       }
       if (cancelled) return;
-      if (savedCode && savedCode !== detail.starterCode) {
-        setCode(savedCode);
-        wsResetSaved(savedCode);
-      } else {
-        setCode(detail.starterCode);
-        wsResetSaved(detail.starterCode);
-      }
+      setCodes({ brute: loaded.brute, better: loaded.better, optimal: loaded.optimal });
+      wsResetSaved(loaded[activeApproach] || detail.starterCode);
       setConsoleEntries([]);
       setTestResults([]);
       setBottomTab('description');
     };
-    loadCode();
-    // Auto-generate if no hardcoded detail
+    loadAllCodes();
     if (!hasHardcodedDetail) {
       generateFullDetail();
     }
