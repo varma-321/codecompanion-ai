@@ -158,25 +158,22 @@ export function buildTestWrapper(
   // If we detected a method, call it with the variables
   let callCode: string;
   if (methodSig) {
-    // Map input variable names to method parameters by position
     const args = methodSig.params.map((param, idx) => {
-      // First try exact name match
       if (inputs[param.name] !== undefined) return param.name;
-      // Then try positional match
       if (idx < varNames.length) return varNames[idx];
       return 'null';
     }).join(', ');
 
     const resultType = methodSig.returnType;
     const printStmt = buildOutputPrint(resultType);
+    const caller = methodSig.isStatic ? methodSig.name : `new Main().${methodSig.name}`;
 
     if (resultType === 'void') {
-      callCode = `        ${methodSig.name}(${args});\n        System.out.println("void");`;
+      callCode = `        ${caller}(${args});\n        System.out.println("void");`;
     } else {
-      callCode = `        ${resultType} result = ${methodSig.name}(${args});\n        ${printStmt}`;
+      callCode = `        ${resultType} result = ${caller}(${args});\n        ${printStmt}`;
     }
   } else {
-    // No method detected - just run the code as-is with variables available
     callCode = '        // Could not detect method signature - running code as-is';
   }
 
