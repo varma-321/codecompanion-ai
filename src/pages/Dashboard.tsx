@@ -343,9 +343,9 @@ const Dashboard = () => {
         codeIsDirty={codeIsDirty}
       />
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left: Problem Explorer */}
-        <div className="w-56 shrink-0 border-r border-border">
+      <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
+        {/* Left: Problem Explorer - hidden on mobile */}
+        <div className="hidden md:block w-56 shrink-0 border-r border-border">
           <ProblemExplorer
             problems={problems}
             activeProblemId={activeProblem?.id || null}
