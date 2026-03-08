@@ -13,8 +13,9 @@ export type ExecutionStatus =
   | 'failed';
 
 export interface ExecutionResult {
-  stdout: string | null;
-  stderr: string | null;
+  success: boolean;
+  output: string | null;
+  error: string | null;
   status: { id: number; description: string };
 }
 
@@ -26,7 +27,7 @@ export async function executeJavaCode(
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     onStatus?.('compiling');
 
@@ -45,8 +46,9 @@ export async function executeJavaCode(
       onStatus?.('failed');
       const errorText = await response.text();
       return {
-        stdout: null,
-        stderr: `Backend error: ${response.status} - ${errorText || 'Unknown error'}`,
+        success: false,
+        output: null,
+        error: `Backend error: ${response.status} - ${errorText || 'Unknown error'}`,
         status: { id: 11, description: 'Backend Error' },
       };
     }
@@ -55,41 +57,46 @@ export async function executeJavaCode(
 
     const data = await response.json();
 
-    // Determine status based on response
-    const hasError = data.stderr && data.stderr.trim().length > 0;
-    const isCompileError = hasError && /error:|cannot find symbol|class .* is public/i.test(data.stderr);
-
-    if (isCompileError) {
-      onStatus?.('compile_error');
+    // Handle the backend response format: { success, output } or { success, error }
+    if (data.success) {
+      onStatus?.('complete');
       return {
-        stdout: data.stdout || null,
-        stderr: data.stderr || null,
-        status: { id: 6, description: 'Compilation Error' },
+        success: true,
+        output: data.output || '',
+        error: null,
+        status: { id: 3, description: 'Accepted' },
       };
-    }
+    } else {
+      // Check if it's a compilation error
+      const errorMsg = data.error || 'Unknown error';
+      const isCompileError = /error:|cannot find symbol|class .* is public|expected|illegal/i.test(errorMsg);
+      
+      if (isCompileError) {
+        onStatus?.('compile_error');
+        return {
+          success: false,
+          output: null,
+          error: errorMsg,
+          status: { id: 6, description: 'Compilation Error' },
+        };
+      }
 
-    if (hasError && !data.stdout) {
       onStatus?.('failed');
       return {
-        stdout: data.stdout || null,
-        stderr: data.stderr || null,
+        success: false,
+        output: null,
+        error: errorMsg,
         status: { id: 11, description: 'Runtime Error' },
       };
     }
-
-    onStatus?.('complete');
-    return {
-      stdout: data.stdout || null,
-      stderr: data.stderr || null,
-      status: { id: 3, description: 'Accepted' },
-    };
   } catch (error: any) {
     onStatus?.('failed');
 
     if (error.name === 'AbortError') {
       return {
-        stdout: null,
-        stderr: 'Execution stopped: program exceeded time limit or encountered an error.',
+        success: false,
+        output: null,
+        error: 'Execution timed out. Program exceeded time limit or encountered an error.',
         status: { id: 11, description: 'Timeout' },
       };
     }
@@ -101,15 +108,17 @@ export async function executeJavaCode(
 
     if (isConnectionError) {
       return {
-        stdout: null,
-        stderr: 'Server is waking up or temporarily unavailable. Please try again.',
+        success: false,
+        output: null,
+        error: 'Server is waking up. Please wait a moment and try again.',
         status: { id: 11, description: 'Connection Error' },
       };
     }
 
     return {
-      stdout: null,
-      stderr: error.message || 'Execution failed',
+      success: false,
+      output: null,
+      error: error.message || 'Execution failed',
       status: { id: 11, description: 'Error' },
     };
   }
