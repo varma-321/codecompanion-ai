@@ -149,12 +149,20 @@ const ProblemWorkspace = () => {
   // Auto-generate full problem details if not hardcoded
   const generateFullDetail = useCallback(async () => {
     if (!roadmapProblem || !key || hasHardcodedDetail) return;
-    // Check cache
     const cached = getCachedDetail(key);
-    // Re-generate if cached version has fewer than 10 test cases (old format)
     if (cached && cached.testCases.length >= 10) {
       setDetail(cached);
-      if (!localStorage.getItem(`workspace-code-${key}`)) setCode(cached.starterCode);
+      // Only set starter code if codes haven't been loaded from DB yet
+      if (!codesLoadedFromDb.current) {
+        setCodes(prev => {
+          const starter = cached.starterCode;
+          return {
+            brute: prev.brute === detail.starterCode ? starter : prev.brute,
+            better: prev.better === detail.starterCode ? starter : prev.better,
+            optimal: prev.optimal === detail.starterCode ? starter : prev.optimal,
+          };
+        });
+      }
       return;
     }
     setIsGenerating(true);
@@ -190,12 +198,12 @@ const ProblemWorkspace = () => {
         };
         setCachedDetail(key, enhanced);
         setDetail(enhanced);
-        // Update codes only if user hasn't written anything for any approach
-        if (generated.starterCode) {
+        // Only update codes if they haven't been loaded from DB
+        if (generated.starterCode && !codesLoadedFromDb.current) {
           setCodes(prev => ({
-            brute: localStorage.getItem(`workspace-code-${key}__brute`) ? prev.brute : generated.starterCode,
-            better: localStorage.getItem(`workspace-code-${key}__better`) ? prev.better : generated.starterCode,
-            optimal: localStorage.getItem(`workspace-code-${key}__optimal`) ? prev.optimal : generated.starterCode,
+            brute: prev.brute === detail.starterCode ? generated.starterCode : prev.brute,
+            better: prev.better === detail.starterCode ? generated.starterCode : prev.better,
+            optimal: prev.optimal === detail.starterCode ? generated.starterCode : prev.optimal,
           }));
         }
       }
@@ -208,6 +216,7 @@ const ProblemWorkspace = () => {
   // Load saved code for ALL approaches from DB (with localStorage fallback)
   useEffect(() => {
     let cancelled = false;
+    codesLoadedFromDb.current = false;
     const loadAllCodes = async () => {
       const approaches: Approach[] = ['brute', 'better', 'optimal'];
       const loaded: Record<string, string> = {};
