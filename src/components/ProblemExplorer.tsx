@@ -69,35 +69,35 @@ const ProblemExplorer = ({ problems, activeProblemId, onSelect, onRefresh }: Pro
   };
 
   return (
-    <div className="flex h-full flex-col bg-ide-sidebar">
-      <div className="flex items-center justify-between border-b border-panel-border px-3 py-2">
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+    <div className="flex h-full flex-col bg-card">
+      <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           Problems
         </span>
         <div className="flex items-center gap-0.5">
           <Button
             variant="ghost"
             size="icon"
-            className={`h-6 w-6 ${showBookmarked ? 'text-warning' : ''}`}
+            className={`h-7 w-7 rounded-lg ${showBookmarked ? 'text-warning' : ''}`}
             onClick={() => setShowBookmarked(b => !b)}
             title="Show bookmarked"
           >
             {showBookmarked ? <BookmarkCheck className="h-3.5 w-3.5" /> : <Bookmark className="h-3.5 w-3.5" />}
           </Button>
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleCreate}>
+          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={handleCreate}>
             <Plus className="h-3.5 w-3.5" />
           </Button>
         </div>
       </div>
 
-      <div className="px-2 py-2">
+      <div className="px-2.5 py-2">
         <div className="relative">
-          <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/60" />
           <Input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search problems..."
-            className="h-7 pl-7 text-xs"
+            placeholder="Search..."
+            className="h-8 pl-8 text-xs rounded-lg bg-secondary border-0 focus-visible:ring-1"
           />
         </div>
       </div>
