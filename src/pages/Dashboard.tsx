@@ -47,43 +47,24 @@ const Dashboard = ({ username, onLogout }: DashboardProps) => {
 
   const handleRun = async () => {
     setIsRunning(true);
-    setExecStatus('checking');
+    setExecStatus('sending');
     addConsoleEntry('system', '▶ Compiling and running...');
     try {
-      const result = await executeJavaCode(code, '', (status) => setExecStatus(status));
+      const result = await executeJavaCode(code, (status) => setExecStatus(status));
 
-      if (result.status.description === 'API Unavailable') {
-        addConsoleEntry('error', result.stderr || 'Piston API is currently unavailable or restricted.');
-        setRunDisabled(true);
-        setTimeout(() => setRunDisabled(false), 30000);
-      } else {
-        if (result.compile_output) {
-          addConsoleEntry('error', result.compile_output);
-        }
-        if (result.stderr) {
-          addConsoleEntry('error', result.stderr);
-        }
-        if (result.stdout) {
-          addConsoleEntry('output', result.stdout);
-        }
-        if (result.status.id === 3) {
-          addConsoleEntry('info', `✓ Executed in ${result.time}s | Memory: ${result.memory} KB`);
-        } else {
-          addConsoleEntry('error', `Status: ${result.status.description}`);
-        }
+      if (result.stderr) {
+        addConsoleEntry('error', result.stderr);
+      }
+      if (result.stdout) {
+        addConsoleEntry('output', result.stdout);
+      }
+      if (result.status.id === 3) {
+        addConsoleEntry('info', '✓ Execution complete');
+      } else if (result.status.description !== 'Compilation Error') {
+        addConsoleEntry('error', `Status: ${result.status.description}`);
       }
     } catch (err: any) {
-      const errorMessage = err?.message || 'Execution failed';
-      const restricted = /whitelist only|unavailable|restricted|401/i.test(errorMessage);
-
-      if (restricted) {
-        addConsoleEntry('error', 'Piston API is currently unavailable or restricted.');
-        setRunDisabled(true);
-        setTimeout(() => setRunDisabled(false), 30000);
-      } else {
-        addConsoleEntry('error', errorMessage);
-      }
-
+      addConsoleEntry('error', err?.message || 'Execution failed');
       setExecStatus('failed');
     }
     setIsRunning(false);
