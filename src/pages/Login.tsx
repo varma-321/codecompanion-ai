@@ -1,33 +1,31 @@
 import { useState } from 'react';
-import { Code2, Terminal, Cpu } from 'lucide-react';
+import { Code2, Terminal, Cpu, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { setUser } from '@/lib/store';
+import { loginOrCreateUser } from '@/lib/supabase';
+import { useUser } from '@/lib/user-context';
 
-interface LoginProps {
-  onLogin: (username: string) => void;
-}
-
-const Login = ({ onLogin }: LoginProps) => {
+const Login = () => {
   const [username, setUsername] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { setUser } = useUser();
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     const trimmed = username.trim();
-    if (!trimmed) {
-      setError('Username is required');
-      return;
+    if (!trimmed) { setError('Username is required'); return; }
+    if (trimmed.length < 3) { setError('Username must be at least 3 characters'); return; }
+    if (!/^[a-zA-Z0-9_]+$/.test(trimmed)) { setError('Username can only contain letters, numbers, and underscores'); return; }
+
+    setLoading(true);
+    setError('');
+    try {
+      const user = await loginOrCreateUser(trimmed);
+      setUser(user);
+    } catch (err: any) {
+      setError(err?.message || 'Login failed. Please try again.');
     }
-    if (trimmed.length < 3) {
-      setError('Username must be at least 3 characters');
-      return;
-    }
-    if (!/^[a-zA-Z0-9_]+$/.test(trimmed)) {
-      setError('Username can only contain letters, numbers, and underscores');
-      return;
-    }
-    setUser(trimmed);
-    onLogin(trimmed);
+    setLoading(false);
   };
 
   return (
@@ -51,7 +49,7 @@ const Login = ({ onLogin }: LoginProps) => {
               <Terminal className="h-3.5 w-3.5" /> Java Runtime
             </span>
             <span className="flex items-center gap-1">
-              <Cpu className="h-3.5 w-3.5" /> Ollama AI
+              <Cpu className="h-3.5 w-3.5" /> Groq AI
             </span>
             <span className="flex items-center gap-1">
               <Code2 className="h-3.5 w-3.5" /> Monaco Editor
@@ -64,19 +62,20 @@ const Login = ({ onLogin }: LoginProps) => {
           <Input
             value={username}
             onChange={(e) => { setUsername(e.target.value); setError(''); }}
-            onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+            onKeyDown={(e) => e.key === 'Enter' && !loading && handleLogin()}
             placeholder="e.g. dev_coder"
             className="mb-2 font-mono"
             autoFocus
+            disabled={loading}
           />
           {error && <p className="mb-3 text-xs text-destructive">{error}</p>}
-          <Button onClick={handleLogin} className="w-full">
-            Enter Lab
+          <Button onClick={handleLogin} className="w-full" disabled={loading}>
+            {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Signing in...</> : 'Enter Lab'}
           </Button>
         </div>
 
         <p className="mt-4 text-center text-xs text-muted-foreground">
-          Your problems and solutions are saved locally in your browser.
+          Your problems and solutions are saved securely in the cloud.
         </p>
       </div>
     </div>
