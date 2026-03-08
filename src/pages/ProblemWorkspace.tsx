@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Play, FlaskConical, Loader2, CheckCircle2, XCircle, Brain, ChevronRight, Code2, GitCompare, Cloud, Keyboard, Sparkles, AlertTriangle, Zap, TrendingUp, Trophy, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Play, FlaskConical, Loader2, CheckCircle2, XCircle, Brain, ChevronRight, Code2, GitCompare, Cloud, Keyboard, Sparkles, AlertTriangle, Zap, TrendingUp, Trophy, Eye, EyeOff, BarChart3, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAutosave } from '@/hooks/use-autosave';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -109,7 +109,7 @@ const ProblemWorkspace = () => {
   const [isRunningTests, setIsRunningTests] = useState(false);
   const [execStatus, setExecStatus] = useState<ExecStatusType>('ready');
   const [testResults, setTestResults] = useState<TestResult[]>([]);
-  const [bottomTab, setBottomTab] = useState<'description' | 'console' | 'results' | 'history' | 'snippets' | 'solutions'>('description');
+  const [bottomTab, setBottomTab] = useState<'description' | 'console' | 'results' | 'history' | 'snippets' | 'solutions' | 'analysis'>('description');
   const [consoleHeight, setConsoleHeight] = useState(320);
   const [showDescription, setShowDescription] = useState(true);
   const [timeSpent, setTimeSpent] = useState(0);
@@ -118,6 +118,20 @@ const ProblemWorkspace = () => {
   const [showCelebration, setShowCelebration] = useState(false);
   const [celebrationTime, setCelebrationTime] = useState<number | undefined>();
   const [focusMode, setFocusMode] = useState(false);
+
+  // Complexity analysis state
+  interface ComplexityResult {
+    timeComplexity: string;
+    spaceComplexity: string;
+    suggestion: string;
+    optimizationPossible?: boolean;
+    betterApproach?: string;
+    fullExplanation?: string;
+  }
+  const [analysisResult, setAnalysisResult] = useState<ComplexityResult | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isExplaining, setIsExplaining] = useState(false);
+  const [showFullExplanation, setShowFullExplanation] = useState(false);
 
   // Autosave active approach code to Supabase + localStorage
   const autosaveWorkspaceCode = useCallback(async (val: string) => {
@@ -413,6 +427,59 @@ const ProblemWorkspace = () => {
     document.addEventListener('mouseup', onUp);
   }, [consoleHeight]);
 
+  // Analyze complexity
+  const handleAnalyze = async () => {
+    if (isAnalyzing || !code.trim()) return;
+    setIsAnalyzing(true);
+    setAnalysisResult(null);
+    setShowFullExplanation(false);
+    setBottomTab('analysis');
+    try {
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-complexity`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ code, executionTimeMs: 0 }),
+      });
+      if (!resp.ok) throw new Error('Analysis failed');
+      const result = await resp.json();
+      setAnalysisResult(result);
+    } catch (err: any) {
+      toast.error('Complexity analysis failed. Try again.');
+    }
+    setIsAnalyzing(false);
+  };
+
+  // Get full explanation
+  const handleFullExplanation = async () => {
+    if (isExplaining || !analysisResult) return;
+    setIsExplaining(true);
+    try {
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-complexity`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          code,
+          executionTimeMs: 0,
+          fullExplanation: true,
+          problemTitle: roadmapProblem?.title || '',
+        }),
+      });
+      if (!resp.ok) throw new Error('Explanation failed');
+      const result = await resp.json();
+      setAnalysisResult(prev => prev ? { ...prev, fullExplanation: result.fullExplanation || result.suggestion } : prev);
+      setShowFullExplanation(true);
+    } catch {
+      toast.error('Could not generate explanation.');
+    }
+    setIsExplaining(false);
+  };
+
   if (!roadmapProblem) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -428,6 +495,7 @@ const ProblemWorkspace = () => {
     { key: 'description' as const, label: 'Tests' },
     { key: 'console' as const, label: 'Console' },
     { key: 'results' as const, label: testResults.length > 0 ? `Results (${testResults.filter(r => r.status === 'PASSED').length}/${testResults.length})` : 'Results' },
+    { key: 'analysis' as const, label: analysisResult ? '📊 Analysis ✓' : '📊 Analysis' },
     { key: 'history' as const, label: '📜 History' },
     { key: 'snippets' as const, label: '📋 Templates' },
     { key: 'solutions' as const, label: '⚡ Solutions' },
@@ -472,6 +540,10 @@ const ProblemWorkspace = () => {
           <Button onClick={handleRunTests} disabled={isRunning || isRunningTests || detail.testCases.length === 0} size="sm" variant="outline" className="h-7 gap-1 text-xs">
             {isRunningTests ? <Loader2 className="h-3 w-3 animate-spin" /> : <FlaskConical className="h-3 w-3" />}
             Run Tests ({detail.testCases.length})
+          </Button>
+          <Button onClick={handleAnalyze} disabled={isAnalyzing || !code.trim()} size="sm" variant="outline" className="h-7 gap-1 text-xs">
+            {isAnalyzing ? <Loader2 className="h-3 w-3 animate-spin" /> : <BarChart3 className="h-3 w-3" />}
+            Analyze
           </Button>
           <ExecutionStatus status={execStatus} />
         </div>
@@ -685,6 +757,68 @@ const ProblemWorkspace = () => {
                     ) : (
                       <div className="flex h-full items-center justify-center text-xs text-muted-foreground py-10">
                         Run tests to see results
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+              )}
+              {bottomTab === 'analysis' && (
+                <ScrollArea className="h-full">
+                  <div className="p-4 space-y-4">
+                    {isAnalyzing ? (
+                      <div className="flex flex-col items-center justify-center py-10 gap-3">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                        <p className="text-xs text-muted-foreground">Analyzing your code complexity...</p>
+                      </div>
+                    ) : analysisResult ? (
+                      <>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="rounded-lg border border-panel-border bg-secondary/20 p-3">
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1">⏱️ Time Complexity</p>
+                            <p className="text-lg font-bold font-mono text-primary">{analysisResult.timeComplexity}</p>
+                          </div>
+                          <div className="rounded-lg border border-panel-border bg-secondary/20 p-3">
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1">💾 Space Complexity</p>
+                            <p className="text-lg font-bold font-mono text-primary">{analysisResult.spaceComplexity}</p>
+                          </div>
+                        </div>
+                        {analysisResult.suggestion && (
+                          <div className="rounded-lg border border-panel-border bg-primary/5 p-3">
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1">💡 Suggestion</p>
+                            <p className="text-xs text-foreground leading-relaxed">{analysisResult.suggestion}</p>
+                          </div>
+                        )}
+                        {analysisResult.optimizationPossible && analysisResult.betterApproach && (
+                          <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
+                            <p className="text-[10px] uppercase tracking-wider font-bold mb-1 text-emerald-600">🚀 Better Approach</p>
+                            <p className="text-xs text-foreground leading-relaxed">{analysisResult.betterApproach}</p>
+                          </div>
+                        )}
+                        {showFullExplanation && analysisResult.fullExplanation && (
+                          <div className="rounded-lg border border-panel-border bg-secondary/10 p-3">
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-2">📖 Full Explanation</p>
+                            <div className="text-xs text-foreground leading-relaxed prose prose-sm max-w-none dark:prose-invert">
+                              <ReactMarkdown>{analysisResult.fullExplanation}</ReactMarkdown>
+                            </div>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={handleFullExplanation} disabled={isExplaining}>
+                            {isExplaining ? <Loader2 className="h-3 w-3 animate-spin" /> : <Brain className="h-3 w-3" />}
+                            {showFullExplanation ? 'Refresh Explanation' : 'Full Explanation'}
+                          </Button>
+                          <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={handleAnalyze}>
+                            <BarChart3 className="h-3 w-3" /> Re-analyze
+                          </Button>
+                        </div>
+                        <div className="rounded border border-panel-border bg-secondary/10 p-2 text-[10px] text-muted-foreground">
+                          💡 Tip: Write different approaches in the Brute/Better/Optimal tabs, then analyze each to compare complexities.
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-10 gap-3">
+                        <BarChart3 className="h-8 w-8 text-muted-foreground/30" />
+                        <p className="text-xs text-muted-foreground">Click <strong>Analyze</strong> to get time & space complexity analysis</p>
                       </div>
                     )}
                   </div>
