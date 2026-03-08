@@ -65,6 +65,8 @@ const MODULES: ModuleCard[] = [
   { id: 'search', title: 'Problem Search', subtitle: 'Search all 750+ problems', icon: <Search className="h-5 w-5" />, route: '/search', category: 'tools', accent: 'text-blue-500' },
   { id: 'streak-calendar', title: 'Activity Calendar', subtitle: 'GitHub-style heatmap', icon: <Calendar className="h-5 w-5" />, route: '/streak-calendar', category: 'social', accent: 'text-green-500' },
   { id: 'bigo', title: 'Big-O Visualizer', subtitle: 'Interactive complexity chart', icon: <BarChart3 className="h-5 w-5" />, route: '/bigo', category: 'study', accent: 'text-amber-500' },
+  { id: 'profile', title: 'My Profile', subtitle: 'Stats, badges & progress', icon: <Target className="h-5 w-5" />, route: '/profile', category: 'social', accent: 'text-primary' },
+  { id: 'submissions', title: 'Submission History', subtitle: 'All your past submissions', icon: <Code2 className="h-5 w-5" />, route: '/submissions', category: 'tools', accent: 'text-cyan-500' },
 ];
 
 const CATEGORY_INFO: Record<string, { label: string; icon: React.ReactNode }> = {

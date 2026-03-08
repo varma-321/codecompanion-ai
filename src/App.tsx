@@ -98,6 +98,8 @@ const App = () => (
               <Route path="/search" element={<GlobalSearch />} />
               <Route path="/streak-calendar" element={<StreakCalendar />} />
               <Route path="/bigo" element={<BigOVisualizer />} />
+              <Route path="/profile" element={<UserProfile />} />
+              <Route path="/submissions" element={<SubmissionHistory />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
