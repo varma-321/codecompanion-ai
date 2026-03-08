@@ -91,28 +91,19 @@ const ProblemWorkspace = () => {
     setBottomTab('console');
     addConsoleEntry('system', `▶ Running ${detail.testCases.length} test(s)...`);
 
-    const results: TestResult[] = [];
+    const { runAllTests } = await import('@/lib/test-runner');
 
-    for (let i = 0; i < detail.testCases.length; i++) {
-      const tc = detail.testCases[i];
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/run-java`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code, testInputs: tc.inputs }),
-          signal: AbortSignal.timeout(15000),
-        });
-        const data = await response.json();
-        const actual = (data.success ? (data.output || '') : (data.error || '')).trim();
-        const expected = tc.expected.trim();
-        const passed = actual === expected;
-        results.push({ test: i + 1, status: passed ? 'PASSED' : 'FAILED', expected, actual: actual || '(no output)' });
-        addConsoleEntry(passed ? 'info' : 'error', `Test ${i + 1} ${passed ? 'PASSED' : 'FAILED'}${!passed ? ` (expected: ${expected}, got: ${actual})` : ''}`);
-      } catch (err: any) {
-        results.push({ test: i + 1, status: 'FAILED', expected: tc.expected, actual: err.message || 'Error' });
-        addConsoleEntry('error', `Test ${i + 1} FAILED: ${err.message || 'Error'}`);
-      }
-    }
+    const tcInputs = detail.testCases.map(tc => ({
+      inputs: tc.inputs,
+      expected: tc.expected.trim(),
+    }));
+
+    const results = await runAllTests(code, tcInputs, setExecStatus, (idx, r) => {
+      addConsoleEntry(
+        r.status === 'PASSED' ? 'info' : 'error',
+        `Test ${r.test} ${r.status}${r.status === 'FAILED' ? ` (expected: ${r.expected}, got: ${r.actual})` : ''}`
+      );
+    });
 
     const passed = results.filter(r => r.status === 'PASSED').length;
     addConsoleEntry('system', `\n${passed}/${results.length} tests passed.`);
