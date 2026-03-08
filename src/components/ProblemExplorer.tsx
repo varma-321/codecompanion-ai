@@ -146,6 +146,12 @@ const ProblemExplorer = ({ problems, activeProblemId, onSelect, onRefresh }: Pro
             </div>
             {editingId !== p.id && (
               <div className="hidden items-center gap-0.5 group-hover:flex">
+                <button onClick={(e) => handleToggleBookmark(p, e)} className="rounded p-0.5 hover:bg-secondary">
+                  {(p as any).bookmarked
+                    ? <BookmarkCheck className="h-3 w-3 text-warning" />
+                    : <Bookmark className="h-3 w-3 text-muted-foreground" />
+                  }
+                </button>
                 <button onClick={(e) => handleRenameStart(p, e)} className="rounded p-0.5 hover:bg-secondary">
                   <Pencil className="h-3 w-3 text-muted-foreground" />
                 </button>
