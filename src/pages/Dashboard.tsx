@@ -326,6 +326,8 @@ const Dashboard = () => {
         runDisabled={false}
         aiEnabled={aiEnabled}
         onAIToggle={setAiEnabled}
+        isAutoSaving={isAutoSaving}
+        codeIsDirty={codeIsDirty}
       />
 
       <div className="flex flex-1 overflow-hidden">
