@@ -24,7 +24,7 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are a test case generator for Java DSA problems. Given a Java function, generate 5 diverse test cases including edge cases. Return ONLY a JSON array of objects with "input" and "expectedOutput" fields. The input should be the string representation of the arguments. Example: [{"input": "[1,2,3]", "expectedOutput": "6"}, {"input": "[]", "expectedOutput": "0"}]. No markdown, no explanation, just the JSON array.`
+            content: `You are a test case generator for Java DSA problems. Given a Java function, generate 5 diverse test cases including edge cases. Return ONLY a JSON array of objects with "variableName", "input" and "expectedOutput" fields. The variableName should match the parameter name of the function. The input should be the string representation of the argument value. Example: [{"variableName": "arr", "input": "[1,2,3]", "expectedOutput": "6"}]. No markdown, no explanation, just the JSON array.`
           },
           {
             role: "user",
