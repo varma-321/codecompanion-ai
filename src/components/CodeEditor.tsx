@@ -1,4 +1,5 @@
 import Editor from '@monaco-editor/react';
+import { useTheme } from '@/lib/theme-context';
 
 interface CodeEditorProps {
   code: string;
@@ -6,13 +7,15 @@ interface CodeEditorProps {
 }
 
 const CodeEditor = ({ code, onChange }: CodeEditorProps) => {
+  const { theme } = useTheme();
+
   return (
     <Editor
       height="100%"
       language="java"
       value={code}
       onChange={(v) => onChange(v || '')}
-      theme="vs"
+      theme={theme === 'dark' ? 'vs-dark' : 'vs'}
       options={{
         fontSize: 14,
         fontFamily: "'JetBrains Mono', monospace",

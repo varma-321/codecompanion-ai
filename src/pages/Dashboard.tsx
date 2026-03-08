@@ -46,6 +46,19 @@ const Dashboard = () => {
   const [isRunningTests, setIsRunningTests] = useState(false);
   const [bottomTab, setBottomTab] = useState<'console' | 'tests' | 'results'>('tests');
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === 'Enter') { e.preventDefault(); handleRun(); }
+        if (e.key === 's') { e.preventDefault(); handleSave(); }
+        if (e.shiftKey && e.key === 'E') { e.preventDefault(); handleExplain(); }
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  });
+
   useEffect(() => {
     if (userId) {
       fetchProblems(userId).then(setProblems).catch(() => {});

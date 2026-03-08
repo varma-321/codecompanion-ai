@@ -93,28 +93,73 @@ export type Database = {
           },
         ]
       }
+      learning_history: {
+        Row: {
+          algorithm: string
+          completed: boolean
+          created_at: string
+          difficulty: string
+          id: string
+          time_spent_seconds: number
+          topic: string
+          user_id: string
+        }
+        Insert: {
+          algorithm: string
+          completed?: boolean
+          created_at?: string
+          difficulty?: string
+          id?: string
+          time_spent_seconds?: number
+          topic: string
+          user_id: string
+        }
+        Update: {
+          algorithm?: string
+          completed?: boolean
+          created_at?: string
+          difficulty?: string
+          id?: string
+          time_spent_seconds?: number
+          topic?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       problems: {
         Row: {
           code: string
           created_at: string
+          difficulty: string
           id: string
+          solved: boolean
+          time_spent_seconds: number
           title: string
+          topic: string
           updated_at: string
           user_id: string
         }
         Insert: {
           code?: string
           created_at?: string
+          difficulty?: string
           id?: string
+          solved?: boolean
+          time_spent_seconds?: number
           title?: string
+          topic?: string
           updated_at?: string
           user_id: string
         }
         Update: {
           code?: string
           created_at?: string
+          difficulty?: string
           id?: string
+          solved?: boolean
+          time_spent_seconds?: number
           title?: string
+          topic?: string
           updated_at?: string
           user_id?: string
         }
