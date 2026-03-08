@@ -9,7 +9,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { code } = await req.json();
+    const { code, title, difficulty } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -24,9 +24,18 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are a test case generator for Java DSA problems. Given a Java function, generate 5 diverse test cases including edge cases.
+            content: `You are a comprehensive test case generator for Java DSA problems, similar to what LeetCode uses internally.
 
-IMPORTANT: Each test case must have MULTIPLE INPUT VARIABLES matching the function parameters.
+Generate exactly 20 test cases that thoroughly validate correctness. Cover ALL categories:
+
+1. BASIC CASES (3-4): Simple examples matching the problem description
+2. EDGE CASES (4-5): Empty arrays, single elements, null/zero inputs, minimum valid inputs  
+3. BOUNDARY CONDITIONS (3-4): Max/min constraints, off-by-one scenarios
+4. SPECIAL PATTERNS (3-4): All same elements, sorted, reverse sorted, alternating
+5. NEGATIVE/TRICKY CASES (3-4): Negative numbers, duplicates, no valid answer
+6. STRESS CASES (2-3): Larger inputs (50-100 elements) to test efficiency
+
+CRITICAL: Each test case must have MULTIPLE INPUT VARIABLES matching the function parameters.
 
 For example, if the function is:
 public static int[] twoSum(int[] nums, int target)
@@ -34,22 +43,20 @@ public static int[] twoSum(int[] nums, int target)
 Then each test case should have inputs for BOTH "nums" and "target":
 {
   "inputs": { "nums": "[2,7,11,15]", "target": "9" },
-  "expectedOutput": "[0,1]"
+  "expectedOutput": "[0, 1]",
+  "category": "basic"
 }
 
-Another example for:
-public static int binarySearch(int[] arr, int target)
-
-{
-  "inputs": { "arr": "[1,3,5,7,9]", "target": "5" },
-  "expectedOutput": "2"
-}
-
-All input values must be STRING representations. Arrays as "[1,2,3]", integers as "5", strings as "hello".`
+All input values must be STRING representations. Arrays as "[1,2,3]", integers as "5", strings as "hello".
+Expected output must exactly match what System.out.println() would produce in Java:
+- Arrays: "[1, 2, 3]" (with spaces after commas, like Arrays.toString)
+- 2D arrays: "[[1, 2], [3, 4]]" (like Arrays.deepToString)
+- Booleans: "true" or "false"
+- Strings: just the string without extra quotes`
           },
           {
             role: "user",
-            content: `Generate 5 diverse test cases for this Java function:\n\n${code}`
+            content: `Generate 20 comprehensive test cases for this Java function${title ? ` (Problem: ${title}, Difficulty: ${difficulty || 'Medium'})` : ''}:\n\n${code}`
           }
         ],
         tools: [
@@ -57,7 +64,7 @@ All input values must be STRING representations. Arrays as "[1,2,3]", integers a
             type: "function",
             function: {
               name: "return_test_cases",
-              description: "Return generated test cases with multi-variable inputs",
+              description: "Return 20 comprehensive test cases covering all edge cases and scenarios",
               parameters: {
                 type: "object",
                 properties: {
@@ -68,9 +75,13 @@ All input values must be STRING representations. Arrays as "[1,2,3]", integers a
                       properties: {
                         inputs: {
                           type: "object",
-                          description: "Map of parameter name to string value, e.g. {\"nums\": \"[1,2,3]\", \"target\": \"5\"}"
+                          description: "Map of parameter name to string value"
                         },
-                        expectedOutput: { type: "string" }
+                        expectedOutput: { type: "string" },
+                        category: { 
+                          type: "string",
+                          description: "Test category: basic, edge, boundary, pattern, tricky, or stress"
+                        }
                       },
                       required: ["inputs", "expectedOutput"],
                       additionalProperties: false
