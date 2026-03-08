@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Plus, Search, Trash2, FileCode, Pencil, Check, X } from 'lucide-react';
+import { Plus, Search, Trash2, FileCode, Pencil, Check, X, Bookmark, BookmarkCheck, Filter } from 'lucide-react';
 import { DbProblem, createProblem, deleteProblem as dbDeleteProblem, updateProblem as dbUpdateProblem, DEFAULT_CODE } from '@/lib/supabase';
 import { useUser } from '@/lib/user-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { supabase } from '@/integrations/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
 
 interface ProblemExplorerProps {
@@ -18,10 +19,12 @@ const ProblemExplorer = ({ problems, activeProblemId, onSelect, onRefresh }: Pro
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
+  const [showBookmarked, setShowBookmarked] = useState(false);
 
-  const filtered = problems.filter(p =>
-    p.title.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = problems.filter(p => {
+    if (showBookmarked && !(p as any).bookmarked) return false;
+    return p.title.toLowerCase().includes(search.toLowerCase());
+  });
 
   const handleCreate = async () => {
     if (!authUser) return;
@@ -38,6 +41,15 @@ const ProblemExplorer = ({ problems, activeProblemId, onSelect, onRefresh }: Pro
       await dbDeleteProblem(id);
       onRefresh();
     } catch { /* silent */ }
+  };
+
+  const handleToggleBookmark = async (p: DbProblem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newVal = !(p as any).bookmarked;
+    try {
+      await supabase.from('problems').update({ bookmarked: newVal } as any).eq('id', p.id);
+      onRefresh();
+    } catch {}
   };
 
   const handleRenameStart = (p: DbProblem, e: React.MouseEvent) => {
@@ -62,9 +74,20 @@ const ProblemExplorer = ({ problems, activeProblemId, onSelect, onRefresh }: Pro
         <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Problems
         </span>
-        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleCreate}>
-          <Plus className="h-3.5 w-3.5" />
-        </Button>
+        <div className="flex items-center gap-0.5">
+          <Button
+            variant="ghost"
+            size="icon"
+            className={`h-6 w-6 ${showBookmarked ? 'text-warning' : ''}`}
+            onClick={() => setShowBookmarked(b => !b)}
+            title="Show bookmarked"
+          >
+            {showBookmarked ? <BookmarkCheck className="h-3.5 w-3.5" /> : <Bookmark className="h-3.5 w-3.5" />}
+          </Button>
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleCreate}>
+            <Plus className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       </div>
 
       <div className="px-2 py-2">
@@ -123,6 +146,12 @@ const ProblemExplorer = ({ problems, activeProblemId, onSelect, onRefresh }: Pro
             </div>
             {editingId !== p.id && (
               <div className="hidden items-center gap-0.5 group-hover:flex">
+                <button onClick={(e) => handleToggleBookmark(p, e)} className="rounded p-0.5 hover:bg-secondary">
+                  {(p as any).bookmarked
+                    ? <BookmarkCheck className="h-3 w-3 text-warning" />
+                    : <Bookmark className="h-3 w-3 text-muted-foreground" />
+                  }
+                </button>
                 <button onClick={(e) => handleRenameStart(p, e)} className="rounded p-0.5 hover:bg-secondary">
                   <Pencil className="h-3 w-3 text-muted-foreground" />
                 </button>

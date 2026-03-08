@@ -128,10 +128,12 @@ export type Database = {
       }
       problems: {
         Row: {
+          bookmarked: boolean
           code: string
           created_at: string
           difficulty: string
           id: string
+          notes: string
           solved: boolean
           time_spent_seconds: number
           title: string
@@ -140,10 +142,12 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          bookmarked?: boolean
           code?: string
           created_at?: string
           difficulty?: string
           id?: string
+          notes?: string
           solved?: boolean
           time_spent_seconds?: number
           title?: string
@@ -152,10 +156,12 @@ export type Database = {
           user_id: string
         }
         Update: {
+          bookmarked?: boolean
           code?: string
           created_at?: string
           difficulty?: string
           id?: string
+          notes?: string
           solved?: boolean
           time_spent_seconds?: number
           title?: string

@@ -16,6 +16,12 @@ export interface DbProblem {
   code: string;
   created_at: string;
   updated_at: string;
+  bookmarked?: boolean;
+  notes?: string;
+  difficulty?: string;
+  topic?: string;
+  solved?: boolean;
+  time_spent_seconds?: number;
 }
 
 export interface DbAnalysis {

@@ -11,6 +11,9 @@ import TestResultsTable from '@/components/TestResultsTable';
 import VisualDebugger from '@/components/VisualDebugger';
 import ExecutionAnalyticsPanel from '@/components/ExecutionAnalyticsPanel';
 import DailyChallenge from '@/components/DailyChallenge';
+import NotesPanel from '@/components/NotesPanel';
+import StreakPanel from '@/components/StreakPanel';
+import RecursionTreePanel from '@/components/RecursionTreePanel';
 import Toolbar from '@/components/Toolbar';
 import ExecutionStatus from '@/components/ExecutionStatus';
 import SettingsDialog from '@/components/SettingsDialog';
@@ -47,7 +50,7 @@ const Dashboard = () => {
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [isGeneratingTests, setIsGeneratingTests] = useState(false);
   const [isRunningTests, setIsRunningTests] = useState(false);
-  const [bottomTab, setBottomTab] = useState<'console' | 'tests' | 'results' | 'debugger' | 'daily'>('tests');
+  const [bottomTab, setBottomTab] = useState<'console' | 'tests' | 'results' | 'debugger' | 'daily' | 'notes' | 'streak' | 'recursion'>('tests');
 
   // Execution analytics
   const [execTimeMs, setExecTimeMs] = useState<number | null>(null);
@@ -274,6 +277,12 @@ const Dashboard = () => {
     toast.info('Use the AI chat panel to analyze your code.');
   };
 
+  const handleSaveNotes = useCallback(async (notes: string) => {
+    if (!activeProblem) return;
+    await supabase.from('problems').update({ notes } as any).eq('id', activeProblem.id);
+    toast.success('Notes saved');
+  }, [activeProblem]);
+
   const handleLogout = async () => {
     try { await signOut(); } catch {}
   };
@@ -356,7 +365,7 @@ const Dashboard = () => {
           >
             {/* Tab bar */}
             <div className="flex items-center border-b border-panel-border bg-ide-toolbar">
-              {(['console', 'tests', 'results', 'debugger', 'daily'] as const).map(tab => (
+              {(['console', 'tests', 'results', 'debugger', 'notes', 'recursion', 'streak', 'daily'] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => { setBottomTab(tab); setConsoleCollapsed(false); }}
@@ -368,7 +377,9 @@ const Dashboard = () => {
                 >
                   {tab === 'tests' ? `Tests (${testCases.length})` : tab === 'results' && testResults.length > 0
                     ? `Results (${testResults.filter(r => r.status === 'PASSED').length}/${testResults.length})`
-                    : tab === 'debugger' ? '🔍 Debug' : tab === 'daily' ? '📅 Daily' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                    : tab === 'debugger' ? '🔍 Debug' : tab === 'daily' ? '📅 Daily'
+                    : tab === 'notes' ? '📝 Notes' : tab === 'recursion' ? '🌳 Recursion'
+                    : tab === 'streak' ? '🔥 Streak' : tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </button>
               ))}
             </div>
@@ -446,6 +457,39 @@ const Dashboard = () => {
                 <div className="flex flex-1">
                   <div className="flex-1 overflow-auto p-3">
                     <DailyChallenge />
+                  </div>
+                  <div className="w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
+                    <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
+                  </div>
+                </div>
+              )}
+
+              {bottomTab === 'notes' && (
+                <div className="flex flex-1">
+                  <div className="flex-1 overflow-hidden">
+                    <NotesPanel notes={(activeProblem as any)?.notes || ''} onSave={handleSaveNotes} />
+                  </div>
+                  <div className="w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
+                    <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
+                  </div>
+                </div>
+              )}
+
+              {bottomTab === 'recursion' && (
+                <div className="flex flex-1">
+                  <div className="flex-1 overflow-hidden">
+                    <RecursionTreePanel code={code} />
+                  </div>
+                  <div className="w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
+                    <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
+                  </div>
+                </div>
+              )}
+
+              {bottomTab === 'streak' && (
+                <div className="flex flex-1">
+                  <div className="flex-1 overflow-auto">
+                    <StreakPanel />
                   </div>
                   <div className="w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
                     <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
