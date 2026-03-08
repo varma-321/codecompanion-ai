@@ -28,7 +28,7 @@ const Toolbar = ({ onRun, onSave, onAnalyze, onSettings, onLogout, username, isR
 
   const navItems = [
     { path: '/', label: 'IDE', icon: null },
-    { path: '/striver', label: 'Striver Sheet', icon: Route },
+    { path: '/modules', label: 'Modules', icon: BookOpen },
     { path: '/analytics', label: 'Analytics', icon: BarChart3 },
     { path: '/generate', label: 'Generate', icon: Wand2 },
   ];
