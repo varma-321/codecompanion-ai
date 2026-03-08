@@ -94,6 +94,42 @@ export type Database = {
         }
         Relationships: []
       }
+      execution_history: {
+        Row: {
+          code_snapshot: string
+          created_at: string
+          execution_time_ms: number | null
+          id: string
+          language: string
+          passed: boolean
+          problem_id: string
+          test_results: Json
+          user_id: string
+        }
+        Insert: {
+          code_snapshot?: string
+          created_at?: string
+          execution_time_ms?: number | null
+          id?: string
+          language?: string
+          passed?: boolean
+          problem_id: string
+          test_results?: Json
+          user_id: string
+        }
+        Update: {
+          code_snapshot?: string
+          created_at?: string
+          execution_time_ms?: number | null
+          id?: string
+          language?: string
+          passed?: boolean
+          problem_id?: string
+          test_results?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
       hints: {
         Row: {
           created_at: string

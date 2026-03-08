@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Play, FlaskConical, Loader2, CheckCircle2, XCircle, Brain, ChevronRight, Code2, GitCompare, Cloud } from 'lucide-react';
+import { ArrowLeft, Play, FlaskConical, Loader2, CheckCircle2, XCircle, Brain, ChevronRight, Code2, GitCompare, Cloud, Keyboard } from 'lucide-react';
 import { useAutosave } from '@/hooks/use-autosave';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,22 +15,29 @@ import ExecutionStatus from '@/components/ExecutionStatus';
 import ProblemTimer from '@/components/ProblemTimer';
 import CodeSnippets from '@/components/CodeSnippets';
 import SolutionComparison from '@/components/SolutionComparison';
+import ExecutionHistoryPanel, { saveExecutionHistory } from '@/components/ExecutionHistoryPanel';
+import KeyboardShortcutsDialog from '@/components/KeyboardShortcutsDialog';
 import { useUser } from '@/lib/user-context';
 import { supabase } from '@/integrations/supabase/client';
-import { STRIVER_ROADMAP, getDifficultyBg } from '@/lib/striver-roadmap-data';
+import { STRIVER_ROADMAP, getDifficultyBg, type RoadmapProblem } from '@/lib/striver-roadmap-data';
+import { NEETCODE_ROADMAP } from '@/lib/neetcode-roadmap-data';
+import { LEETCODE_TOP150_ROADMAP } from '@/lib/leetcode-top150-data';
 import { getProblemDetail, type ProblemDetail } from '@/lib/striver-problem-details';
 import { executeJavaCode, type ExecutionStatus as ExecStatusType } from '@/lib/executor';
 import { API_BASE_URL } from '@/lib/api';
 import ReactMarkdown from 'react-markdown';
+
+// Build a lookup for all problems across all modules
+const ALL_ROADMAPS = [...STRIVER_ROADMAP, ...NEETCODE_ROADMAP, ...LEETCODE_TOP150_ROADMAP];
 
 const ProblemWorkspace = () => {
   const { key } = useParams<{ key: string }>();
   const navigate = useNavigate();
   const { authUser } = useUser();
 
-  // Find the problem from roadmap data
+  // Find the problem from any roadmap
   const roadmapProblem = useMemo(() => {
-    for (const topic of STRIVER_ROADMAP) {
+    for (const topic of ALL_ROADMAPS) {
       const found = topic.problems.find(p => p.key === key);
       if (found) return { ...found, topic: topic.name };
     }
@@ -48,15 +55,16 @@ const ProblemWorkspace = () => {
   const [isRunningTests, setIsRunningTests] = useState(false);
   const [execStatus, setExecStatus] = useState<ExecStatusType>('ready');
   const [testResults, setTestResults] = useState<TestResult[]>([]);
-  const [bottomTab, setBottomTab] = useState<'description' | 'console' | 'results' | 'snippets' | 'solutions'>('description');
+  const [bottomTab, setBottomTab] = useState<'description' | 'console' | 'results' | 'history' | 'snippets' | 'solutions'>('description');
   const [consoleHeight, setConsoleHeight] = useState(320);
   const [showDescription, setShowDescription] = useState(true);
   const [timeSpent, setTimeSpent] = useState(0);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
 
-  // Autosave code to user_problem_progress or a problems entry
+  // Autosave code to localStorage
   const autosaveWorkspaceCode = useCallback(async (val: string) => {
     if (!authUser || !key) return;
-    // Save code to user_problem_progress (we'll store in localStorage as backup)
     try {
       localStorage.setItem(`workspace-code-${key}`, val);
     } catch {}
@@ -69,7 +77,6 @@ const ProblemWorkspace = () => {
 
   // Reset code when problem changes
   useEffect(() => {
-    // Try to restore saved code from localStorage
     const saved = localStorage.getItem(`workspace-code-${key}`);
     if (saved && saved !== detail.starterCode) {
       setCode(saved);
@@ -81,6 +88,30 @@ const ProblemWorkspace = () => {
     setTestResults([]);
     setBottomTab('description');
   }, [key]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod) {
+        if (e.key === 'Enter') { e.preventDefault(); handleRun(); }
+        if (e.key === 's') { e.preventDefault(); /* autosave handles this */ toast.success('Auto-saved'); }
+        if (e.shiftKey && e.key === 'E') { e.preventDefault(); /* AI explain */ }
+        if (e.shiftKey && e.key === 'T') { e.preventDefault(); handleRunTests(); }
+        if (e.shiftKey && e.key === 'H') { e.preventDefault(); setShowDescription(p => !p); }
+        if (e.key === 'k') { e.preventDefault(); setShowShortcuts(p => !p); }
+        if (e.key === '1') { e.preventDefault(); setBottomTab('description'); }
+        if (e.key === '2') { e.preventDefault(); setBottomTab('console'); }
+        if (e.key === '3') { e.preventDefault(); setBottomTab('results'); }
+        if (e.key === '4') { e.preventDefault(); setBottomTab('history'); }
+        if (e.key === '5') { e.preventDefault(); setBottomTab('snippets'); }
+        if (e.key === '6') { e.preventDefault(); setBottomTab('solutions'); }
+      }
+      if (e.key === 'Escape') { setShowShortcuts(false); }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  });
 
   const addConsoleEntry = (type: ConsoleEntry['type'], text: string) => {
     setConsoleEntries(prev => [...prev, {
@@ -95,13 +126,20 @@ const ProblemWorkspace = () => {
     setExecStatus('sending');
     setBottomTab('console');
     addConsoleEntry('system', '▶ Compiling and running...');
+    const startTime = Date.now();
     try {
       const result = await executeJavaCode(code, (s) => setExecStatus(s));
+      const execTime = Date.now() - startTime;
       if (result.success) {
         if (result.output) addConsoleEntry('output', result.output);
-        addConsoleEntry('info', '✓ Execution completed');
+        addConsoleEntry('info', `✓ Execution completed (${execTime}ms)`);
       } else {
         if (result.error) addConsoleEntry('error', result.error);
+      }
+      // Save to history
+      if (authUser && key) {
+        await saveExecutionHistory(authUser.id, key, code, [], result.success, execTime);
+        setHistoryRefreshKey(prev => prev + 1);
       }
     } catch (err: any) {
       addConsoleEntry('error', err?.message || 'Execution failed');
@@ -116,6 +154,7 @@ const ProblemWorkspace = () => {
     setTestResults([]);
     setBottomTab('console');
     addConsoleEntry('system', `▶ Running ${detail.testCases.length} test(s)...`);
+    const startTime = Date.now();
 
     const { runAllTests } = await import('@/lib/test-runner');
 
@@ -131,16 +170,23 @@ const ProblemWorkspace = () => {
       );
     });
 
+    const execTime = Date.now() - startTime;
     const passed = results.filter(r => r.status === 'PASSED').length;
-    addConsoleEntry('system', `\n${passed}/${results.length} tests passed.`);
+    const allPassed = passed === results.length;
+    addConsoleEntry('system', `\n${passed}/${results.length} tests passed (${execTime}ms).`);
     setTestResults(results);
     setBottomTab('results');
     setExecStatus('complete');
     setIsRunningTests(false);
 
+    // Save execution history
+    if (authUser && key) {
+      await saveExecutionHistory(authUser.id, key, code, results, allPassed, execTime);
+      setHistoryRefreshKey(prev => prev + 1);
+    }
+
     // Update progress in Supabase
     if (authUser && key) {
-      const allPassed = passed === results.length;
       try {
         const { data: existing } = await supabase
           .from('user_problem_progress')
@@ -184,21 +230,30 @@ const ProblemWorkspace = () => {
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="text-center">
           <p className="text-lg font-semibold text-foreground">Problem not found</p>
-          <Button onClick={() => navigate('/striver')} className="mt-4">Back to Roadmap</Button>
+          <Button onClick={() => navigate('/modules')} className="mt-4">Back to Modules</Button>
         </div>
       </div>
     );
   }
 
+  const tabItems = [
+    { key: 'description' as const, label: 'Tests' },
+    { key: 'console' as const, label: 'Console' },
+    { key: 'results' as const, label: testResults.length > 0 ? `Results (${testResults.filter(r => r.status === 'PASSED').length}/${testResults.length})` : 'Results' },
+    { key: 'history' as const, label: '📜 History' },
+    { key: 'snippets' as const, label: '📋 Templates' },
+    { key: 'solutions' as const, label: '⚡ Solutions' },
+  ];
+
   return (
     <div className="flex h-screen flex-col bg-background">
       {/* Header */}
       <div className="flex items-center gap-2 border-b border-panel-border bg-ide-toolbar px-3 py-1.5">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/striver')} className="h-7 gap-1 text-xs">
-          <ArrowLeft className="h-3 w-3" /> Roadmap
+        <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="h-7 gap-1 text-xs">
+          <ArrowLeft className="h-3 w-3" /> Back
         </Button>
         <ChevronRight className="h-3 w-3 text-muted-foreground" />
-        <Badge variant="outline" className="text-[10px]">{roadmapProblem.topic}</Badge>
+        <Badge variant="outline" className="text-[10px]">{(roadmapProblem as any).topic}</Badge>
         <span className="text-sm font-bold text-foreground">{roadmapProblem.title}</span>
         <Badge className={`text-[10px] ${getDifficultyBg(roadmapProblem.difficulty)}`}>
           {roadmapProblem.difficulty}
@@ -216,6 +271,9 @@ const ProblemWorkspace = () => {
           <div className="h-4 w-px bg-panel-border" />
           <ProblemTimer problemId={key || null} onTimeUpdate={setTimeSpent} />
           <div className="h-4 w-px bg-panel-border" />
+          <Button variant="ghost" size="sm" onClick={() => setShowShortcuts(true)} className="h-7 w-7 p-0" title="Keyboard Shortcuts (Ctrl+K)">
+            <Keyboard className="h-3.5 w-3.5" />
+          </Button>
           <Button onClick={handleRun} disabled={isRunning || isRunningTests} size="sm" className="h-7 gap-1 text-xs">
             {isRunning ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
             Run
@@ -301,19 +359,15 @@ const ProblemWorkspace = () => {
           {/* Bottom panel */}
           <div className="shrink-0 border-t border-panel-border" style={{ height: consoleHeight }}>
             <div className="flex items-center border-b border-panel-border bg-ide-toolbar">
-              {(['description', 'console', 'results', 'snippets', 'solutions'] as const).map(tab => (
+              {tabItems.map(tab => (
                 <button
-                  key={tab}
-                  onClick={() => setBottomTab(tab)}
+                  key={tab.key}
+                  onClick={() => setBottomTab(tab.key)}
                   className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors ${
-                    bottomTab === tab ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'
+                    bottomTab === tab.key ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  {tab === 'results' && testResults.length > 0
-                    ? `Results (${testResults.filter(r => r.status === 'PASSED').length}/${testResults.length})`
-                    : tab === 'snippets' ? '📋 Templates'
-                    : tab === 'solutions' ? '⚡ Solutions'
-                    : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  {tab.label}
                 </button>
               ))}
             </div>
@@ -362,6 +416,14 @@ const ProblemWorkspace = () => {
                   </div>
                 </ScrollArea>
               )}
+              {bottomTab === 'history' && authUser && key && (
+                <ExecutionHistoryPanel
+                  key={historyRefreshKey}
+                  userId={authUser.id}
+                  problemId={key}
+                  onRestoreCode={(restored) => { setCode(restored); toast.success('Code restored from history'); }}
+                />
+              )}
               {bottomTab === 'snippets' && (
                 <CodeSnippets onInsert={(snippet) => setCode(prev => prev + snippet)} />
               )}
@@ -377,6 +439,9 @@ const ProblemWorkspace = () => {
           <AIChatPanel code={code} problemId={null} aiEnabled={true} />
         </div>
       </div>
+
+      {/* Keyboard Shortcuts Dialog */}
+      <KeyboardShortcutsDialog isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
     </div>
   );
 };
