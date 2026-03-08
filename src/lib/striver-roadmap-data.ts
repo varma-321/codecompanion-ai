@@ -185,10 +185,6 @@ export const STRIVER_ROADMAP: RoadmapTopic[] = [
       { key: 'str-19', title: 'Largest Odd Number in String', difficulty: 'Easy' },
       { key: 'str-20', title: 'Rotate String', difficulty: 'Easy' },
       { key: 'str-21', title: 'Beautiful Arrangement of Strings', difficulty: 'Hard' },
-      // New problems
-      { key: 'str-22', title: 'Sum of Beauty of All Substrings', difficulty: 'Medium' },
-      { key: 'str-23', title: 'Shortest Palindrome', difficulty: 'Hard' },
-      { key: 'str-24', title: 'Count Palindromic Subsequences', difficulty: 'Hard' },
     ],
   },
   {
