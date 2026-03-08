@@ -8,6 +8,7 @@ import {
   chat as aiChat, getExtraInsights, checkOllamaStatus, getOllamaModels,
   getSelectedModel, setSelectedModel
 } from '@/lib/ollama';
+import { explainCodeViaBackend } from '@/lib/explain';
 import ReactMarkdown from 'react-markdown';
 
 interface ChatMessage {
