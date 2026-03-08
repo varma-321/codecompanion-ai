@@ -545,6 +545,9 @@ const ProblemWorkspace = () => {
             {isAnalyzing ? <Loader2 className="h-3 w-3 animate-spin" /> : <BarChart3 className="h-3 w-3" />}
             Analyze
           </Button>
+          <Button onClick={() => navigate(`/discuss?problem=${key}`)} size="sm" variant="ghost" className="h-7 gap-1 text-xs">
+            <MessageSquare className="h-3 w-3" /> Discuss
+          </Button>
           <ExecutionStatus status={execStatus} />
         </div>
       </div>
