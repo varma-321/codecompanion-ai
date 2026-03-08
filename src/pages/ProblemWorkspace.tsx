@@ -303,6 +303,10 @@ const ProblemWorkspace = () => {
         if (allPassed) toast.success('🎉 Problem solved! Progress saved.');
       } catch {}
     }
+
+    // Show celebration modal
+    setCelebrationTime(execTime);
+    setShowCelebration(true);
   };
 
   const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
