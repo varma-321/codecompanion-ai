@@ -47,6 +47,10 @@ const App = () => (
               <Route path="/problem/:key" element={<ProblemWorkspace />} />
               <Route path="/analytics" element={<StudyAnalytics />} />
               <Route path="/generate" element={<ProblemGenerator />} />
+              <Route path="/achievements" element={<Achievements />} />
+              <Route path="/interview" element={<InterviewSimulator />} />
+              <Route path="/create" element={<CustomProblemCreator />} />
+              <Route path="/community" element={<CommunitySolutions />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

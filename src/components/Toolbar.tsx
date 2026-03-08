@@ -33,6 +33,10 @@ const Toolbar = ({ onRun, onSave, onAnalyze, onSettings, onLogout, username, isR
     { path: '/review', label: 'Review', icon: Brain },
     { path: '/patterns', label: 'Patterns', icon: Code2 },
     { path: '/leaderboard', label: 'Board', icon: Trophy },
+    { path: '/achievements', label: 'Badges', icon: Award },
+    { path: '/interview', label: 'Interview', icon: MessageSquare },
+    { path: '/create', label: 'Create', icon: Plus },
+    { path: '/community', label: 'Community', icon: Share2 },
     { path: '/analytics', label: 'Analytics', icon: BarChart3 },
   ];
 
