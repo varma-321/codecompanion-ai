@@ -1,0 +1,1 @@
+ALTER TABLE public.test_cases ADD COLUMN IF NOT EXISTS variable_name text NOT NULL DEFAULT 'arr';

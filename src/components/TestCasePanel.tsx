@@ -15,36 +15,39 @@ export interface TestResult {
 interface TestCasePanelProps {
   testCases: DbTestCase[];
   testResults: TestResult[];
-  onAdd: (input: string, expectedOutput: string) => void;
-  onUpdate: (id: string, input: string, expectedOutput: string) => void;
+  onAdd: (input: string, expectedOutput: string, variableName: string) => void;
+  onUpdate: (id: string, input: string, expectedOutput: string, variableName: string) => void;
   onDelete: (id: string) => void;
   onGenerateAI: () => void;
   isGenerating: boolean;
 }
 
 const TestCasePanel = ({ testCases, testResults, onAdd, onUpdate, onDelete, onGenerateAI, isGenerating }: TestCasePanelProps) => {
+  const [newVarName, setNewVarName] = useState('arr');
   const [newInput, setNewInput] = useState('');
   const [newExpected, setNewExpected] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editVarName, setEditVarName] = useState('');
   const [editInput, setEditInput] = useState('');
   const [editExpected, setEditExpected] = useState('');
 
   const handleAdd = () => {
     if (!newInput.trim()) return;
-    onAdd(newInput.trim(), newExpected.trim());
+    onAdd(newInput.trim(), newExpected.trim(), newVarName.trim() || 'arr');
     setNewInput('');
     setNewExpected('');
   };
 
   const startEdit = (tc: DbTestCase) => {
     setEditingId(tc.id);
+    setEditVarName(tc.variable_name);
     setEditInput(tc.input);
     setEditExpected(tc.expected_output);
   };
 
   const confirmEdit = () => {
     if (editingId) {
-      onUpdate(editingId, editInput, editExpected);
+      onUpdate(editingId, editInput, editExpected, editVarName.trim() || 'arr');
       setEditingId(null);
     }
   };
@@ -109,11 +112,13 @@ const TestCasePanel = ({ testCases, testResults, onAdd, onUpdate, onDelete, onGe
                 </div>
                 {isEditing ? (
                   <div className="space-y-1">
-                    <Input value={editInput} onChange={e => setEditInput(e.target.value)} className="h-6 text-xs" placeholder="Input" />
+                    <Input value={editVarName} onChange={e => setEditVarName(e.target.value)} className="h-6 text-xs" placeholder="Variable name e.g. arr" />
+                    <Input value={editInput} onChange={e => setEditInput(e.target.value)} className="h-6 text-xs" placeholder="Input value" />
                     <Input value={editExpected} onChange={e => setEditExpected(e.target.value)} className="h-6 text-xs" placeholder="Expected Output" />
                   </div>
                 ) : (
                   <div className="space-y-0.5 font-mono">
+                    <div><span className="text-muted-foreground">Var: </span><span className="text-primary font-semibold">{tc.variable_name}</span></div>
                     <div><span className="text-muted-foreground">Input: </span>{tc.input}</div>
                     <div><span className="text-muted-foreground">Expected: </span>{tc.expected_output}</div>
                     {result?.status === 'FAILED' && (
@@ -136,6 +141,7 @@ const TestCasePanel = ({ testCases, testResults, onAdd, onUpdate, onDelete, onGe
       {/* Add new test case */}
       <div className="border-t border-panel-border p-2 space-y-1">
         <div className="flex gap-1">
+          <Input value={newVarName} onChange={e => setNewVarName(e.target.value)} placeholder="var name" className="h-7 text-xs w-20 shrink-0" />
           <Input value={newInput} onChange={e => setNewInput(e.target.value)} placeholder="Input e.g. [1,2,3]" className="h-7 text-xs flex-1" />
           <Input value={newExpected} onChange={e => setNewExpected(e.target.value)} placeholder="Expected e.g. 6" className="h-7 text-xs flex-1" />
           <Button size="sm" onClick={handleAdd} disabled={!newInput.trim()} className="h-7 px-2">
