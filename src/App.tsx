@@ -45,6 +45,8 @@ import StreakCalendar from "./pages/StreakCalendar";
 import BigOVisualizer from "./pages/BigOVisualizer";
 import UserProfile from "./pages/UserProfile";
 import SubmissionHistory from "./pages/SubmissionHistory";
+import AdminLogin from "./pages/AdminLogin";
+import AdminDashboard from "./pages/AdminDashboard";
 
 const queryClient = new QueryClient();
 
@@ -100,6 +102,8 @@ const App = () => (
               <Route path="/bigo" element={<BigOVisualizer />} />
               <Route path="/profile" element={<UserProfile />} />
               <Route path="/submissions" element={<SubmissionHistory />} />
+              <Route path="/admin-login" element={<AdminLogin />} />
+              <Route path="/admin" element={<AdminDashboard />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

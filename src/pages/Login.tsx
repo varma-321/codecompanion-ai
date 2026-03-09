@@ -1,10 +1,14 @@
 import { useState } from 'react';
-import { Code2, Terminal, Cpu, Loader2, Mail, Lock, User, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Code2, Terminal, Cpu, Loader2, Mail, Lock, User, ArrowLeft, ArrowRight, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { signUp, signIn, supabase } from '@/lib/supabase';
+import { useUser } from '@/lib/user-context';
+import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
+  const { enterGuestMode } = useUser();
+  const navigate = useNavigate();
   const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -12,6 +16,7 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [signupSuccess, setSignupSuccess] = useState(false);
 
   const handleSubmit = async () => {
     setError('');
@@ -46,6 +51,7 @@ const Login = () => {
     try {
       if (mode === 'signup') {
         await signUp(email.trim(), password, username.trim());
+        setSignupSuccess(true);
       } else {
         await signIn(email.trim(), password);
       }
@@ -92,7 +98,20 @@ const Login = () => {
             </button>
           )}
 
-          {resetSent ? (
+          {signupSuccess ? (
+            <div className="rounded-xl bg-success/10 p-5 text-center">
+              <p className="text-sm font-medium text-success">Account Created!</p>
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                Please check your email to verify your account. After verification, an admin will review and approve your access.
+              </p>
+              <button
+                onClick={() => { setSignupSuccess(false); setMode('login'); }}
+                className="mt-3 text-xs font-medium text-foreground hover:underline"
+              >
+                Back to Sign In
+              </button>
+            </div>
+          ) : resetSent ? (
             <div className="rounded-xl bg-success/10 p-5 text-center">
               <p className="text-sm font-medium text-success">Reset link sent!</p>
               <p className="mt-1.5 text-xs text-muted-foreground">Check your email for a password reset link.</p>
@@ -144,6 +163,19 @@ const Login = () => {
                 )}
               </Button>
 
+              {/* Guest Mode Button */}
+              {mode === 'login' && (
+                <Button
+                  onClick={enterGuestMode}
+                  variant="outline"
+                  className="w-full h-10 rounded-xl text-sm font-medium mt-3 gap-2"
+                  disabled={loading}
+                >
+                  <Users className="h-4 w-4" />
+                  Continue as Guest
+                </Button>
+              )}
+
               <div className="mt-5 flex flex-col items-center gap-2">
                 {mode === 'login' && (
                   <button onClick={() => { setMode('forgot'); setError(''); }} className="text-xs text-muted-foreground hover:text-foreground transition-colors" disabled={loading}>
@@ -151,12 +183,21 @@ const Login = () => {
                   </button>
                 )}
                 <button
-                  onClick={() => { setMode(mode === 'signup' ? 'login' : 'signup'); setError(''); }}
+                  onClick={() => { setMode(mode === 'signup' ? 'login' : 'signup'); setError(''); setSignupSuccess(false); }}
                   className="text-xs font-medium text-foreground hover:underline"
                   disabled={loading}
                 >
                   {mode === 'signup' ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
                 </button>
+                {mode === 'login' && (
+                  <button
+                    onClick={() => navigate('/admin-login')}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    disabled={loading}
+                  >
+                    Admin Login →
+                  </button>
+                )}
               </div>
             </>
           )}
