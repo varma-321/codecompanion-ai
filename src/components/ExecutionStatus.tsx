@@ -13,6 +13,7 @@
     complete: { label: 'Execution Complete', icon: CheckCircle2, colorClass: 'text-success' },
     compile_error: { label: 'Compilation Error', icon: AlertTriangle, colorClass: 'text-destructive' },
     failed: { label: 'Execution Failed', icon: XCircle, colorClass: 'text-destructive' },
+    stopped: { label: 'Stopped', icon: XCircle, colorClass: 'text-warning' },
   };
 
   const ExecutionStatus = ({ status }: ExecutionStatusProps) => {

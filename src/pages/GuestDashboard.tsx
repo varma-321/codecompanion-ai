@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Play, Brain, Loader2, FlaskConical, Bug, Zap, CloudOff, MessageSquare, LogIn } from 'lucide-react';
+import { Play, Brain, Loader2, FlaskConical, Bug, Zap, CloudOff, MessageSquare, LogIn, Square } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import CodeEditor from '@/components/CodeEditor';
@@ -11,7 +11,7 @@ import CodeSnippets from '@/components/CodeSnippets';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '@/lib/user-context';
 import { useTheme } from '@/lib/theme-context';
-import { executeJavaCode, type ExecutionStatus as ExecStatusType } from '@/lib/executor';
+import { executeJavaCode, stopExecution, type ExecutionStatus as ExecStatusType } from '@/lib/executor';
 import { Moon, Sun, BookOpen } from 'lucide-react';
 
 const DEFAULT_GUEST_CODE = `public class Main {
@@ -137,6 +137,11 @@ const GuestDashboard = () => {
             {isRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
             Run
           </Button>
+          {isRunning && (
+            <Button onClick={() => { stopExecution(); setIsRunning(false); setExecStatus('stopped' as any); }} size="sm" variant="destructive" className="h-8 gap-1 text-xs font-medium shrink-0 rounded-lg">
+              <Square className="h-3.5 w-3.5" /> Stop
+            </Button>
+          )}
 
           <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs shrink-0 rounded-lg" disabled>
             <CloudOff className="h-3.5 w-3.5" />
@@ -178,6 +183,11 @@ const GuestDashboard = () => {
               {isRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
               {isRunning ? 'Running...' : 'Run'}
             </Button>
+            {isRunning && (
+              <Button onClick={() => { stopExecution(); setIsRunning(false); setExecStatus('stopped' as any); }} size="sm" variant="destructive" className="h-8 gap-1.5 px-3 text-xs font-medium rounded-lg shrink-0">
+                <Square className="h-3.5 w-3.5" /> Stop
+              </Button>
+            )}
             <ExecutionStatus status={execStatus} />
           </div>
         )}

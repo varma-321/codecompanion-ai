@@ -10,27 +10,28 @@ import type { ExecutionStatus } from './executor';
 
 const BACKEND_URL = `${API_BASE_URL}/api/run-java`;
 
+// Global abort controller for stopping test runs
+let testAbortController: AbortController | null = null;
+
+export function stopTestExecution() {
+  if (testAbortController) {
+    testAbortController.abort();
+    testAbortController = null;
+  }
+}
+
 // ─── Type inference from string values ───────────────────────────
 
 function inferJavaType(value: string): string {
   const v = value.trim();
-  // 2D array: [[1,2],[3,4]]
   if (/^\[\s*\[/.test(v)) return 'int[][]';
-  // 1D array of strings: ["a","b"]
   if (/^\[.*"/.test(v)) return 'String[]';
-  // 1D int array: [1,2,3]
   if (/^\[/.test(v)) return 'int[]';
-  // boolean
   if (v === 'true' || v === 'false') return 'boolean';
-  // string (quoted)
   if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) return 'String';
-  // double
   if (/^-?\d+\.\d+$/.test(v)) return 'double';
-  // int
   if (/^-?\d+$/.test(v)) return 'int';
-  // char
   if (v.length === 1) return 'char';
-  // default to String
   return 'String';
 }
 
@@ -62,7 +63,6 @@ function toJavaLiteral(value: string, javaType: string): string {
       return `new ${javaType}${inner}`;
     }
     case 'char[]': {
-      // Parse ["a","b"] or [a,b] into new char[]{'a','b'}
       try {
         const items = JSON.parse(v);
         if (Array.isArray(items)) {
@@ -88,7 +88,6 @@ function toJavaLiteral(value: string, javaType: string): string {
     case 'List<Integer>':
     case 'List<String>':
     case 'List<Long>': {
-      // Convert [1,2,3] to Arrays.asList(1,2,3) or List.of(1,2,3)
       try {
         const items = JSON.parse(v);
         if (Array.isArray(items)) {
@@ -114,7 +113,6 @@ function toJavaLiteral(value: string, javaType: string): string {
       return `java.util.Arrays.asList()`;
     }
     default:
-      // For unknown types, try to infer from value
       if (v.startsWith('[')) {
         const inner = v.replace(/^\[/, '{').replace(/\]$/, '}');
         return `new ${javaType}${inner}`;
@@ -135,6 +133,10 @@ function buildOutputPrint(returnType: string): string {
       return 'System.out.println(java.util.Arrays.toString(result));';
     case 'boolean[]':
       return 'System.out.println(java.util.Arrays.toString(result));';
+    case 'long[]':
+      return 'System.out.println(java.util.Arrays.toString(result));';
+    case 'double[]':
+      return 'System.out.println(java.util.Arrays.toString(result));';
     case 'List<Integer>':
     case 'List<String>':
     case 'List<List<Integer>>':
@@ -154,21 +156,19 @@ interface MethodSignature {
 }
 
 function parseMethodSignature(code: string): MethodSignature | null {
-  // Match: public static <return> <name>(<params>)
-  // Also match without static, or just the method
   const patterns = [
-    { regex: /public\s+static\s+([\w\[\]<>,\s]+?)\s+(\w+)\s*\(([^)]*)\)/, isStatic: true },
-    { regex: /public\s+([\w\[\]<>,\s]+?)\s+(\w+)\s*\(([^)]*)\)/, isStatic: false },
-    { regex: /static\s+([\w\[\]<>,\s]+?)\s+(\w+)\s*\(([^)]*)\)/, isStatic: true },
+    { regex: /public\s+static\s+([\w\[\]<>,\s]+?)\s+(\w+)\s*\(([^)]*)\)/g, isStatic: true },
+    { regex: /public\s+([\w\[\]<>,\s]+?)\s+(\w+)\s*\(([^)]*)\)/g, isStatic: false },
+    { regex: /static\s+([\w\[\]<>,\s]+?)\s+(\w+)\s*\(([^)]*)\)/g, isStatic: true },
   ];
 
   for (const { regex, isStatic } of patterns) {
-    const match = code.match(regex);
-    if (match) {
+    let match;
+    while ((match = regex.exec(code)) !== null) {
       const returnType = match[1].trim();
       const name = match[2].trim();
-      // Skip main method
-      if (name === 'main') continue;
+      if (name === 'main' || name === 'void') continue;
+      if (returnType === 'class') continue;
       const paramsStr = match[3].trim();
       const params: { type: string; name: string }[] = [];
       if (paramsStr) {
@@ -183,12 +183,6 @@ function parseMethodSignature(code: string): MethodSignature | null {
     }
   }
   return null;
-}
-
-// ─── Check if code already has a class declaration ───────────────
-
-function hasClassDeclaration(code: string): boolean {
-  return /\bclass\s+\w+/.test(code);
 }
 
 // ─── Default value for a Java type ──────────────────────────────
@@ -217,7 +211,7 @@ function removeMainMethod(code: string): string {
   const startIdx = match.index;
   let braceCount = 0;
   let endIdx = match.index + match[0].length;
-  braceCount = 1; // We've seen the opening brace
+  braceCount = 1;
 
   for (let i = endIdx; i < code.length; i++) {
     if (code[i] === '{') braceCount++;
@@ -246,7 +240,7 @@ export function buildTestWrapper(
   const safeInputs: Record<string, string> = {};
   if (inputs && typeof inputs === 'object') {
     for (const [k, v] of Object.entries(inputs)) {
-      if (v !== null && v !== undefined) {
+      if (v !== null && v !== undefined && String(v).trim() !== '') {
         safeInputs[k] = String(v);
       }
     }
@@ -256,7 +250,6 @@ export function buildTestWrapper(
   const varDecls: string[] = [];
   const varNames: string[] = [];
   
-  // Build a map from param name -> param type from the method signature
   const paramTypeMap: Record<string, string> = {};
   if (methodSig) {
     for (const p of methodSig.params) {
@@ -264,12 +257,10 @@ export function buildTestWrapper(
     }
   }
 
-  // Also build positional mapping: input entries in order -> method params in order
   const inputEntries = Object.entries(safeInputs);
   
   for (let i = 0; i < inputEntries.length; i++) {
     const [name, value] = inputEntries[i];
-    // Use method signature type if available (by name match or positional match)
     let jType = paramTypeMap[name];
     if (!jType && methodSig && i < methodSig.params.length) {
       jType = methodSig.params[i].type;
@@ -278,20 +269,20 @@ export function buildTestWrapper(
       jType = inferJavaType(value);
     }
     const literal = toJavaLiteral(value, jType);
-    varDecls.push(`        ${jType} ${name} = ${literal};`);
-    varNames.push(name);
+    // Use the method param name if positional match and names differ
+    const varName = (methodSig && i < methodSig.params.length && !paramTypeMap[name]) 
+      ? methodSig.params[i].name 
+      : name;
+    varDecls.push(`        ${jType} ${varName} = ${literal};`);
+    varNames.push(varName);
   }
 
   // If we detected a method, call it with the variables
   let callCode: string;
   if (methodSig && varNames.length > 0) {
-    // Map method params to input variables by name first, then position
     const args = methodSig.params.map((param, idx) => {
-      // Exact name match
-      if (safeInputs[param.name] !== undefined) return param.name;
-      // Try positional match
+      if (varNames.includes(param.name)) return param.name;
       if (idx < varNames.length) return varNames[idx];
-      // Last resort: use a default value based on type
       return getDefaultForType(param.type);
     }).join(', ');
 
@@ -305,7 +296,6 @@ export function buildTestWrapper(
       callCode = `        ${resultType} result = ${caller}(${args});\n        ${printStmt}`;
     }
   } else if (methodSig && varNames.length === 0) {
-    // No inputs provided - can't call method
     callCode = '        System.out.println("ERROR: No test inputs provided");';
   } else {
     callCode = '        // Could not detect method signature - running code as-is';
@@ -314,11 +304,9 @@ export function buildTestWrapper(
   // Strip any existing class wrapper or main method from user code
   let cleanCode = userCode.trim();
   
-  // If user code is wrapped in a class, extract just the methods
   const classMatch = cleanCode.match(/(?:public\s+)?class\s+\w+\s*\{([\s\S]*)\}\s*$/);
   if (classMatch) {
     cleanCode = classMatch[1].trim();
-    // Remove any existing main method using brace-counting
     cleanCode = removeMainMethod(cleanCode);
   }
 
@@ -353,22 +341,61 @@ export async function runAllTests(
 ): Promise<TestResult[]> {
   if (testCases.length === 0) return [];
 
+  // Create a new abort controller for this test run
+  const controller = new AbortController();
+  testAbortController = controller;
+
   onStatus?.('sending');
   const methodSig = parseMethodSignature(userCode);
   const results: TestResult[] = [];
 
   for (let i = 0; i < testCases.length; i++) {
+    // Check if aborted
+    if (controller.signal.aborted) {
+      const result: TestResult = {
+        test: i + 1,
+        status: 'FAILED',
+        expected: testCases[i].expected,
+        actual: 'Stopped by user',
+      };
+      results.push(result);
+      onTestResult?.(i, result);
+      continue;
+    }
+
     const tc = testCases[i];
     onStatus?.('running');
 
-    const wrappedCode = buildTestWrapper(userCode, tc.inputs, methodSig);
+    // Validate inputs aren't empty
+    const validInputs: Record<string, string> = {};
+    if (tc.inputs && typeof tc.inputs === 'object') {
+      for (const [k, v] of Object.entries(tc.inputs)) {
+        if (v !== null && v !== undefined && String(v).trim() !== '') {
+          validInputs[k] = String(v);
+        }
+      }
+    }
+
+    if (Object.keys(validInputs).length === 0) {
+      const result: TestResult = {
+        test: i + 1,
+        status: 'FAILED',
+        expected: tc.expected,
+        actual: 'ERROR: Empty or invalid test inputs',
+      };
+      results.push(result);
+      onTestResult?.(i, result);
+      continue;
+    }
+
+    const wrappedCode = buildTestWrapper(userCode, validInputs, methodSig);
 
     try {
       const response = await fetch(BACKEND_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: wrappedCode }),
-        signal: AbortSignal.timeout(15000),
+        signal: controller.signal,
       });
 
       if (!response.ok) {
@@ -388,7 +415,7 @@ export async function runAllTests(
       const actual = (data.success ? (data.output || '') : (data.error || '')).trim();
       const expected = tc.expected.trim();
       
-      // Normalize comparison: remove spaces around brackets/commas for arrays
+      // Normalize comparison
       const normalize = (s: string) => s.replace(/\s+/g, '').toLowerCase();
       const passed = normalize(actual) === normalize(expected);
 
@@ -405,13 +432,17 @@ export async function runAllTests(
         test: i + 1,
         status: 'FAILED',
         expected: tc.expected,
-        actual: err.name === 'AbortError' ? 'Timeout (15s)' : (err.message || 'Error'),
+        actual: err.name === 'AbortError' ? 'Stopped by user' : (err.message || 'Error'),
       };
       results.push(result);
       onTestResult?.(i, result);
+      
+      // If aborted, stop processing remaining tests
+      if (err.name === 'AbortError') break;
     }
   }
 
+  testAbortController = null;
   onStatus?.('complete');
   return results;
 }

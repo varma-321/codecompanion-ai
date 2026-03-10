@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Play, FlaskConical, Loader2, CheckCircle2, XCircle, Brain, ChevronRight, Code2, GitCompare, Cloud, Keyboard, Sparkles, AlertTriangle, Zap, TrendingUp, Trophy, Eye, EyeOff, BarChart3, ChevronDown, ChevronUp, MessageSquare, FileText, Bot } from 'lucide-react';
+import { ArrowLeft, Play, FlaskConical, Loader2, CheckCircle2, XCircle, Brain, ChevronRight, Code2, GitCompare, Cloud, Keyboard, Sparkles, AlertTriangle, Zap, TrendingUp, Trophy, Eye, EyeOff, BarChart3, ChevronDown, ChevronUp, MessageSquare, FileText, Bot, Square } from 'lucide-react';
 import { useAutosave } from '@/hooks/use-autosave';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,7 +25,7 @@ import { STRIVER_ROADMAP, getDifficultyBg, type RoadmapProblem } from '@/lib/str
 import { NEETCODE_ROADMAP } from '@/lib/neetcode-roadmap-data';
 import { LEETCODE_TOP150_ROADMAP } from '@/lib/leetcode-top150-data';
 import { getProblemDetail, PROBLEM_DETAILS, type ProblemDetail } from '@/lib/striver-problem-details';
-import { executeJavaCode, type ExecutionStatus as ExecStatusType } from '@/lib/executor';
+import { executeJavaCode, stopExecution, type ExecutionStatus as ExecStatusType } from '@/lib/executor';
 import { API_BASE_URL } from '@/lib/api';
 import ReactMarkdown from 'react-markdown';
 
@@ -539,6 +539,11 @@ const ProblemWorkspace = () => {
             {isRunning ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
             Run
           </Button>
+          {(isRunning || isRunningTests) && (
+            <Button onClick={() => { stopExecution(); import('@/lib/test-runner').then(m => m.stopTestExecution()); setIsRunning(false); setIsRunningTests(false); setExecStatus('stopped' as any); }} size="sm" variant="destructive" className="h-7 gap-1 text-xs">
+              <Square className="h-3 w-3" /> Stop
+            </Button>
+          )}
           <Button onClick={handleRunTests} disabled={isRunning || isRunningTests || detail.testCases.length === 0} size="sm" variant="outline" className="h-7 gap-1 text-xs">
             {isRunningTests ? <Loader2 className="h-3 w-3 animate-spin" /> : <FlaskConical className="h-3 w-3" />}
             <span className="hidden md:inline">Run Tests ({detail.testCases.length})</span>
