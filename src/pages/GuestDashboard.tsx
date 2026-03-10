@@ -137,6 +137,11 @@ const GuestDashboard = () => {
             {isRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
             Run
           </Button>
+          {isRunning && (
+            <Button onClick={() => { stopExecution(); setIsRunning(false); setExecStatus('stopped' as any); }} size="sm" variant="destructive" className="h-8 gap-1 text-xs font-medium shrink-0 rounded-lg">
+              <Square className="h-3.5 w-3.5" /> Stop
+            </Button>
+          )}
 
           <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs shrink-0 rounded-lg" disabled>
             <CloudOff className="h-3.5 w-3.5" />
