@@ -25,7 +25,7 @@ import { STRIVER_ROADMAP, getDifficultyBg, type RoadmapProblem } from '@/lib/str
 import { NEETCODE_ROADMAP } from '@/lib/neetcode-roadmap-data';
 import { LEETCODE_TOP150_ROADMAP } from '@/lib/leetcode-top150-data';
 import { getProblemDetail, PROBLEM_DETAILS, type ProblemDetail } from '@/lib/striver-problem-details';
-import { executeJavaCode, type ExecutionStatus as ExecStatusType } from '@/lib/executor';
+import { executeJavaCode, stopExecution, type ExecutionStatus as ExecStatusType } from '@/lib/executor';
 import { API_BASE_URL } from '@/lib/api';
 import ReactMarkdown from 'react-markdown';
 
