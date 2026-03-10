@@ -196,6 +196,11 @@ const CodePlayground = () => {
             {running ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
             Run
           </Button>
+          {running && (
+            <Button size="sm" variant="destructive" onClick={() => { stopExecution(); setRunning(false); }} className="h-7 gap-1 text-xs">
+              <Square className="h-3 w-3" /> Stop
+            </Button>
+          )}
         </div>
       </div>
 
