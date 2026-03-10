@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Play, Loader2, Trash2, Download, Copy, Check, Layers } from 'lucide-react';
+import { ArrowLeft, Play, Loader2, Trash2, Download, Copy, Check, Layers, Square } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
