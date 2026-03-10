@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import CodeEditor from '@/components/CodeEditor';
-import { executeJavaCode, type ExecutionStatus as ExecStatusType } from '@/lib/executor';
+import { executeJavaCode, stopExecution, type ExecutionStatus as ExecStatusType } from '@/lib/executor';
 
 const TEMPLATES: Record<string, string> = {
   'Hello World': `import java.util.*;
