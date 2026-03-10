@@ -10,7 +10,8 @@ export type ExecutionStatus =
   | 'running'
   | 'complete'
   | 'compile_error'
-  | 'failed';
+  | 'failed'
+  | 'stopped';
 
 export interface ExecutionResult {
   success: boolean;
@@ -19,14 +20,33 @@ export interface ExecutionResult {
   status: { id: number; description: string };
 }
 
+// Global abort controller for stopping execution
+let currentAbortController: AbortController | null = null;
+
+export function stopExecution() {
+  if (currentAbortController) {
+    currentAbortController.abort();
+    currentAbortController = null;
+  }
+}
+
+export function isExecuting(): boolean {
+  return currentAbortController !== null;
+}
+
 export async function executeJavaCode(
   code: string,
   onStatus?: (status: ExecutionStatus) => void
 ): Promise<ExecutionResult> {
+  // Abort any previous execution
+  stopExecution();
+  
+  const controller = new AbortController();
+  currentAbortController = controller;
+  
   onStatus?.('sending');
 
   try {
-    const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     onStatus?.('compiling');
@@ -44,6 +64,7 @@ export async function executeJavaCode(
 
     if (!response.ok) {
       onStatus?.('failed');
+      currentAbortController = null;
       const errorText = await response.text();
       return {
         success: false,
@@ -56,8 +77,8 @@ export async function executeJavaCode(
     onStatus?.('running');
 
     const data = await response.json();
+    currentAbortController = null;
 
-    // Handle the backend response format: { success, output } or { success, error }
     if (data.success) {
       onStatus?.('complete');
       return {
@@ -67,7 +88,6 @@ export async function executeJavaCode(
         status: { id: 3, description: 'Accepted' },
       };
     } else {
-      // Check if it's a compilation error
       const errorMsg = data.error || 'Unknown error';
       const isCompileError = /error:|cannot find symbol|class .* is public|expected|illegal/i.test(errorMsg);
       
@@ -90,18 +110,20 @@ export async function executeJavaCode(
       };
     }
   } catch (error: any) {
-    onStatus?.('failed');
+    currentAbortController = null;
 
     if (error.name === 'AbortError') {
+      onStatus?.('stopped');
       return {
         success: false,
         output: null,
-        error: 'Execution timed out. Program exceeded time limit or encountered an error.',
-        status: { id: 11, description: 'Timeout' },
+        error: 'Execution stopped by user.',
+        status: { id: 11, description: 'Stopped' },
       };
     }
 
-    // Connection refused or network error
+    onStatus?.('failed');
+
     const isConnectionError = error.message?.includes('Failed to fetch') || 
                               error.message?.includes('NetworkError') ||
                               error.message?.includes('ECONNREFUSED');

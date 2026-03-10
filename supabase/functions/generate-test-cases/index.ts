@@ -24,16 +24,11 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are a comprehensive test case generator for Java DSA problems, similar to what LeetCode uses internally.
+            content: `You are a test case generator for Java DSA problems. Generate exactly 3 high-quality test cases:
 
-Generate exactly 20 test cases that thoroughly validate correctness. Cover ALL categories:
-
-1. BASIC CASES (3-4): Simple examples matching the problem description
-2. EDGE CASES (4-5): Empty arrays, single elements, null/zero inputs, minimum valid inputs  
-3. BOUNDARY CONDITIONS (3-4): Max/min constraints, off-by-one scenarios
-4. SPECIAL PATTERNS (3-4): All same elements, sorted, reverse sorted, alternating
-5. NEGATIVE/TRICKY CASES (3-4): Negative numbers, duplicates, no valid answer
-6. STRESS CASES (2-3): Larger inputs (50-100 elements) to test efficiency
+1. NORMAL CASE: A standard test case matching the problem description with typical inputs
+2. EDGE CASE: Edge cases like empty arrays, single elements, null/zero inputs, minimum valid inputs
+3. BOUNDARY CASE: Max/min constraints, large values, off-by-one scenarios
 
 CRITICAL: Each test case must have MULTIPLE INPUT VARIABLES matching the function parameters.
 
@@ -44,7 +39,7 @@ Then each test case should have inputs for BOTH "nums" and "target":
 {
   "inputs": { "nums": "[2,7,11,15]", "target": "9" },
   "expectedOutput": "[0, 1]",
-  "category": "basic"
+  "category": "normal"
 }
 
 All input values must be STRING representations. Arrays as "[1,2,3]", integers as "5", strings as "hello".
@@ -56,7 +51,7 @@ Expected output must exactly match what System.out.println() would produce in Ja
           },
           {
             role: "user",
-            content: `Generate 20 comprehensive test cases for this Java function${title ? ` (Problem: ${title}, Difficulty: ${difficulty || 'Medium'})` : ''}:\n\n${code}`
+            content: `Generate 3 high-quality test cases (normal, edge, boundary) for this Java function${title ? ` (Problem: ${title}, Difficulty: ${difficulty || 'Medium'})` : ''}:\n\n${code}`
           }
         ],
         tools: [
@@ -64,7 +59,7 @@ Expected output must exactly match what System.out.println() would produce in Ja
             type: "function",
             function: {
               name: "return_test_cases",
-              description: "Return 20 comprehensive test cases covering all edge cases and scenarios",
+              description: "Return 3 high-quality test cases: normal, edge, and boundary",
               parameters: {
                 type: "object",
                 properties: {
@@ -80,7 +75,7 @@ Expected output must exactly match what System.out.println() would produce in Ja
                         expectedOutput: { type: "string" },
                         category: { 
                           type: "string",
-                          description: "Test category: basic, edge, boundary, pattern, tricky, or stress"
+                          description: "Test category: normal, edge, or boundary"
                         }
                       },
                       required: ["inputs", "expectedOutput"],
