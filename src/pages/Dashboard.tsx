@@ -27,7 +27,7 @@ import {
   DbProblem, DbTestCase, fetchProblems, updateProblem, signOut, DEFAULT_CODE,
   fetchTestCases, insertTestCase, updateTestCase, deleteTestCase,
 } from '@/lib/supabase';
-import { executeJavaCode, type ExecutionStatus as ExecStatusType } from '@/lib/executor';
+import { executeJavaCode, stopExecution, type ExecutionStatus as ExecStatusType } from '@/lib/executor';
 import { detectProblemTitle } from '@/lib/ai-backend';
 import { supabase } from '@/integrations/supabase/client';
 
