@@ -1,13 +1,13 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Play, Loader2, Trash2, Download, Copy, Check, Layers } from 'lucide-react';
+import { ArrowLeft, Play, Loader2, Trash2, Download, Copy, Check, Layers, Square } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import CodeEditor from '@/components/CodeEditor';
-import { executeJavaCode, type ExecutionStatus as ExecStatusType } from '@/lib/executor';
+import { executeJavaCode, stopExecution, type ExecutionStatus as ExecStatusType } from '@/lib/executor';
 
 const TEMPLATES: Record<string, string> = {
   'Hello World': `import java.util.*;
@@ -196,6 +196,11 @@ const CodePlayground = () => {
             {running ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
             Run
           </Button>
+          {running && (
+            <Button size="sm" variant="destructive" onClick={() => { stopExecution(); setRunning(false); }} className="h-7 gap-1 text-xs">
+              <Square className="h-3 w-3" /> Stop
+            </Button>
+          )}
         </div>
       </div>
 

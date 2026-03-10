@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Code2, Loader2, Mail, Lock, ArrowLeft, ArrowRight, Shield } from 'lucide-react';
+import { Loader2, Mail, Lock, ArrowLeft, ArrowRight, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { signIn, supabase } from '@/lib/supabase';
@@ -20,7 +20,6 @@ const AdminLogin = () => {
     setLoading(true);
     try {
       await signIn(email.trim(), password);
-      // After sign-in, check if user is admin
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Login failed');
 

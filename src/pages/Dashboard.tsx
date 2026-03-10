@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
-import { Play, Brain, Loader2, FlaskConical, Bug, Zap, CloudOff, Cloud, FolderOpen, MessageSquare } from 'lucide-react';
+import { Play, Brain, Loader2, FlaskConical, Bug, Zap, CloudOff, Cloud, FolderOpen, MessageSquare, Square } from 'lucide-react';
 import { useAutosave } from '@/hooks/use-autosave';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -27,7 +27,7 @@ import {
   DbProblem, DbTestCase, fetchProblems, updateProblem, signOut, DEFAULT_CODE,
   fetchTestCases, insertTestCase, updateTestCase, deleteTestCase,
 } from '@/lib/supabase';
-import { executeJavaCode, type ExecutionStatus as ExecStatusType } from '@/lib/executor';
+import { executeJavaCode, stopExecution, type ExecutionStatus as ExecStatusType } from '@/lib/executor';
 import { detectProblemTitle } from '@/lib/ai-backend';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -407,6 +407,11 @@ const Dashboard = () => {
                 {isRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
                 {isRunning ? 'Running...' : 'Run'}
               </Button>
+              {(isRunning || isRunningTests) && (
+                <Button onClick={() => { stopExecution(); import('@/lib/test-runner').then(m => m.stopTestExecution()); setIsRunning(false); setIsRunningTests(false); setExecStatus('stopped' as any); }} size="sm" variant="destructive" className="h-8 gap-1.5 px-3 text-xs font-medium rounded-lg shrink-0">
+                  <Square className="h-3.5 w-3.5" /> Stop
+                </Button>
+              )}
               <Button onClick={handleRunTests} disabled={isRunning || isRunningTests || testCases.length === 0} size="sm" variant="outline" className="h-8 gap-1.5 px-3 sm:px-4 text-xs font-medium rounded-lg shrink-0">
                 {isRunningTests ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FlaskConical className="h-3.5 w-3.5" />}
                 <span className="hidden sm:inline">{isRunningTests ? 'Testing...' : `Run Tests (${testCases.length})`}</span>
