@@ -539,6 +539,11 @@ const ProblemWorkspace = () => {
             {isRunning ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
             Run
           </Button>
+          {(isRunning || isRunningTests) && (
+            <Button onClick={() => { stopExecution(); import('@/lib/test-runner').then(m => m.stopTestExecution()); setIsRunning(false); setIsRunningTests(false); setExecStatus('stopped' as any); }} size="sm" variant="destructive" className="h-7 gap-1 text-xs">
+              <Square className="h-3 w-3" /> Stop
+            </Button>
+          )}
           <Button onClick={handleRunTests} disabled={isRunning || isRunningTests || detail.testCases.length === 0} size="sm" variant="outline" className="h-7 gap-1 text-xs">
             {isRunningTests ? <Loader2 className="h-3 w-3 animate-spin" /> : <FlaskConical className="h-3 w-3" />}
             <span className="hidden md:inline">Run Tests ({detail.testCases.length})</span>
