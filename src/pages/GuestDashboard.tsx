@@ -11,7 +11,7 @@ import CodeSnippets from '@/components/CodeSnippets';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '@/lib/user-context';
 import { useTheme } from '@/lib/theme-context';
-import { executeJavaCode, type ExecutionStatus as ExecStatusType } from '@/lib/executor';
+import { executeJavaCode, stopExecution, type ExecutionStatus as ExecStatusType } from '@/lib/executor';
 import { Moon, Sun, BookOpen } from 'lucide-react';
 
 const DEFAULT_GUEST_CODE = `public class Main {
