@@ -68,7 +68,7 @@ const InterviewSimulator = () => {
   const { authUser } = useUser();
   const [difficulty, setDifficulty] = useState('all');
   const [timeLimit, setTimeLimit] = useState(30);
-  const [source, setSource] = useState<'random' | 'module' | 'company'>('random');
+  const [source, setSource] = useState<'random' | 'module' | 'company' | 'solved'>('random');
   const [selectedModule, setSelectedModule] = useState<ModuleKey>('all');
   const [selectedCompany, setSelectedCompany] = useState(COMPANY_NAMES[0]);
   const [phase, setPhase] = useState<'setup' | 'coding' | 'review'>('setup');
@@ -78,12 +78,16 @@ const InterviewSimulator = () => {
   const [aiFeedback, setAiFeedback] = useState('');
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
+  const [solvedKeys, setSolvedKeys] = useState<Set<string>>(new Set());
   const timerRef = useRef<any>(null);
 
   useEffect(() => {
     if (!authUser) return;
     supabase.from('interview_results').select('*').eq('user_id', authUser.id).order('created_at', { ascending: false }).limit(10)
       .then(({ data }) => setHistory(data || []));
+    // Load solved keys
+    supabase.from('user_problem_progress').select('problem_key').eq('user_id', authUser.id).eq('solved', true)
+      .then(({ data }) => setSolvedKeys(new Set((data || []).map(d => d.problem_key))));
   }, [authUser, phase]);
 
   useEffect(() => {
