@@ -209,11 +209,12 @@ const InterviewSimulator = () => {
               {/* Source selection */}
               <div>
                 <label className="text-sm font-medium text-foreground mb-1.5 block">Question Source</label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {([
                     { key: 'random' as const, label: 'Random (All)', icon: <Shuffle className="h-3.5 w-3.5" /> },
                     { key: 'module' as const, label: 'By Module', icon: <BookOpen className="h-3.5 w-3.5" /> },
                     { key: 'company' as const, label: 'By Company', icon: <Building2 className="h-3.5 w-3.5" /> },
+                    { key: 'solved' as const, label: `Solved (${solvedKeys.size})`, icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
                   ]).map(s => (
                     <button
                       key={s.key}
