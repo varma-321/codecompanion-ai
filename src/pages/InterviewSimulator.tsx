@@ -109,7 +109,9 @@ const InterviewSimulator = () => {
   const problemPool = useMemo(() => {
     let pool: typeof ALL_PROBLEMS = [];
 
-    if (source === 'company') {
+    if (source === 'solved') {
+      pool = ALL_PROBLEMS.filter(p => solvedKeys.has(p.key));
+    } else if (source === 'company') {
       const slugs = COMPANY_TAGS[selectedCompany] || [];
       pool = slugs.map(s => findBySlug(s)).filter(Boolean) as typeof ALL_PROBLEMS;
     } else if (source === 'module') {
@@ -120,23 +122,20 @@ const InterviewSimulator = () => {
         pool = mod.data.flatMap(t => t.problems.map(p => ({ ...p, topic: t.name })));
       }
     } else {
-      // random from everything
       pool = ALL_PROBLEMS;
     }
 
-    // Filter by difficulty
     if (difficulty !== 'all') {
       pool = pool.filter(p => p.difficulty === difficulty);
     }
 
-    // Deduplicate by key
     const seen = new Set<string>();
     return pool.filter(p => {
       if (seen.has(p.key)) return false;
       seen.add(p.key);
       return true;
     });
-  }, [source, selectedModule, selectedCompany, difficulty]);
+  }, [source, selectedModule, selectedCompany, difficulty, solvedKeys]);
 
   const startInterview = () => {
     if (problemPool.length === 0) return;
