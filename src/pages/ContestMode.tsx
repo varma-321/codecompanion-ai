@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Timer, Trophy, Zap, CheckCircle2, XCircle, Play, RotateCcw, Clock,
+  ArrowLeft, Timer, Trophy, Zap, CheckCircle2, XCircle, Play, RotateCcw, Clock, BookOpen,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -16,12 +16,23 @@ import { LEETCODE_TOP150_ROADMAP } from '@/lib/leetcode-top150-data';
 
 type ContestState = 'setup' | 'running' | 'finished';
 type Difficulty = 'Easy' | 'Medium' | 'Hard' | 'Mixed';
+type QuestionSource = 'all' | 'solved';
 
 const ALL_PROBLEMS = [
   ...STRIVER_ROADMAP.flatMap(t => t.problems),
   ...NEETCODE_ROADMAP.flatMap(t => t.problems),
   ...LEETCODE_TOP150_ROADMAP.flatMap(t => t.problems),
 ];
+
+// Deduplicate by key
+const UNIQUE_PROBLEMS = (() => {
+  const seen = new Set<string>();
+  return ALL_PROBLEMS.filter(p => {
+    if (seen.has(p.key)) return false;
+    seen.add(p.key);
+    return true;
+  });
+})();
 
 function pickRandom(arr: RoadmapProblem[], count: number, difficulty: Difficulty): RoadmapProblem[] {
   let pool = difficulty === 'Mixed' ? arr : arr.filter(p => p.difficulty === difficulty);
@@ -41,7 +52,8 @@ const ContestMode = () => {
   const [state, setState] = useState<ContestState>('setup');
   const [difficulty, setDifficulty] = useState<Difficulty>('Mixed');
   const [problemCount, setProblemCount] = useState(5);
-  const [timeLimit, setTimeLimit] = useState(30); // minutes
+  const [timeLimit, setTimeLimit] = useState(30);
+  const [questionSource, setQuestionSource] = useState<QuestionSource>('all');
   const [problems, setProblems] = useState<RoadmapProblem[]>([]);
   const [results, setResults] = useState<ContestResult[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -49,8 +61,9 @@ const ContestMode = () => {
   const [problemStart, setProblemStart] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval>>();
 
-  // Past contest results
   const [pastResults, setPastResults] = useState<any[]>([]);
+  const [solvedKeys, setSolvedKeys] = useState<Set<string>>(new Set());
+  const [loadingSolved, setLoadingSolved] = useState(false);
 
   useEffect(() => {
     if (!authUser) return;
@@ -61,10 +74,26 @@ const ContestMode = () => {
       .order('created_at', { ascending: false })
       .limit(10)
       .then(({ data }) => setPastResults(data || []));
+
+    // Load solved problem keys
+    setLoadingSolved(true);
+    supabase
+      .from('user_problem_progress')
+      .select('problem_key')
+      .eq('user_id', authUser.id)
+      .eq('solved', true)
+      .then(({ data }) => {
+        setSolvedKeys(new Set((data || []).map(d => d.problem_key)));
+        setLoadingSolved(false);
+      });
   }, [authUser, state]);
 
   const startContest = () => {
-    const selected = pickRandom(ALL_PROBLEMS, problemCount, difficulty);
+    let pool = UNIQUE_PROBLEMS;
+    if (questionSource === 'solved' && solvedKeys.size > 0) {
+      pool = UNIQUE_PROBLEMS.filter(p => solvedKeys.has(p.key));
+    }
+    const selected = pickRandom(pool, problemCount, difficulty);
     setProblems(selected);
     setResults([]);
     setCurrentIdx(0);
@@ -115,10 +144,8 @@ const ContestMode = () => {
       setCurrentIdx(currentIdx + 1);
       setProblemStart(elapsed);
     } else {
-      // All problems done
       if (timerRef.current) clearInterval(timerRef.current);
       setState('finished');
-      // Save
       if (authUser) {
         const solvedCount = newResults.filter(r => r.solved).length;
         const score = newResults.reduce((s, r) => {
@@ -174,7 +201,7 @@ const ContestMode = () => {
 
               <Card>
                 <CardContent className="p-4 space-y-4">
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div>
                       <label className="text-xs font-semibold text-muted-foreground">Difficulty</label>
                       <Select value={difficulty} onValueChange={(v) => setDifficulty(v as Difficulty)}>
@@ -205,14 +232,34 @@ const ContestMode = () => {
                         </SelectContent>
                       </Select>
                     </div>
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground">Source</label>
+                      <Select value={questionSource} onValueChange={(v) => setQuestionSource(v as QuestionSource)}>
+                        <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Problems</SelectItem>
+                          <SelectItem value="solved" disabled={solvedKeys.size === 0}>
+                            Solved ({solvedKeys.size})
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <Button className="w-full gap-2" onClick={startContest}>
+                  
+                  {questionSource === 'solved' && solvedKeys.size === 0 && (
+                    <p className="text-xs text-warning">You haven't solved any problems yet. Solve problems in any module first.</p>
+                  )}
+
+                  <Button 
+                    className="w-full gap-2" 
+                    onClick={startContest}
+                    disabled={questionSource === 'solved' && solvedKeys.size === 0}
+                  >
                     <Play className="h-4 w-4" /> Start Contest
                   </Button>
                 </CardContent>
               </Card>
 
-              {/* Past results */}
               {pastResults.length > 0 && (
                 <div>
                   <h2 className="text-sm font-bold text-foreground mb-2">Past Contests</h2>

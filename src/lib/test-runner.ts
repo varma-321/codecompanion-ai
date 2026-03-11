@@ -48,6 +48,10 @@ function toJavaLiteral(value: string, javaType: string): string {
       return v.endsWith('L') ? v : `${v}L`;
     case 'float':
       return v.endsWith('f') ? v : `${v}f`;
+    case 'short':
+      return `(short)${v}`;
+    case 'byte':
+      return `(byte)${v}`;
     case 'char':
       if (v.startsWith("'")) return v;
       return `'${v.replace(/^"|"$/g, '')}'`;
@@ -55,10 +59,25 @@ function toJavaLiteral(value: string, javaType: string): string {
       if (v.startsWith('"') && v.endsWith('"')) return v;
       if (v.startsWith("'") && v.endsWith("'")) return `"${v.slice(1, -1)}"`;
       return `"${v}"`;
+    case 'Integer':
+      return `Integer.valueOf(${v})`;
+    case 'Long':
+      return `Long.valueOf(${v}L)`;
+    case 'Double':
+      return `Double.valueOf(${v})`;
+    case 'Float':
+      return `Float.valueOf(${v}f)`;
+    case 'Boolean':
+      return `Boolean.valueOf(${v})`;
+    case 'Character':
+      if (v.startsWith("'")) return `Character.valueOf(${v})`;
+      return `Character.valueOf('${v.replace(/^"|"$/g, '')}')`;
     case 'int[]':
     case 'long[]':
     case 'double[]':
-    case 'float[]': {
+    case 'float[]':
+    case 'short[]':
+    case 'byte[]': {
       const inner = v.replace(/^\[/, '{').replace(/\]$/, '}');
       return `new ${javaType}${inner}`;
     }
@@ -75,6 +94,15 @@ function toJavaLiteral(value: string, javaType: string): string {
     case 'String[]': {
       return `new String[]${v.replace('[', '{').replace(/\]$/, '}')}`;
     }
+    case 'Integer[]': {
+      try {
+        const items = JSON.parse(v);
+        if (Array.isArray(items)) {
+          return `new Integer[]{${items.join(', ')}}`;
+        }
+      } catch {}
+      return `new Integer[]${v.replace('[', '{').replace(/\]$/, '}')}`;
+    }
     case 'int[][]':
     case 'long[][]':
     case 'double[][]': {
@@ -87,7 +115,8 @@ function toJavaLiteral(value: string, javaType: string): string {
     }
     case 'List<Integer>':
     case 'List<String>':
-    case 'List<Long>': {
+    case 'List<Long>':
+    case 'List<Double>': {
       try {
         const items = JSON.parse(v);
         if (Array.isArray(items)) {
@@ -95,10 +124,10 @@ function toJavaLiteral(value: string, javaType: string): string {
             if (javaType === 'List<String>') return `"${item}"`;
             return String(item);
           }).join(', ');
-          return `java.util.Arrays.asList(${literals})`;
+          return `new java.util.ArrayList<>(java.util.Arrays.asList(${literals}))`;
         }
       } catch {}
-      return `java.util.Arrays.asList()`;
+      return `new java.util.ArrayList<>()`;
     }
     case 'List<List<Integer>>': {
       try {
@@ -107,10 +136,51 @@ function toJavaLiteral(value: string, javaType: string): string {
           const lists = outer.map((inner: any[]) =>
             `java.util.Arrays.asList(${inner.join(', ')})`
           ).join(', ');
-          return `java.util.Arrays.asList(${lists})`;
+          return `new java.util.ArrayList<>(java.util.Arrays.asList(${lists}))`;
         }
       } catch {}
-      return `java.util.Arrays.asList()`;
+      return `new java.util.ArrayList<>()`;
+    }
+    case 'ArrayList<Integer>':
+    case 'ArrayList<String>': {
+      const innerType = javaType.includes('String') ? 'List<String>' : 'List<Integer>';
+      return toJavaLiteral(v, innerType);
+    }
+    case 'LinkedList<Integer>':
+    case 'LinkedList<String>': {
+      try {
+        const items = JSON.parse(v);
+        if (Array.isArray(items)) {
+          const literals = items.map((item: any) => {
+            if (javaType.includes('String')) return `"${item}"`;
+            return String(item);
+          }).join(', ');
+          return `new java.util.LinkedList<>(java.util.Arrays.asList(${literals}))`;
+        }
+      } catch {}
+      return `new java.util.LinkedList<>()`;
+    }
+    case 'HashSet<Integer>':
+    case 'HashSet<String>': {
+      try {
+        const items = JSON.parse(v);
+        if (Array.isArray(items)) {
+          const literals = items.map((item: any) => {
+            if (javaType.includes('String')) return `"${item}"`;
+            return String(item);
+          }).join(', ');
+          return `new java.util.HashSet<>(java.util.Arrays.asList(${literals}))`;
+        }
+      } catch {}
+      return `new java.util.HashSet<>()`;
+    }
+    case 'StringBuilder': {
+      const str = v.startsWith('"') ? v : `"${v}"`;
+      return `new StringBuilder(${str})`;
+    }
+    case 'StringBuffer': {
+      const str = v.startsWith('"') ? v : `"${v}"`;
+      return `new StringBuffer(${str})`;
     }
     default:
       if (v.startsWith('[')) {
@@ -126,21 +196,33 @@ function toJavaLiteral(value: string, javaType: string): string {
 function buildOutputPrint(returnType: string): string {
   switch (returnType) {
     case 'int[]':
+    case 'boolean[]':
+    case 'long[]':
+    case 'double[]':
+    case 'float[]':
+    case 'short[]':
+    case 'byte[]':
+    case 'char[]':
+    case 'String[]':
+    case 'Integer[]':
       return 'System.out.println(java.util.Arrays.toString(result));';
     case 'int[][]':
+    case 'long[][]':
+    case 'double[][]':
+    case 'String[][]':
       return 'System.out.println(java.util.Arrays.deepToString(result));';
-    case 'String[]':
-      return 'System.out.println(java.util.Arrays.toString(result));';
-    case 'boolean[]':
-      return 'System.out.println(java.util.Arrays.toString(result));';
-    case 'long[]':
-      return 'System.out.println(java.util.Arrays.toString(result));';
-    case 'double[]':
-      return 'System.out.println(java.util.Arrays.toString(result));';
     case 'List<Integer>':
     case 'List<String>':
     case 'List<List<Integer>>':
+    case 'ArrayList<Integer>':
+    case 'ArrayList<String>':
+    case 'LinkedList<Integer>':
+    case 'HashSet<Integer>':
+    case 'HashSet<String>':
       return 'System.out.println(result);';
+    case 'StringBuilder':
+    case 'StringBuffer':
+      return 'System.out.println(result.toString());';
     default:
       return 'System.out.println(result);';
   }
@@ -160,6 +242,8 @@ function parseMethodSignature(code: string): MethodSignature | null {
     { regex: /public\s+static\s+([\w\[\]<>,\s]+?)\s+(\w+)\s*\(([^)]*)\)/g, isStatic: true },
     { regex: /public\s+([\w\[\]<>,\s]+?)\s+(\w+)\s*\(([^)]*)\)/g, isStatic: false },
     { regex: /static\s+([\w\[\]<>,\s]+?)\s+(\w+)\s*\(([^)]*)\)/g, isStatic: true },
+    { regex: /private\s+static\s+([\w\[\]<>,\s]+?)\s+(\w+)\s*\(([^)]*)\)/g, isStatic: true },
+    { regex: /private\s+([\w\[\]<>,\s]+?)\s+(\w+)\s*\(([^)]*)\)/g, isStatic: false },
   ];
 
   for (const { regex, isStatic } of patterns) {
@@ -194,10 +278,25 @@ function getDefaultForType(javaType: string): string {
     case 'long': return '0L';
     case 'double': return '0.0';
     case 'float': return '0.0f';
+    case 'short': return '(short)0';
+    case 'byte': return '(byte)0';
     case 'boolean': return 'false';
     case 'char': return "' '";
     case 'String': return '""';
-    default: return 'null';
+    case 'Integer': return '0';
+    case 'Long': return '0L';
+    case 'Double': return '0.0';
+    case 'Float': return '0.0f';
+    case 'Boolean': return 'false';
+    case 'Character': return "' '";
+    case 'StringBuilder': return 'new StringBuilder()';
+    case 'StringBuffer': return 'new StringBuffer()';
+    default:
+      if (javaType.startsWith('List<') || javaType.startsWith('ArrayList<')) return 'new java.util.ArrayList<>()';
+      if (javaType.startsWith('LinkedList<')) return 'new java.util.LinkedList<>()';
+      if (javaType.startsWith('HashSet<')) return 'new java.util.HashSet<>()';
+      if (javaType.startsWith('HashMap<')) return 'new java.util.HashMap<>()';
+      return 'null';
   }
 }
 
@@ -296,8 +395,21 @@ export function buildTestWrapper(
       callCode = `        ${resultType} result = ${caller}(${args});\n        ${printStmt}`;
     }
   } else if (methodSig && varNames.length === 0) {
-    callCode = '        System.out.println("ERROR: No test inputs provided");';
+    // Try calling the method with no args if it has no params
+    if (methodSig.params.length === 0) {
+      const resultType = methodSig.returnType;
+      const printStmt = buildOutputPrint(resultType);
+      const caller = methodSig.isStatic ? methodSig.name : `new Main().${methodSig.name}`;
+      if (resultType === 'void') {
+        callCode = `        ${caller}();\n        System.out.println("void");`;
+      } else {
+        callCode = `        ${resultType} result = ${caller}();\n        ${printStmt}`;
+      }
+    } else {
+      callCode = '        System.out.println("ERROR: No test inputs provided for method parameters");';
+    }
   } else {
+    // No method signature detected — try running code as-is with stdin
     callCode = '        // Could not detect method signature - running code as-is';
   }
 
@@ -377,15 +489,20 @@ export async function runAllTests(
     }
 
     if (Object.keys(validInputs).length === 0) {
-      const result: TestResult = {
-        test: i + 1,
-        status: 'FAILED',
-        expected: tc.expected,
-        actual: 'ERROR: Empty or invalid test inputs',
-      };
-      results.push(result);
-      onTestResult?.(i, result);
-      continue;
+      // If inputs are empty but we have a method with no params, still run
+      if (methodSig && methodSig.params.length === 0) {
+        // proceed with empty inputs
+      } else {
+        const result: TestResult = {
+          test: i + 1,
+          status: 'FAILED',
+          expected: tc.expected,
+          actual: 'ERROR: Empty or invalid test inputs',
+        };
+        results.push(result);
+        onTestResult?.(i, result);
+        continue;
+      }
     }
 
     const wrappedCode = buildTestWrapper(userCode, validInputs, methodSig);
@@ -415,8 +532,8 @@ export async function runAllTests(
       const actual = (data.success ? (data.output || '') : (data.error || '')).trim();
       const expected = tc.expected.trim();
       
-      // Normalize comparison
-      const normalize = (s: string) => s.replace(/\s+/g, '').toLowerCase();
+      // Normalize comparison - handle whitespace differences
+      const normalize = (s: string) => s.replace(/\s+/g, ' ').trim().toLowerCase();
       const passed = normalize(actual) === normalize(expected);
 
       const result: TestResult = {
