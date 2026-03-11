@@ -68,7 +68,7 @@ const InterviewSimulator = () => {
   const { authUser } = useUser();
   const [difficulty, setDifficulty] = useState('all');
   const [timeLimit, setTimeLimit] = useState(30);
-  const [source, setSource] = useState<'random' | 'module' | 'company'>('random');
+  const [source, setSource] = useState<'random' | 'module' | 'company' | 'solved'>('random');
   const [selectedModule, setSelectedModule] = useState<ModuleKey>('all');
   const [selectedCompany, setSelectedCompany] = useState(COMPANY_NAMES[0]);
   const [phase, setPhase] = useState<'setup' | 'coding' | 'review'>('setup');
@@ -78,12 +78,16 @@ const InterviewSimulator = () => {
   const [aiFeedback, setAiFeedback] = useState('');
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
+  const [solvedKeys, setSolvedKeys] = useState<Set<string>>(new Set());
   const timerRef = useRef<any>(null);
 
   useEffect(() => {
     if (!authUser) return;
     supabase.from('interview_results').select('*').eq('user_id', authUser.id).order('created_at', { ascending: false }).limit(10)
       .then(({ data }) => setHistory(data || []));
+    // Load solved keys
+    supabase.from('user_problem_progress').select('problem_key').eq('user_id', authUser.id).eq('solved', true)
+      .then(({ data }) => setSolvedKeys(new Set((data || []).map(d => d.problem_key))));
   }, [authUser, phase]);
 
   useEffect(() => {
@@ -105,7 +109,9 @@ const InterviewSimulator = () => {
   const problemPool = useMemo(() => {
     let pool: typeof ALL_PROBLEMS = [];
 
-    if (source === 'company') {
+    if (source === 'solved') {
+      pool = ALL_PROBLEMS.filter(p => solvedKeys.has(p.key));
+    } else if (source === 'company') {
       const slugs = COMPANY_TAGS[selectedCompany] || [];
       pool = slugs.map(s => findBySlug(s)).filter(Boolean) as typeof ALL_PROBLEMS;
     } else if (source === 'module') {
@@ -116,23 +122,20 @@ const InterviewSimulator = () => {
         pool = mod.data.flatMap(t => t.problems.map(p => ({ ...p, topic: t.name })));
       }
     } else {
-      // random from everything
       pool = ALL_PROBLEMS;
     }
 
-    // Filter by difficulty
     if (difficulty !== 'all') {
       pool = pool.filter(p => p.difficulty === difficulty);
     }
 
-    // Deduplicate by key
     const seen = new Set<string>();
     return pool.filter(p => {
       if (seen.has(p.key)) return false;
       seen.add(p.key);
       return true;
     });
-  }, [source, selectedModule, selectedCompany, difficulty]);
+  }, [source, selectedModule, selectedCompany, difficulty, solvedKeys]);
 
   const startInterview = () => {
     if (problemPool.length === 0) return;
@@ -206,11 +209,12 @@ const InterviewSimulator = () => {
               {/* Source selection */}
               <div>
                 <label className="text-sm font-medium text-foreground mb-1.5 block">Question Source</label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {([
                     { key: 'random' as const, label: 'Random (All)', icon: <Shuffle className="h-3.5 w-3.5" /> },
                     { key: 'module' as const, label: 'By Module', icon: <BookOpen className="h-3.5 w-3.5" /> },
                     { key: 'company' as const, label: 'By Company', icon: <Building2 className="h-3.5 w-3.5" /> },
+                    { key: 'solved' as const, label: `Solved (${solvedKeys.size})`, icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
                   ]).map(s => (
                     <button
                       key={s.key}

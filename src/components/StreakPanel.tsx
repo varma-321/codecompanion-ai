@@ -20,18 +20,43 @@ const StreakPanel = () => {
     if (!authUser) return;
     const load = async () => {
       setLoading(true);
-      const { data: problems } = await supabase
+      
+      // Query user_problem_progress for all solved problems across ALL modules
+      const { data: progress } = await supabase
+        .from('user_problem_progress')
+        .select('problem_key, solved, solved_at, last_attempted')
+        .eq('user_id', authUser.id)
+        .eq('solved', true)
+        .order('solved_at', { ascending: false });
+
+      // Also check the old problems table for main IDE solved problems
+      const { data: oldProblems } = await supabase
         .from('problems')
         .select('created_at, solved, updated_at')
         .eq('user_id', authUser.id)
-        .eq('solved', true)
-        .order('updated_at', { ascending: false });
+        .eq('solved', true);
 
-      const solved = problems || [];
-      setTotalSolved(solved.length);
+      // Merge all solved dates
+      const solvedDates: string[] = [];
+      
+      (progress || []).forEach(p => {
+        if (p.solved_at) solvedDates.push(p.solved_at);
+        else if (p.last_attempted) solvedDates.push(p.last_attempted);
+      });
+      
+      (oldProblems || []).forEach(p => {
+        solvedDates.push(p.updated_at);
+      });
 
-      // Calculate streak
-      const days = new Set(solved.map(p => new Date(p.updated_at).toISOString().slice(0, 10)));
+      const totalCount = new Set([
+        ...(progress || []).map(p => p.problem_key),
+        ...(oldProblems || []).map(() => 'ide-problem'),
+      ]).size;
+      
+      setTotalSolved((progress || []).length + (oldProblems || []).length);
+
+      // Calculate streak from all solved dates
+      const days = new Set(solvedDates.map(d => new Date(d).toISOString().slice(0, 10)));
       let currentStreak = 0;
       const today = new Date();
       for (let i = 0; i < 365; i++) {
@@ -52,7 +77,7 @@ const StreakPanel = () => {
         const d = new Date(today);
         d.setDate(d.getDate() - i);
         const key = d.toISOString().slice(0, 10);
-        const count = solved.filter(p => new Date(p.updated_at).toISOString().slice(0, 10) === key).length;
+        const count = solvedDates.filter(sd => new Date(sd).toISOString().slice(0, 10) === key).length;
         week.push({ date: key, count });
       }
       setWeekActivity(week);
