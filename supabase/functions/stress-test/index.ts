@@ -26,11 +26,11 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: "You generate stress test cases to find edge cases in Java code. Generate diverse, tricky test cases including: empty inputs, single elements, large numbers, negative numbers, duplicates, sorted/reverse-sorted inputs, boundary values, and cases designed to break common wrong approaches."
+            content: "You generate stress test cases to find edge cases in Java code. Generate a SMALL set of diverse, tricky test cases (maximum 5) including: empty inputs, single elements, large numbers, negative numbers, duplicates, sorted/reverse-sorted inputs, boundary values, and cases designed to break common wrong approaches. Prefer the most informative cases over quantity."
           },
           {
             role: "user",
-            content: `Generate 20 diverse stress test cases for this Java function. Existing tests:\n${existingTests}\n\nCode:\n${code}\n\nGenerate cases that test edge cases and could break incorrect solutions.`
+            content: `Generate up to 5 diverse, high-signal stress test cases for this Java function. Existing tests:\n${existingTests}\n\nCode:\n${code}\n\nGenerate cases that test edge cases and could break incorrect solutions. Focus on quality and variety, not quantity.`
           }
         ],
         tools: [{
@@ -43,6 +43,7 @@ serve(async (req) => {
               properties: {
                 testCases: {
                   type: "array",
+                  maxItems: 5,
                   items: {
                     type: "object",
                     properties: {

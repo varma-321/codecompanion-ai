@@ -26,25 +26,21 @@ serve(async (req) => {
             role: "system",
             content: `You are an expert competitive programming problem writer who creates problems identical to real LeetCode problems.
 
-Generate complete LeetCode-style problem details for Java DSA problems with COMPREHENSIVE test cases.
+Generate complete LeetCode-style problem details for Java DSA problems with a SMALL SET of HIGH-QUALITY test cases.
 
 CRITICAL TEST CASE REQUIREMENTS:
-- Generate exactly 20 test cases that thoroughly validate correctness
-- Test cases MUST cover ALL of the following categories:
-
-1. BASIC CASES (3-4): Simple examples that match the problem description
-2. EDGE CASES (4-5): Empty arrays, single elements, null/zero inputs, minimum valid inputs
-3. BOUNDARY CONDITIONS (3-4): Maximum constraints, minimum constraints, off-by-one scenarios
-4. SPECIAL PATTERNS (3-4): All same elements, sorted input, reverse sorted, alternating patterns
-5. NEGATIVE/TRICKY CASES (3-4): Negative numbers, duplicates, no valid answer scenarios
-6. STRESS CASES (2-3): Larger inputs (arrays of 50-100 elements) to test efficiency
+- Generate at most 5 test cases, choosing only the highest-value cases
+- The 5 cases together MUST cover:
+  1. NORMAL CASES: Standard examples that match the problem description
+  2. EDGE CASES: Empty arrays, single elements, null/zero inputs, minimum valid inputs
+  3. BOUNDARY CONDITIONS: Maximum/minimum constraints, off-by-one scenarios
+  4. (Optional) STRESS / SPECIAL PATTERN: Only include if it adds unique coverage
 
 Each test case input value must be a STRING representation. Arrays as "[1,2,3]", integers as "5", strings as "\"hello\"".
-The expected output must exactly match what System.out.println() would produce in Java.
+The expected output must exactly match what System.out.println() would produce in Java for a CORRECT solution.
 
-For array outputs: use Arrays.toString format like "[1, 2, 3]" 
+For array / list outputs: use Java toString formats like "[1, 2, 3]" (spaces after commas, like Arrays.toString / List.toString)
 For 2D arrays: use Arrays.deepToString format like "[[1, 2], [3, 4]]"
-For lists: use toString format like "[1, 2, 3]"
 For boolean: "true" or "false"
 For strings: just the string without quotes
 
@@ -97,6 +93,7 @@ This should match the REAL LeetCode problem if it exists. Include full descripti
                 },
                 testCases: {
                   type: "array",
+                  maxItems: 5,
                   items: {
                     type: "object",
                     properties: {
@@ -107,12 +104,12 @@ This should match the REAL LeetCode problem if it exists. Include full descripti
                       expected: { type: "string" },
                       category: { 
                         type: "string",
-                        description: "Test category: basic, edge, boundary, pattern, tricky, or stress"
+                        description: "Test category: normal, edge, boundary, pattern, tricky, or stress"
                       }
                     },
                     required: ["inputs", "expected"]
                   },
-                  description: "20 comprehensive test cases covering basic, edge, boundary, pattern, tricky, and stress scenarios"
+                  description: "Up to 5 high-quality test cases covering normal, edge, boundary, and (optionally) a stress/special pattern case"
                 },
                 functionName: { type: "string" },
                 returnType: { type: "string" },

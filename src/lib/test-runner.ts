@@ -532,8 +532,20 @@ export async function runAllTests(
       const actual = (data.success ? (data.output || '') : (data.error || '')).trim();
       const expected = tc.expected.trim();
       
-      // Normalize comparison - handle whitespace differences
-      const normalize = (s: string) => s.replace(/\s+/g, ' ').trim().toLowerCase();
+      // Normalize comparison to be robust against formatting differences,
+      // especially for arrays/lists where AI-generated expectations may omit spaces.
+      const normalize = (s: string) => {
+        const trimmed = s.trim();
+        // If it looks like an array/list output, remove spaces right after commas
+        // and around brackets so "[1, 2, 3]" and "[1,2,3]" are treated the same.
+        if (/^\[[\s\S]*\]$/.test(trimmed)) {
+          const noOuterSpace = trimmed.replace(/\s*\[\s*/g, '[').replace(/\s*\]\s*/g, ']');
+          const compactCommas = noOuterSpace.replace(/,\s+/g, ',');
+          return compactCommas.toLowerCase();
+        }
+        return trimmed.replace(/\s+/g, ' ').toLowerCase();
+      };
+
       const passed = normalize(actual) === normalize(expected);
 
       const result: TestResult = {

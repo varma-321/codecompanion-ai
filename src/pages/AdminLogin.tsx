@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Loader2, Mail, Lock, ArrowLeft, ArrowRight, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { signIn, supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '@/lib/api';
 
 const AdminLogin = () => {
   const navigate = useNavigate();
@@ -19,23 +19,20 @@ const AdminLogin = () => {
 
     setLoading(true);
     try {
-      await signIn(email.trim(), password);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Login failed');
+      const res = await fetch(`${API_BASE_URL}/api/admin/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password })
+      });
 
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('role', 'admin')
-        .maybeSingle();
-
-      if (!roleData) {
-        await supabase.auth.signOut();
-        setError('Access denied. This login is for administrators only.');
-      } else {
-        navigate('/admin');
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Login failed');
       }
+
+      // Store JWT token
+      localStorage.setItem('admin_token', data.token);
+      navigate('/admin');
     } catch (err: any) {
       setError(err?.message || 'Authentication failed.');
     }

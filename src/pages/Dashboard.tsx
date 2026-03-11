@@ -30,6 +30,7 @@ import {
 import { executeJavaCode, stopExecution, type ExecutionStatus as ExecStatusType } from '@/lib/executor';
 import { detectProblemTitle } from '@/lib/ai-backend';
 import { supabase } from '@/integrations/supabase/client';
+import { API_BASE_URL } from '@/lib/api';
 
 const Dashboard = () => {
   const { authUser, profile } = useUser();
@@ -225,10 +226,13 @@ const Dashboard = () => {
     if (!activeProblem || !userId) { toast.error('Select a problem first'); return; }
     setIsGeneratingTests(true);
     try {
-      const { data, error } = await supabase.functions.invoke('generate-test-cases', {
-        body: { code },
+      const res = await fetch(`${API_BASE_URL}/api/generate-test-cases`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code })
       });
-      if (error) throw error;
+      if (!res.ok) throw new Error('Server error: ' + res.status);
+      const data = await res.json();
       const generated = data?.testCases || [];
       if (generated.length === 0) { toast.info('No test cases generated'); setIsGeneratingTests(false); return; }
 

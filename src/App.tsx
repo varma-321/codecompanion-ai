@@ -47,6 +47,7 @@ import UserProfile from "./pages/UserProfile";
 import SubmissionHistory from "./pages/SubmissionHistory";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminSignup from "./pages/AdminSignup";
 
 const queryClient = new QueryClient();
 
@@ -103,6 +104,7 @@ const App = () => (
               <Route path="/profile" element={<UserProfile />} />
               <Route path="/submissions" element={<SubmissionHistory />} />
               <Route path="/admin-login" element={<AdminLogin />} />
+              <Route path="/admin/signup" element={<AdminSignup />} />
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
