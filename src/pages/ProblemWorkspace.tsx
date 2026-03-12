@@ -675,10 +675,27 @@ const ProblemWorkspace = () => {
           </SheetContent>
         </Sheet>
 
-        <Button onClick={handleAnalyze} disabled={isAnalyzing || !code.trim()} size="sm" variant="outline" className="h-7 gap-1 text-[11px] shrink-0">
-          {isAnalyzing ? <Loader2 className="h-3 w-3 animate-spin" /> : <BarChart3 className="h-3 w-3" />}
-          Analyze
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="sm" variant="outline" className="h-7 gap-1 text-[11px] shrink-0">
+              <Sparkles className="h-3 w-3" /> AI Tools
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-48">
+            <DropdownMenuItem onClick={handleAnalyze} disabled={isAnalyzing || !code.trim()}>
+              <BarChart3 className="h-3.5 w-3.5 mr-2" /> Analyze Code
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__mistakes__' }))}>
+              <AlertTriangle className="h-3.5 w-3.5 mr-2" /> Find Mistakes
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__hints__' }))}>
+              <Brain className="h-3.5 w-3.5 mr-2" /> Hints
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__patterns__' }))}>
+              <TrendingUp className="h-3.5 w-3.5 mr-2" /> Detect Pattern
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Main layout: responsive columns */}
