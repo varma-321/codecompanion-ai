@@ -167,7 +167,7 @@ const ProblemWorkspace = () => {
   const generateFullDetail = useCallback(async () => {
     if (!roadmapProblem || !key || hasHardcodedDetail) return;
     const cached = getCachedDetail(key);
-    if (cached && cached.testCases.length >= 10) {
+    if (cached && cached.testCases.length >= 3) {
       setDetail(cached);
       // Only set starter code if codes haven't been loaded from DB yet
       if (!codesLoadedFromDb.current) {
