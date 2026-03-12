@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DbTestCase } from '@/lib/supabase';
 
 export interface TestResult {
@@ -26,16 +27,27 @@ interface TestCasePanelProps {
 interface InputVar {
   name: string;
   value: string;
+  type: string;
 }
 
+const JAVA_TYPES = [
+  'auto', 'int', 'long', 'short', 'byte', 'float', 'double', 'char', 'boolean',
+  'String', 'Integer', 'Long', 'Double', 'Float', 'Boolean', 'Character',
+  'StringBuilder', 'StringBuffer',
+  'int[]', 'String[]', 'int[][]',
+  'ArrayList<Integer>', 'ArrayList<String>',
+  'LinkedList<Integer>', 'LinkedList<String>',
+  'HashSet<Integer>', 'HashSet<String>',
+  'HashMap<String,Integer>',
+];
+
 const getInputs = (tc: DbTestCase): Record<string, string> => {
-  // Use new inputs field if populated, fall back to legacy
   if (tc.inputs && Object.keys(tc.inputs).length > 0) return tc.inputs;
   return { [tc.variable_name || 'arr']: tc.input || '' };
 };
 
 const TestCasePanel = ({ testCases, testResults, onAdd, onUpdate, onDelete, onGenerateAI, isGenerating }: TestCasePanelProps) => {
-  const [newVars, setNewVars] = useState<InputVar[]>([{ name: 'nums', value: '' }]);
+  const [newVars, setNewVars] = useState<InputVar[]>([{ name: 'nums', value: '', type: 'auto' }]);
   const [newExpected, setNewExpected] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editVars, setEditVars] = useState<InputVar[]>([]);
@@ -48,26 +60,26 @@ const TestCasePanel = ({ testCases, testResults, onAdd, onUpdate, onDelete, onGe
     }
     if (Object.keys(inputs).length === 0) return;
     onAdd(inputs, newExpected.trim());
-    setNewVars([{ name: 'nums', value: '' }]);
+    setNewVars([{ name: 'nums', value: '', type: 'auto' }]);
     setNewExpected('');
   };
 
-  const addNewVar = () => setNewVars(prev => [...prev, { name: '', value: '' }]);
+  const addNewVar = () => setNewVars(prev => [...prev, { name: '', value: '', type: 'auto' }]);
   const removeNewVar = (idx: number) => setNewVars(prev => prev.filter((_, i) => i !== idx));
-  const updateNewVar = (idx: number, field: 'name' | 'value', val: string) => {
+  const updateNewVar = (idx: number, field: 'name' | 'value' | 'type', val: string) => {
     setNewVars(prev => prev.map((v, i) => i === idx ? { ...v, [field]: val } : v));
   };
 
   const startEdit = (tc: DbTestCase) => {
     const inputs = getInputs(tc);
     setEditingId(tc.id);
-    setEditVars(Object.entries(inputs).map(([name, value]) => ({ name, value })));
+    setEditVars(Object.entries(inputs).map(([name, value]) => ({ name, value, type: 'auto' })));
     setEditExpected(tc.expected_output);
   };
 
-  const addEditVar = () => setEditVars(prev => [...prev, { name: '', value: '' }]);
+  const addEditVar = () => setEditVars(prev => [...prev, { name: '', value: '', type: 'auto' }]);
   const removeEditVar = (idx: number) => setEditVars(prev => prev.filter((_, i) => i !== idx));
-  const updateEditVar = (idx: number, field: 'name' | 'value', val: string) => {
+  const updateEditVar = (idx: number, field: 'name' | 'value' | 'type', val: string) => {
     setEditVars(prev => prev.map((v, i) => i === idx ? { ...v, [field]: val } : v));
   };
 
@@ -83,6 +95,19 @@ const TestCasePanel = ({ testCases, testResults, onAdd, onUpdate, onDelete, onGe
 
   const passedCount = testResults.filter(r => r.status === 'PASSED').length;
   const totalResults = testResults.length;
+
+  const TypeSelect = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="h-6 w-[80px] text-[10px] shrink-0">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent className="max-h-48">
+        {JAVA_TYPES.map(t => (
+          <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
 
   return (
     <div className="flex h-full flex-col bg-ide-sidebar">
@@ -145,7 +170,8 @@ const TestCasePanel = ({ testCases, testResults, onAdd, onUpdate, onDelete, onGe
                   <div className="space-y-1">
                     {editVars.map((v, vi) => (
                       <div key={vi} className="flex gap-1 items-center">
-                        <Input value={v.name} onChange={e => updateEditVar(vi, 'name', e.target.value)} className="h-6 text-xs w-20 shrink-0 font-mono" placeholder="var" />
+                        <TypeSelect value={v.type} onChange={val => updateEditVar(vi, 'type', val)} />
+                        <Input value={v.name} onChange={e => updateEditVar(vi, 'name', e.target.value)} className="h-6 text-xs w-16 shrink-0 font-mono" placeholder="var" />
                         <span className="text-muted-foreground">=</span>
                         <Input value={v.value} onChange={e => updateEditVar(vi, 'value', e.target.value)} className="h-6 text-xs flex-1 font-mono" placeholder="value" />
                         {editVars.length > 1 && (
@@ -199,11 +225,12 @@ const TestCasePanel = ({ testCases, testResults, onAdd, onUpdate, onDelete, onGe
         </div>
         {newVars.map((v, idx) => (
           <div key={idx} className="flex gap-1 items-center">
+            <TypeSelect value={v.type} onChange={val => updateNewVar(idx, 'type', val)} />
             <Input
               value={v.name}
               onChange={e => updateNewVar(idx, 'name', e.target.value)}
-              placeholder="var name"
-              className="h-7 text-xs w-20 shrink-0 font-mono"
+              placeholder="var"
+              className="h-7 text-xs w-16 shrink-0 font-mono"
             />
             <span className="text-xs text-muted-foreground">=</span>
             <Input
