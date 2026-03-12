@@ -24,11 +24,13 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are a test case generator for Java DSA problems. Generate exactly 3 high-quality test cases:
+            content: `You are a test case generator for Java DSA problems. Generate exactly 5 high-quality test cases:
 
 1. NORMAL CASE: A standard test case matching the problem description with typical inputs
 2. EDGE CASE: Edge cases like empty arrays, single elements, null/zero inputs, minimum valid inputs
 3. BOUNDARY CASE: Max/min constraints, large values, off-by-one scenarios
+4. LARGE INPUT CASE: A test with larger-than-typical input to test performance
+5. CORNER CASE: A tricky or unusual input that might catch common bugs
 
 CRITICAL: Each test case must have MULTIPLE INPUT VARIABLES matching the function parameters.
 
@@ -51,7 +53,7 @@ Expected output must exactly match what System.out.println() would produce in Ja
           },
           {
             role: "user",
-            content: `Generate 3 high-quality test cases (normal, edge, boundary) for this Java function${title ? ` (Problem: ${title}, Difficulty: ${difficulty || 'Medium'})` : ''}:\n\n${code}`
+            content: `Generate 5 high-quality test cases (normal, edge, boundary, large input, corner) for this Java function${title ? ` (Problem: ${title}, Difficulty: ${difficulty || 'Medium'})` : ''}:\n\n${code}`
           }
         ],
         tools: [
@@ -59,12 +61,13 @@ Expected output must exactly match what System.out.println() would produce in Ja
             type: "function",
             function: {
               name: "return_test_cases",
-              description: "Return 3 high-quality test cases: normal, edge, and boundary",
+              description: "Return 5 high-quality test cases: normal, edge, boundary, large input, and corner case",
               parameters: {
                 type: "object",
                 properties: {
                   testCases: {
                     type: "array",
+                    maxItems: 5,
                     items: {
                       type: "object",
                       properties: {
@@ -75,7 +78,7 @@ Expected output must exactly match what System.out.println() would produce in Ja
                         expectedOutput: { type: "string" },
                         category: { 
                           type: "string",
-                          description: "Test category: normal, edge, or boundary"
+                          description: "Test category: normal, edge, boundary, large_input, or corner"
                         }
                       },
                       required: ["inputs", "expectedOutput"],
