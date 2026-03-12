@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Loader2, Mail, Lock, ArrowLeft, ArrowRight, Shield } from 'lucide-react';
+import { Loader2, Mail, Lock, ArrowLeft, ArrowRight, Shield, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useNavigate } from 'react-router-dom';
-import { API_BASE_URL } from '@/lib/api';
+import { supabase } from '@/integrations/supabase/client';
 
 const AdminLogin = () => {
   const navigate = useNavigate();
@@ -19,19 +19,29 @@ const AdminLogin = () => {
 
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/admin/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), password })
+      // Sign in with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
       });
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Login failed');
+      if (authError) throw new Error(authError.message);
+      if (!authData.user) throw new Error('Login failed');
+
+      // Check if user has admin role
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', authData.user.id)
+        .eq('role', 'admin')
+        .maybeSingle();
+
+      if (roleError) throw new Error('Failed to verify admin access');
+      if (!roleData) {
+        await supabase.auth.signOut();
+        throw new Error('Access denied. You do not have admin privileges.');
       }
 
-      // Store JWT token
-      localStorage.setItem('admin_token', data.token);
       navigate('/admin');
     } catch (err: any) {
       setError(err?.message || 'Authentication failed.');
@@ -87,6 +97,16 @@ const AdminLogin = () => {
               </span>
             )}
           </Button>
+
+          <div className="mt-4 text-center">
+            <button
+              type="button"
+              onClick={() => navigate('/admin/signup')}
+              className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+            >
+              <UserPlus className="h-3 w-3" /> Request Admin Access
+            </button>
+          </div>
         </div>
       </div>
     </div>

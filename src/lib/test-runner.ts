@@ -2,6 +2,9 @@
  * Smart Java test runner that parses test case variables,
  * detects the user's method signature, generates a wrapper Main.java,
  * and executes each test case against the backend.
+ * 
+ * KEY: Keeps user's class intact (e.g. Solution) and generates a separate
+ * public class Main that instantiates and calls the user's class.
  */
 
 import { API_BASE_URL } from './api';
@@ -238,6 +241,9 @@ interface MethodSignature {
 }
 
 function parseMethodSignature(code: string): MethodSignature | null {
+  // Remove comments to avoid false matches
+  const cleaned = code.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
+  
   const patterns = [
     { regex: /public\s+static\s+([\w\[\]<>,\s]+?)\s+(\w+)\s*\(([^)]*)\)/g, isStatic: true },
     { regex: /public\s+([\w\[\]<>,\s]+?)\s+(\w+)\s*\(([^)]*)\)/g, isStatic: false },
@@ -248,7 +254,7 @@ function parseMethodSignature(code: string): MethodSignature | null {
 
   for (const { regex, isStatic } of patterns) {
     let match;
-    while ((match = regex.exec(code)) !== null) {
+    while ((match = regex.exec(cleaned)) !== null) {
       const returnType = match[1].trim();
       const name = match[2].trim();
       if (name === 'main' || name === 'void') continue;
@@ -267,6 +273,13 @@ function parseMethodSignature(code: string): MethodSignature | null {
     }
   }
   return null;
+}
+
+// ─── Detect user's class name ───────────────────────────────────
+
+function detectClassName(code: string): string | null {
+  const match = code.match(/(?:public\s+)?class\s+(\w+)\s*\{/);
+  return match ? match[1] : null;
 }
 
 // ─── Default value for a Java type ──────────────────────────────
@@ -300,33 +313,9 @@ function getDefaultForType(javaType: string): string {
   }
 }
 
-// ─── Remove main method using brace-counting ────────────────────
-
-function removeMainMethod(code: string): string {
-  const mainPattern = /public\s+static\s+void\s+main\s*\([^)]*\)\s*\{/;
-  const match = mainPattern.exec(code);
-  if (!match) return code;
-
-  const startIdx = match.index;
-  let braceCount = 0;
-  let endIdx = match.index + match[0].length;
-  braceCount = 1;
-
-  for (let i = endIdx; i < code.length; i++) {
-    if (code[i] === '{') braceCount++;
-    else if (code[i] === '}') {
-      braceCount--;
-      if (braceCount === 0) {
-        endIdx = i + 1;
-        break;
-      }
-    }
-  }
-
-  return (code.slice(0, startIdx) + code.slice(endIdx)).trim();
-}
-
 // ─── Build wrapped code for a single test case ───────────────────
+// NEW: Keeps the user's class (e.g. Solution) intact and generates
+// a separate public class Main that instantiates and calls it.
 
 export function buildTestWrapper(
   userCode: string,
@@ -345,6 +334,9 @@ export function buildTestWrapper(
     }
   }
 
+  // Detect the user's class name
+  const className = detectClassName(userCode) || 'Solution';
+  
   // Build variable declarations using method signature types when available
   const varDecls: string[] = [];
   const varNames: string[] = [];
@@ -372,11 +364,11 @@ export function buildTestWrapper(
     const varName = (methodSig && i < methodSig.params.length && !paramTypeMap[name]) 
       ? methodSig.params[i].name 
       : name;
-    varDecls.push(`        ${jType} ${varName} = ${literal};`);
+    varDecls.push(`            ${jType} ${varName} = ${literal};`);
     varNames.push(varName);
   }
 
-  // If we detected a method, call it with the variables
+  // Build the method call code
   let callCode: string;
   if (methodSig && varNames.length > 0) {
     const args = methodSig.params.map((param, idx) => {
@@ -387,45 +379,45 @@ export function buildTestWrapper(
 
     const resultType = methodSig.returnType;
     const printStmt = buildOutputPrint(resultType);
-    const caller = methodSig.isStatic ? methodSig.name : `new Main().${methodSig.name}`;
+    
+    // Always instantiate user's class for non-static methods
+    const caller = methodSig.isStatic 
+      ? `${className}.${methodSig.name}` 
+      : `new ${className}().${methodSig.name}`;
 
     if (resultType === 'void') {
-      callCode = `        ${caller}(${args});\n        System.out.println("void");`;
+      callCode = `            ${caller}(${args});\n            System.out.println("void");`;
     } else {
-      callCode = `        ${resultType} result = ${caller}(${args});\n        ${printStmt}`;
+      callCode = `            ${resultType} result = ${caller}(${args});\n            ${printStmt}`;
     }
   } else if (methodSig && varNames.length === 0) {
-    // Try calling the method with no args if it has no params
     if (methodSig.params.length === 0) {
       const resultType = methodSig.returnType;
       const printStmt = buildOutputPrint(resultType);
-      const caller = methodSig.isStatic ? methodSig.name : `new Main().${methodSig.name}`;
+      const caller = methodSig.isStatic 
+        ? `${className}.${methodSig.name}` 
+        : `new ${className}().${methodSig.name}`;
       if (resultType === 'void') {
-        callCode = `        ${caller}();\n        System.out.println("void");`;
+        callCode = `            ${caller}();\n            System.out.println("void");`;
       } else {
-        callCode = `        ${resultType} result = ${caller}();\n        ${printStmt}`;
+        callCode = `            ${resultType} result = ${caller}();\n            ${printStmt}`;
       }
     } else {
-      callCode = '        System.out.println("ERROR: No test inputs provided for method parameters");';
+      callCode = '            System.out.println("ERROR: No test inputs provided for method parameters");';
     }
   } else {
-    // No method signature detected — try running code as-is with stdin
-    callCode = '        // Could not detect method signature - running code as-is';
+    callCode = '            // Could not detect method signature - running code as-is';
   }
 
-  // Strip any existing class wrapper or main method from user code
-  let cleanCode = userCode.trim();
-  
-  const classMatch = cleanCode.match(/(?:public\s+)?class\s+\w+\s*\{([\s\S]*)\}\s*$/);
-  if (classMatch) {
-    cleanCode = classMatch[1].trim();
-    cleanCode = removeMainMethod(cleanCode);
-  }
+  // Keep user's class intact, just remove `public` modifier so it doesn't
+  // conflict with public class Main
+  let userClass = userCode.trim();
+  userClass = userClass.replace(/^public\s+class\s+/, 'class ');
 
   return `${imports}
-public class Main {
-    ${cleanCode}
+${userClass}
 
+public class Main {
     public static void main(String[] args) {
         try {
 ${varDecls.join('\n')}
@@ -532,12 +524,9 @@ export async function runAllTests(
       const actual = (data.success ? (data.output || '') : (data.error || '')).trim();
       const expected = tc.expected.trim();
       
-      // Normalize comparison to be robust against formatting differences,
-      // especially for arrays/lists where AI-generated expectations may omit spaces.
+      // Normalize comparison
       const normalize = (s: string) => {
         const trimmed = s.trim();
-        // If it looks like an array/list output, remove spaces right after commas
-        // and around brackets so "[1, 2, 3]" and "[1,2,3]" are treated the same.
         if (/^\[[\s\S]*\]$/.test(trimmed)) {
           const noOuterSpace = trimmed.replace(/\s*\[\s*/g, '[').replace(/\s*\]\s*/g, ']');
           const compactCommas = noOuterSpace.replace(/,\s+/g, ',');
@@ -566,7 +555,6 @@ export async function runAllTests(
       results.push(result);
       onTestResult?.(i, result);
       
-      // If aborted, stop processing remaining tests
       if (err.name === 'AbortError') break;
     }
   }

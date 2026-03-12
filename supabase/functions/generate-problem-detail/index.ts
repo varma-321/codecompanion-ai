@@ -29,12 +29,13 @@ serve(async (req) => {
 Generate complete LeetCode-style problem details for Java DSA problems with a SMALL SET of HIGH-QUALITY test cases.
 
 CRITICAL TEST CASE REQUIREMENTS:
-- Generate at most 5 test cases, choosing only the highest-value cases
+- Generate exactly 5 test cases, choosing only the highest-value cases
 - The 5 cases together MUST cover:
-  1. NORMAL CASES: Standard examples that match the problem description
-  2. EDGE CASES: Empty arrays, single elements, null/zero inputs, minimum valid inputs
-  3. BOUNDARY CONDITIONS: Maximum/minimum constraints, off-by-one scenarios
-  4. (Optional) STRESS / SPECIAL PATTERN: Only include if it adds unique coverage
+  1. NORMAL CASE: Standard example matching the problem description
+  2. EDGE CASE: Empty arrays, single elements, null/zero inputs
+  3. BOUNDARY CASE: Maximum/minimum constraints, off-by-one scenarios
+  4. LARGE INPUT CASE: Larger-than-typical input for performance testing
+  5. CORNER CASE: Tricky or unusual input that catches common bugs
 
 Each test case input value must be a STRING representation. Arrays as "[1,2,3]", integers as "5", strings as "\"hello\"".
 The expected output must exactly match what System.out.println() would produce in Java for a CORRECT solution.
@@ -54,25 +55,25 @@ PROBLEM REQUIREMENTS:
           {
             role: "user",
             content: `Generate a complete LeetCode-style problem for: "${title}" (Difficulty: ${difficulty}, Topic: ${topic || 'General'}). 
-This should match the REAL LeetCode problem if it exists. Include full description, constraints, examples with explanations, starter code, and 20 comprehensive test cases covering all edge cases, boundaries, and stress scenarios.`
+This should match the REAL LeetCode problem if it exists. Include full description, constraints, examples with explanations, starter code, and exactly 5 high-quality test cases covering normal, edge, boundary, large input, and corner cases.`
           },
         ],
         tools: [{
           type: "function",
           function: {
             name: "return_problem_detail",
-            description: "Return the complete problem detail with comprehensive test cases",
+            description: "Return the complete problem detail with 5 high-quality test cases",
             parameters: {
               type: "object",
               properties: {
                 description: { 
                   type: "string", 
-                  description: "Full problem description in markdown. Include the problem statement, what to return, and any special notes. Do NOT include examples or constraints here." 
+                  description: "Full problem description in markdown." 
                 },
                 constraints: {
                   type: "array",
                   items: { type: "string" },
-                  description: "List of constraints like '1 <= nums.length <= 10^5', '−10^9 <= nums[i] <= 10^9'"
+                  description: "List of constraints"
                 },
                 examples: {
                   type: "array",
@@ -89,7 +90,7 @@ This should match the REAL LeetCode problem if it exists. Include full descripti
                 },
                 starterCode: { 
                   type: "string", 
-                  description: "Java starter code with correct class and method signature. Must be a complete compilable class." 
+                  description: "Java starter code with correct class and method signature." 
                 },
                 testCases: {
                   type: "array",
@@ -99,17 +100,17 @@ This should match the REAL LeetCode problem if it exists. Include full descripti
                     properties: {
                       inputs: { 
                         type: "object",
-                        description: "Map of parameter name to value string, e.g. {\"nums\": \"[1,2,3]\", \"target\": \"5\"}"
+                        description: "Map of parameter name to value string"
                       },
                       expected: { type: "string" },
                       category: { 
                         type: "string",
-                        description: "Test category: normal, edge, boundary, pattern, tricky, or stress"
+                        description: "Test category: normal, edge, boundary, large_input, or corner"
                       }
                     },
                     required: ["inputs", "expected"]
                   },
-                  description: "Up to 5 high-quality test cases covering normal, edge, boundary, and (optionally) a stress/special pattern case"
+                  description: "Exactly 5 high-quality test cases"
                 },
                 functionName: { type: "string" },
                 returnType: { type: "string" },
@@ -127,11 +128,11 @@ This should match the REAL LeetCode problem if it exists. Include full descripti
                 hints: {
                   type: "array",
                   items: { type: "string" },
-                  description: "3-4 progressive hints to help solve the problem"
+                  description: "3-4 progressive hints"
                 },
                 approach: {
                   type: "string",
-                  description: "Brief description of the optimal approach and its complexity"
+                  description: "Brief description of the optimal approach"
                 }
               },
               required: ["description", "constraints", "examples", "starterCode", "testCases", "functionName", "returnType", "params"],

@@ -9,7 +9,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useUser } from '@/lib/user-context';
 import { supabase } from '@/integrations/supabase/client';
-import { API_BASE_URL } from '@/lib/api';
 
 interface UserRow {
   id: string;
@@ -37,7 +36,6 @@ const AdminDashboard = () => {
   const [actionDialog, setActionDialog] = useState<{ type: string; user: UserRow | null }>({ type: '', user: null });
   const [banDays, setBanDays] = useState('7');
   const [actionLoading, setActionLoading] = useState(false);
-  const [backendStats, setBackendStats] = useState<any>(null);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -49,7 +47,6 @@ const AdminDashboard = () => {
 
       if (error) throw error;
 
-      // Fetch roles for all users
       const { data: roles } = await supabase
         .from('user_roles')
         .select('user_id, role');
@@ -70,29 +67,15 @@ const AdminDashboard = () => {
     setLoading(false);
   }, []);
 
+  // Use UserContext to verify admin access — no external API needed
   useEffect(() => {
-    const verifyAdminAccess = async () => {
-      const token = localStorage.getItem('admin_token');
-      if (!token) {
-        navigate('/');
-        return;
-      }
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/admin/dashboard`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (!res.ok) {
-          throw new Error('Unauthorized');
-        }
-        const data = await res.json();
-        setBackendStats(data.stats); // Use the mock stats from backend if needed
-        fetchUsers();
-      } catch (err) {
-        navigate('/');
-      }
-    };
-    verifyAdminAccess();
-  }, [navigate, fetchUsers]);
+    if (authLoading) return;
+    if (!authUser || !isAdmin) {
+      navigate('/admin-login');
+      return;
+    }
+    fetchUsers();
+  }, [authUser, isAdmin, authLoading, navigate, fetchUsers]);
 
   const updateUserStatus = async (userId: string, status: string, banUntil?: string | null) => {
     setActionLoading(true);
@@ -127,15 +110,12 @@ const AdminDashboard = () => {
   const handleRemove = async (user: UserRow) => {
     setActionLoading(true);
     try {
-      // Delete profile (will cascade via auth)
       const { error } = await supabase
         .from('profiles')
         .delete()
         .eq('id', user.id);
       
-      // Note: We can't delete from auth.users directly, but blocking effectively removes access
       if (error) {
-        // If delete fails due to RLS, block instead
         await updateUserStatus(user.id, 'blocked', null);
         toast.info('User has been blocked (permanent removal requires backend admin access)');
       } else {
