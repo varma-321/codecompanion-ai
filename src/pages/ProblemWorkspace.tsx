@@ -549,10 +549,40 @@ const ProblemWorkspace = () => {
             <span className="hidden md:inline">Run Tests ({detail.testCases.length})</span>
             <span className="md:hidden">Test</span>
           </Button>
-          <Button onClick={handleAnalyze} disabled={isAnalyzing || !code.trim()} size="sm" variant="outline" className="h-7 gap-1 text-xs hidden sm:flex">
-            {isAnalyzing ? <Loader2 className="h-3 w-3 animate-spin" /> : <BarChart3 className="h-3 w-3" />}
-            <span className="hidden md:inline">Analyze</span>
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="outline" className="h-7 gap-1 text-xs hidden sm:flex">
+                <Sparkles className="h-3 w-3" /> AI Tools <ChevronDown className="h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={handleAnalyze} disabled={isAnalyzing || !code.trim()}>
+                <BarChart3 className="h-3.5 w-3.5 mr-2" /> Analyze Code
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__mistakes__' }))}>
+                <AlertTriangle className="h-3.5 w-3.5 mr-2" /> Find Mistakes
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__hints__' }))}>
+                <Brain className="h-3.5 w-3.5 mr-2" /> Hints
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => {
+                /* trigger AI test case generation via the edge function */
+                const genEvent = new CustomEvent('trigger-explain', { detail: '__generate_tests__' });
+                window.dispatchEvent(genEvent);
+              }}>
+                <FlaskConical className="h-3.5 w-3.5 mr-2" /> Generate Test Cases
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__brute__' }))}>
+                <Zap className="h-3.5 w-3.5 mr-2" /> Brute Force Solution
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__optimal__' }))}>
+                <Trophy className="h-3.5 w-3.5 mr-2" /> Optimal Solution
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__patterns__' }))}>
+                <TrendingUp className="h-3.5 w-3.5 mr-2" /> Detect Pattern
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button onClick={() => navigate(`/discuss?problem=${key}`)} size="sm" variant="ghost" className="h-7 gap-1 text-xs hidden lg:flex">
             <MessageSquare className="h-3 w-3" /> Discuss
           </Button>
