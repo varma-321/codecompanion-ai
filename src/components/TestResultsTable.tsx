@@ -71,6 +71,13 @@ const TestResultsTable = ({ results }: TestResultsTableProps) => {
               <TableCell className="px-2 py-1.5 font-mono text-xs max-w-[200px] truncate">{r.actual}</TableCell>
             </TableRow>
           ))}
+          {results.filter(r => r.isHidden).length > 0 && (
+             <TableRow>
+                 <TableCell colSpan={4} className="text-center py-4 bg-secondary/10 text-muted-foreground text-xs italic">
+                    Additional hidden set of testcases were executed in the backend. 
+                </TableCell>
+             </TableRow>
+          )}
         </TableBody>
       </Table>
     </div>

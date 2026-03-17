@@ -1,12 +1,71 @@
 import { useState, useEffect, useRef } from 'react';
-import { Brain, Send, Loader2, AlertCircle, Lightbulb, Zap, Code2, Bug, BookOpen, FlaskConical, Sparkles, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { Brain, Send, Loader2, AlertCircle, Lightbulb, Zap, Code2, Bug, BookOpen, FlaskConical, Sparkles, Trash2, Copy, ArrowUpRight, BarChart3, Workflow, Trophy, Volume2, VolumeX, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
-  analyzeCode, getHints as getAIHints, getSolution, detectPatterns, detectMistakes,
-  chat as aiChat, getExtraInsights, checkBackendStatus, explainCode
+  analyzeCode, getHints as getAIHints, getSolution, detectMistakes, detectPatterns,
+  chat as aiChat, getExtraInsights, checkBackendStatus
 } from '@/lib/ai-backend';
 import ReactMarkdown from 'react-markdown';
+import mermaid from 'mermaid';
+
+// Mermaid Initializer
+mermaid.initialize({
+  startOnLoad: true,
+  theme: 'dark',
+  securityLevel: 'loose',
+  fontFamily: 'Inter, sans-serif',
+});
+
+const Mermaid = ({ chart }: { chart: string }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const [svg, setSvg] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (ref.current && chart) {
+      setError(null);
+      // Clean up common AI hallucinations in Mermaid
+      const cleanedChart = chart
+        .replace(/^[ \t]*graph [TLR][D]/gm, 'graph TD')
+        .replace(/^\s+|\s+$/g, '');
+
+      mermaid.render(`mermaid-${Math.random().toString(36).substring(2, 9)}`, cleanedChart)
+        .then(({ svg }) => {
+          setSvg(svg);
+        })
+        .catch((e) => {
+          console.error('Mermaid render error:', e);
+          setError('Invalid diagram syntax. Showing raw logic below.');
+        });
+    }
+  }, [chart]);
+
+  if (error) {
+    return (
+      <div className="my-4 p-4 rounded-xl bg-destructive/10 border border-destructive/20">
+        <div className="flex items-center gap-2 mb-2 text-destructive font-bold text-xs">
+          <AlertCircle className="h-3 w-3" /> {error}
+        </div>
+        <pre className="text-[10px] font-mono text-muted-foreground whitespace-pre-wrap bg-black/20 p-2 rounded border border-white/5">
+          {chart}
+        </pre>
+      </div>
+    );
+  }
+
+  return (
+    <div className="my-4 p-4 rounded-xl bg-black/20 border border-white/5 overflow-x-auto shadow-inner transition-all duration-500 hover:border-primary/20">
+      <div 
+        ref={ref} 
+        className="flex justify-center"
+        dangerouslySetInnerHTML={{ __html: svg }} 
+      />
+    </div>
+  );
+};
 
 interface ChatMessage {
   id: string;
@@ -22,14 +81,18 @@ interface AIChatPanelProps {
 }
 
 const quickActions = [
-  { label: 'Analyze', icon: Zap, prompt: '__analyze__' },
-  { label: 'Hints', icon: Lightbulb, prompt: '__hints__' },
-  { label: 'Brute Force', icon: Code2, prompt: '__solution_brute__' },
-  { label: 'Optimal', icon: Sparkles, prompt: '__solution_optimal__' },
-  { label: 'Find Mistakes', icon: Bug, prompt: '__mistakes__' },
-  { label: 'Detect Patterns', icon: BookOpen, prompt: '__patterns__' },
-  { label: 'Edge Cases', icon: FlaskConical, prompt: '__edgecases__' },
-  { label: 'Test Cases', icon: FlaskConical, prompt: '__testcases__' },
+  { label: '✨ Code Aura', icon: Sparkles, prompt: '__vibe__' },
+  { label: '🧠 Visualize', icon: Eye, prompt: '__visualize__' },
+  { label: '🔍 Performance', icon: BarChart3, prompt: '__performance__' },
+  { label: '⚙️ Logic Trace', icon: Workflow, prompt: '__dry_run__' },
+  { label: '💡 Hints', icon: Lightbulb, prompt: '__hints__' },
+  { label: '🏆 Optimal', icon: Trophy, prompt: '__solution_optimal__' },
+  { label: '🐛 Find Bugs', icon: Bug, prompt: '__mistakes__' },
+  { label: '📚 Patterns', icon: BookOpen, prompt: '__patterns__' },
+  { label: '🎯 Approach', icon: AlertCircle, prompt: '__approach__' },
+  { label: '♻️ Refactor', icon: Code2, prompt: '__refactor__' },
+  { label: '🎤 Interview Q', icon: Brain, prompt: '__interview__' },
+  { label: '🧪 Test Cases', icon: FlaskConical, prompt: '__testcases__' },
 ];
 
 const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) => {
@@ -39,6 +102,7 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [hintLevel, setHintLevel] = useState(0);
+  const [isVoiceEnabled, setIsVoiceEnabled] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -55,21 +119,36 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
   }, []);
 
   useEffect(() => {
-    const handleExplain = () => {
-      handleSend('__analyze__');
+    const handleExplain = (e: any) => {
+      const prompt = e.detail || '__analyze__';
+      handleSend(prompt);
     };
     window.addEventListener('trigger-explain', handleExplain);
     return () => window.removeEventListener('trigger-explain', handleExplain);
-  }, [code, backendOnline]);
+  }, [code, backendOnline, problemId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const speak = (text: string) => {
+    if (!isVoiceEnabled) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text.replace(/```[\s\S]*?```/g, '').replace(/[*#]/g, ''));
+    utterance.rate = 1.1;
+    window.speechSynthesis.speak(utterance);
+  };
+
   const addMessage = (role: ChatMessage['role'], content: string): ChatMessage => {
     const msg: ChatMessage = { id: crypto.randomUUID(), role, content, timestamp: new Date() };
     setMessages(prev => [...prev, msg]);
+    if (role === 'assistant') speak(content);
     return msg;
+  };
+
+  const handleInsertCode = (newCode: string) => {
+    window.dispatchEvent(new CustomEvent('update-code', { detail: newCode }));
+    toast.success('Code inserted into editor!');
   };
 
   const handleSend = async (customPrompt?: string) => {
@@ -85,55 +164,69 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
     setIsLoading(true);
 
     try {
-      if (text === '__analyze__') {
-        addMessage('user', '🔍 Analyze this code');
-        const result = await analyzeCode(code);
-        const md = `### Analysis Results\n\n**Problem:** ${result.problemName}\n**Algorithm:** ${result.algorithmUsed}\n\n| Metric | Value |\n|--------|-------|\n| Time Complexity | \`${result.timeComplexity}\` |\n| Space Complexity | \`${result.spaceComplexity}\` |\n\n**Summary:** ${result.summary}\n\n${result.optimizations.length > 0 ? '**Optimizations:**\n' + result.optimizations.map(o => `- ${o}`).join('\n') : ''}`;
-        addMessage('assistant', md);
+      if (text === '__vibe__') {
+        addMessage('user', '✨ Perform AI Code Aura Analysis');
+        const result = await getExtraInsights(code, 'vibe-check', problemId);
+        addMessage('assistant', result);
+      } else if (text === '__performance__') {
+        addMessage('user', '🔍 Run Deep JVM Performance Audit');
+        const result = await getExtraInsights(code, 'performance-audit', problemId);
+        addMessage('assistant', result);
+      } else if (text === '__visualize__') {
+        addMessage('user', '🧠 Visualize Logic Flow');
+        const result = await getExtraInsights(code, 'visualize', problemId);
+        addMessage('assistant', result);
+      } else if (text === '__analyze__') {
+        addMessage('user', '🔍 Run Deep Java Analysis');
+        const result = await analyzeCode(code, problemId);
+        addMessage('assistant', result.summary);
+      } else if (text === '__dry_run__') {
+        addMessage('user', '⚙️ Perform Step-by-Step Logic Trace');
+        const result = await getExtraInsights(code, 'dry-run', problemId);
+        addMessage('assistant', result);
       } else if (text === '__hints__') {
         const nextLevel = Math.min(hintLevel + 1, 4);
-        addMessage('user', `💡 Give me hint ${nextLevel}`);
-        const hint = await getAIHints(code, nextLevel);
+        addMessage('user', `💡 Elite Hint ${nextLevel}`);
+        const hint = await getAIHints(code, nextLevel, problemId);
         addMessage('assistant', `### Hint ${nextLevel} of 4\n\n${hint}`);
         setHintLevel(nextLevel);
       } else if (text.startsWith('__solution_')) {
         const type = text.replace('__solution_', '').replace('__', '') as 'brute' | 'better' | 'optimal';
-        addMessage('user', `📝 Generate ${type} solution`);
-        const sol = await getSolution(code, type);
-        const md = `### ${type.charAt(0).toUpperCase() + type.slice(1)} Solution\n\n| Metric | Value |\n|--------|-------|\n| Time | \`${sol.timeComplexity}\` |\n| Space | \`${sol.spaceComplexity}\` |\n\n**Explanation:** ${sol.explanation}\n\n\`\`\`java\n${sol.code}\n\`\`\``;
-        addMessage('assistant', md);
+        addMessage('user', `📝 Master ${type} Java Solution`);
+        const sol = await getSolution(code, type, problemId);
+        addMessage('assistant', sol.explanation);
       } else if (text === '__mistakes__') {
-        addMessage('user', '🐛 Find mistakes in my code');
-        const result = await detectMistakes(code);
+        addMessage('user', '🐛 Hunt for Logic Bugs');
+        const result = await detectMistakes(code, problemId);
         addMessage('assistant', result);
       } else if (text === '__patterns__') {
-        addMessage('user', '📚 Detect algorithm patterns');
-        const result = await detectPatterns(code);
+        addMessage('user', '📚 Detect Algorithm Patterns');
+        const result = await detectPatterns(code, problemId);
         addMessage('assistant', result);
-      } else if (text === '__edgecases__') {
-        addMessage('user', '⚠️ Find edge cases');
-        const result = await getExtraInsights(code, 'edgecases');
+      } else if (text === '__approach__') {
+        addMessage('user', '🎯 Suggest Best Approach');
+        const result = await getExtraInsights(code, 'approach', problemId);
+        addMessage('assistant', result);
+      } else if (text === '__refactor__') {
+        addMessage('user', '♻️ Refactor My Code');
+        const result = await getExtraInsights(code, 'refactor', problemId);
+        addMessage('assistant', result);
+      } else if (text === '__interview__') {
+        addMessage('user', '🎤 Generate Interview Questions');
+        const result = await getExtraInsights(code, 'interview', problemId);
         addMessage('assistant', result);
       } else if (text === '__testcases__') {
-        addMessage('user', '🧪 Generate test cases');
-        const result = await getExtraInsights(code, 'testcases');
+        addMessage('user', '🧪 Generate Test Cases');
+        const result = await getExtraInsights(code, 'testcases', problemId);
         addMessage('assistant', result);
       } else {
         addMessage('user', text);
-        const response = await aiChat(code, text);
+        const response = await aiChat(code, text, problemId);
         addMessage('assistant', response);
       }
     } catch (err: any) {
-      const isRateLimit = err?.message?.includes('429') || err?.message?.toLowerCase().includes('rate');
-      const isTimeout = err?.message?.toLowerCase().includes('timeout') || err?.message?.toLowerCase().includes('abort');
-      
-      if (isRateLimit) {
-        addMessage('system', '⏳ AI service is temporarily busy. Please try again in a few seconds.');
-      } else if (isTimeout) {
-        addMessage('system', '⏱️ AI request timed out. Please try again.');
-      } else {
-        addMessage('system', '⚠️ AI service is temporarily unavailable. Please try again.');
-      }
+      console.error('AI Chat Error:', err);
+      addMessage('system', `⚠️ ${err.message || 'AI service is temporarily unavailable.'}`);
     }
 
     setIsLoading(false);
@@ -150,142 +243,174 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
   const clearChat = () => {
     setMessages([]);
     setHintLevel(0);
+    window.speechSynthesis.cancel();
   };
 
-  const StatusBadge = () => {
-    const label = checking ? 'Checking...' :
-      backendOnline ? 'Groq Cloud (Online)' : 'AI Offline';
+  const MessageBubble = ({ msg }: { msg: ChatMessage }) => {
+    const isAssistant = msg.role === 'assistant';
+    const isUser = msg.role === 'user';
+    const isSystem = msg.role === 'system';
+
     return (
-      <div className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors duration-300 ${
-        checking ? 'bg-secondary text-muted-foreground' :
-        backendOnline ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'
-      }`}>
-        <span className={`h-1.5 w-1.5 rounded-full transition-colors duration-300 ${
-          checking ? 'animate-pulse-dot bg-muted-foreground' :
-          backendOnline ? 'bg-success' : 'bg-destructive'
-        }`} />
-        {label}
+      <div className={`mb-4 flex flex-col group ${isUser ? 'items-end' : 'items-start'}`}>
+        <div className="flex items-center gap-2 mb-1 px-1">
+          {isAssistant && <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 shadow-sm"><Brain className="h-3 w-3 text-primary" /></div>}
+          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+            {isUser ? 'You' : isAssistant ? 'AI Architect' : 'System'}
+          </span>
+        </div>
+        
+        <div className={`relative max-w-[95%] rounded-2xl px-4 py-3 text-sm shadow-sm transition-all duration-300 backdrop-blur-md border ${
+          isUser 
+            ? 'bg-primary/90 text-primary-foreground border-primary/20 rounded-tr-none' 
+            : isSystem 
+            ? 'bg-warning/10 text-warning border-warning/20 rounded-tl-none italic' 
+            : 'bg-card/50 text-card-foreground border-panel-border rounded-tl-none'
+        }`}>
+          {isAssistant ? (
+            <div className="prose prose-sm max-w-none dark:prose-invert text-[12.5px] leading-relaxed 
+              [&_pre]:mt-3 [&_pre]:mb-3 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:bg-[#0d1117] [&_pre]:p-4 [&_pre]:border [&_pre]:border-white/10 [&_pre]:shadow-inner [&_pre]:text-gray-100
+              [&_code]:font-mono [&_code]:text-[11.5px] [&_code]:text-gray-100 [&_table]:mt-3 [&_table]:mb-3 [&_table]:border-collapse [&_th]:bg-secondary/20 [&_th]:p-2 [&_td]:p-2 [&_td]:border [&_td]:border-panel-border">
+              <ReactMarkdown 
+                components={{
+                  code({ node, inline, className, children, ...props }: any) {
+                    const match = /language-(\w+)/.exec(className || '');
+                    const codeStr = String(children).replace(/\n$/, '');
+                    if (!inline && match && match[1] === 'mermaid') {
+                      return <Mermaid chart={codeStr} />;
+                    }
+                    const isBlock = !inline && match;
+                    const isJava = match && match[1] === 'java';
+                    if (isBlock) {
+                      return (
+                        <div className="relative group/code mt-2 mb-2">
+                          <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover/code:opacity-100 transition-opacity z-10">
+                            <Button 
+                              size="icon" 
+                              variant="secondary" 
+                              className="h-7 w-7 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10"
+                              onClick={() => {
+                                navigator.clipboard.writeText(codeStr);
+                                toast.success('Copied to clipboard');
+                              }}
+                              title="Copy code"
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                            {isJava && (
+                              <Button 
+                                size="icon" 
+                                variant="secondary" 
+                                className="h-7 w-7 bg-primary/30 hover:bg-primary/50 backdrop-blur-md border border-primary/30"
+                                onClick={() => handleInsertCode(codeStr)}
+                                title="Insert into editor"
+                              >
+                                <ArrowUpRight className="h-3.5 w-3.5 text-white" />
+                              </Button>
+                            )}
+                          </div>
+                          <pre className="!bg-[#0d1117] !text-gray-100 rounded-xl p-4 overflow-x-auto text-[11.5px] font-mono border border-white/10" {...props}>
+                            <code className="!text-gray-100 font-mono">{children}</code>
+                          </pre>
+                        </div>
+                      );
+                    }
+                    return <code className="bg-secondary/40 text-primary px-1 py-0.5 rounded text-[11px] font-mono" {...props}>{children}</code>;
+                  }
+                }}
+              >
+                {msg.content}
+              </ReactMarkdown>
+            </div>
+          ) : (
+            <span>{msg.content}</span>
+          )}
+        </div>
       </div>
     );
   };
-
-  const AISkeleton = () => (
-    <div className="mb-3 animate-fade-in space-y-2 rounded-lg border border-panel-border bg-card p-3">
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <Loader2 className="h-3 w-3 animate-spin text-primary" />
-        <span>Analyzing Code...</span>
-      </div>
-      <Skeleton className="h-3 w-full" />
-      <Skeleton className="h-3 w-4/5" />
-      <Skeleton className="h-3 w-3/5" />
-      <div className="mt-2 flex gap-2">
-        <Skeleton className="h-6 w-20 rounded-full" />
-        <Skeleton className="h-6 w-16 rounded-full" />
-      </div>
-      <Skeleton className="h-3 w-full" />
-      <Skeleton className="h-3 w-2/3" />
-    </div>
-  );
-
-  if (!aiEnabled) {
-    return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 bg-ide-sidebar p-4">
-        <AlertCircle className="h-8 w-8 text-muted-foreground" />
-        <div className="text-center">
-          <p className="text-sm font-medium text-foreground">AI Assistant Disabled</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Enable the AI toggle in the toolbar to use AI features.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!backendOnline && !checking) {
-    return (
-      <div className="flex h-full flex-col bg-ide-sidebar">
-        <div className="flex items-center justify-between border-b border-panel-border px-3 py-2">
-          <div className="flex items-center gap-2">
-            <Brain className="h-3.5 w-3.5 text-primary" />
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">AI Code Explanation</span>
-          </div>
-          <StatusBadge />
-        </div>
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 p-4">
-          <AlertCircle className="h-8 w-8 text-muted-foreground" />
-          <div className="text-center">
-            <p className="text-sm font-medium text-foreground">AI Service Unavailable</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Server may be waking up. Please try again in a moment.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="flex h-full flex-col bg-ide-sidebar">
-      <div className="flex items-center justify-between border-b border-panel-border px-3 py-2">
-        <div className="flex items-center gap-2">
-          <Brain className="h-3.5 w-3.5 text-primary" />
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">AI Code Explanation</span>
+    <div className="flex h-full flex-col bg-ide-sidebar overflow-hidden relative">
+      {/* Premium Header */}
+      <div className="flex items-center justify-between border-b border-panel-border bg-gradient-to-r from-background to-secondary/10 px-4 py-3 backdrop-blur-xl z-20">
+        <div className="flex items-center gap-2.5">
+          <div className="p-1.5 rounded-lg bg-primary/10 border border-primary/20 shadow-sm relative overflow-hidden group">
+            <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity blur-md" />
+            <Brain className="h-4 w-4 text-primary animate-pulse relative z-10" />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-primary leading-none drop-shadow-[0_0_8px_rgba(var(--primary),0.4)]">AI Architect</span>
+            <span className="text-[10px] text-muted-foreground mt-0.5">High-Level Java Mentor</span>
+          </div>
         </div>
-        <div className="flex items-center gap-1">
-          <StatusBadge />
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className={`h-7 w-7 rounded-full transition-all duration-300 ${isVoiceEnabled ? 'text-primary bg-primary/10' : 'text-muted-foreground'}`}
+            onClick={() => {
+              setIsVoiceEnabled(!isVoiceEnabled);
+              if (isVoiceEnabled) window.speechSynthesis.cancel();
+              toast.info(`Voice Tutor ${!isVoiceEnabled ? 'Enabled' : 'Disabled'}`);
+            }}
+            title="Toggle Voice Tutor"
+          >
+            {isVoiceEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
+          </Button>
           {messages.length > 0 && (
-            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={clearChat} title="Clear chat">
-              <Trash2 className="h-3 w-3" />
+            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-destructive/10 hover:text-destructive transition-colors" onClick={clearChat} title="Clear workspace">
+              <Trash2 className="h-3.5 w-3.5" />
             </Button>
           )}
+          <div className={`h-2 w-2 rounded-full ${checking ? 'bg-secondary animate-pulse' : backendOnline ? 'bg-success shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-destructive shadow-[0_0_8px_rgba(239,68,68,0.5)]'}`} />
         </div>
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto px-3 py-2">
+      <div className="flex-1 overflow-y-auto px-4 py-4 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-panel-border">
         {messages.length === 0 && !isLoading && (
-          <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
-            <Brain className="h-10 w-10 text-muted-foreground/30" />
-            <div>
-              <p className="text-sm font-medium text-foreground">DSA AI Assistant</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Click "Explain Code" or use quick actions below.
+          <div className="flex h-full flex-col items-center justify-center gap-5 text-center px-4">
+            <div className="relative">
+              <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full animate-pulse" />
+              <div className="relative p-7 rounded-3xl border border-primary/20 bg-card/10 backdrop-blur-md shadow-2xl">
+                <Brain className="h-14 w-14 text-primary/40" />
+              </div>
+            </div>
+            <div className="max-w-[220px] space-y-2">
+              <p className="text-sm font-black text-foreground tracking-tight italic">E P I C   A I   M O D E</p>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                I can explain logic, hunt bugs, and even <span className="text-primary font-bold underline decoration-primary/30">visualize your code</span>. How can I assist?
               </p>
             </div>
           </div>
         )}
 
         {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`mb-3 animate-fade-in ${msg.role === 'user' ? 'flex justify-end' : ''}`}
-            style={{ animationDuration: '0.4s' }}
-          >
-            <div className={`max-w-[95%] rounded-lg px-3 py-2 text-xs transition-all duration-300 ${
-              msg.role === 'user'
-                ? 'bg-primary text-primary-foreground'
-                : msg.role === 'system'
-                ? 'bg-warning/10 text-warning border border-warning/20'
-                : 'bg-card text-card-foreground border border-panel-border'
-            }`}>
-              {msg.role === 'assistant' ? (
-                <div className="prose prose-sm max-w-none text-xs [&_pre]:overflow-x-auto [&_pre]:rounded [&_pre]:bg-secondary [&_pre]:p-2 [&_pre]:font-mono [&_pre]:text-[11px] [&_code]:rounded [&_code]:bg-secondary [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[11px] [&_table]:w-full [&_th]:border [&_th]:border-panel-border [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_td]:border [&_td]:border-panel-border [&_td]:px-2 [&_td]:py-1">
-                  <ReactMarkdown>{msg.content}</ReactMarkdown>
-                </div>
-              ) : (
-                <span>{msg.content}</span>
-              )}
-            </div>
-          </div>
+          <MessageBubble key={msg.id} msg={msg} />
         ))}
 
-        {isLoading && <AISkeleton />}
+        {isLoading && (
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 space-y-3 px-1">
+             <div className="flex items-center gap-2 text-[10px] text-primary font-bold uppercase tracking-widest">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Processing Epic Insights...
+             </div>
+             <Skeleton className="h-4 w-full rounded-full bg-primary/10" />
+             <Skeleton className="h-4 w-5/6 rounded-full bg-primary/5" />
+             <Skeleton className="h-4 w-4/6 rounded-full bg-primary/5" />
+          </div>
+        )}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Quick Actions */}
-      <div className="border-t border-panel-border px-2 py-1.5">
-        <div className="flex flex-wrap gap-1">
+      {/* Optimized Floating Quick Actions Bar */}
+      <div className="px-3 py-2 border-t border-panel-border bg-secondary/5 backdrop-blur-md relative overflow-hidden group/actions">
+        {/* Subtle Side Fades to indicate more content */}
+        <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-ide-sidebar to-transparent z-20 pointer-events-none opacity-0 group-hover/actions:opacity-100 transition-opacity" />
+        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-ide-sidebar to-transparent z-20 pointer-events-none opacity-60 group-hover/actions:opacity-100 transition-opacity" />
+        
+        <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent pb-1.5 relative z-10 flex gap-2 no-scrollbar sm:scrollbar-auto">
           {quickActions.map(action => (
             <Button
               key={action.label}
@@ -293,36 +418,41 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
               size="sm"
               disabled={isLoading}
               onClick={() => handleSend(action.prompt)}
-              className="h-6 gap-1 px-2 text-[10px]"
+              className="h-7 gap-1.5 rounded-full border-panel-border bg-card/50 hover:bg-primary/10 hover:border-primary/30 hover:text-primary transition-all duration-300 text-[10px] font-bold px-3 flex-shrink-0 shadow-sm"
             >
-              <action.icon className="h-2.5 w-2.5" />
+              <action.icon className="h-3 w-3" />
               {action.label}
             </Button>
           ))}
         </div>
       </div>
 
-      {/* Input */}
-      <div className="border-t border-panel-border p-2">
-        <div className="flex gap-1.5">
+      {/* Modern Input Bar */}
+      <div className="p-3 bg-ide-sidebar border-t border-panel-border backdrop-blur-2xl">
+        <div className="relative group transition-all duration-300 focus-within:ring-2 focus-within:ring-primary/20 rounded-2xl overflow-hidden shadow-sm border border-white/5 inset-shadow-sm">
           <textarea
             ref={inputRef}
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask about your code..."
+            placeholder="Ask anything about Java..."
             rows={1}
-            className="flex-1 resize-none rounded-md border border-input bg-background px-3 py-1.5 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            className="w-full resize-none border-none bg-secondary/20 px-4 py-3.5 pr-14 text-xs placeholder:text-muted-foreground/50 focus:outline-none scrollbar-none min-h-[50px] max-h-[150px]"
           />
-          <Button
-            size="icon"
-            onClick={() => handleSend()}
-            disabled={!input.trim() || isLoading}
-            className="h-8 w-8 shrink-0"
-          >
-            <Send className="h-3.5 w-3.5" />
-          </Button>
+          <div className="absolute bottom-2.5 right-2.5">
+            <Button
+              size="icon"
+              onClick={() => handleSend()}
+              disabled={!input.trim() || isLoading}
+              className="h-9 w-9 rounded-xl bg-primary shadow-lg shadow-primary/30 hover:scale-105 active:scale-95 transition-all duration-200 group-hover:shadow-primary/40"
+            >
+              <Send className="h-4 w-4 text-primary-foreground" />
+            </Button>
+          </div>
         </div>
+        <p className="mt-2 text-[9px] text-center text-muted-foreground/40 font-bold uppercase tracking-tighter">
+          Epic AI • Context-aware for {problemId || 'current workspace'}
+        </p>
       </div>
     </div>
   );

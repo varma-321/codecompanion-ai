@@ -511,18 +511,11 @@ export function getProblemDetail(key: string, title: string, difficulty: string)
   // Generate a generic template for problems without specific details
   return {
     key,
-    description: `Solve the "${title}" problem.\n\nDifficulty: ${difficulty}\n\nImplement an efficient solution. Consider edge cases and optimize for both time and space complexity.`,
-    examples: [
-      { input: 'See problem description', output: 'Expected result' },
-    ],
-    starterCode: `class Solution {
-    // Implement your solution here
-    public void solve() {
-        
-    }
-}`,
+    description: `### 🤖 AI is preparing the "${title}" problem... \n\nPlease wait a moment while we fetch the official LeetCode-style description, constraints, and optimized starter code for you.`,
+    examples: [],
+    starterCode: `// 🤖 AI is generating the optimal starter code for: ${title}...\n// Please wait a few seconds...`,
     testCases: [],
-    functionName: 'solve',
+    functionName: 'generating',
     returnType: 'void',
     params: [],
   };

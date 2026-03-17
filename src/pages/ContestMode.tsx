@@ -302,7 +302,7 @@ const ContestMode = () => {
                   </p>
 
                   <div className="flex gap-2 mt-6">
-                    <Button className="flex-1 gap-2" onClick={() => navigate(`/problem/${problems[currentIdx].key}`)}>
+                    <Button className="flex-1 gap-2" onClick={() => navigate(`/problem/${problems[currentIdx].key}?title=${encodeURIComponent(problems[currentIdx].title)}`)}>
                       <Zap className="h-4 w-4" /> Open in Workspace
                     </Button>
                   </div>

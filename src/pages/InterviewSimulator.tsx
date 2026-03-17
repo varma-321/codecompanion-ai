@@ -137,15 +137,38 @@ const InterviewSimulator = () => {
     });
   }, [source, selectedModule, selectedCompany, difficulty, solvedKeys]);
 
-  const startInterview = () => {
+  const startInterview = async () => {
     if (problemPool.length === 0) return;
     const picked = problemPool[Math.floor(Math.random() * problemPool.length)];
-    const detail = getProblemDetail(picked.key, picked.title, picked.difficulty);
+    setLoading(true);
+    
+    let detail = getProblemDetail(picked.key, picked.title, picked.difficulty);
+    
+    // Try to fetch better detail from backend
+    try {
+      const { API_BASE_URL } = await import('@/lib/api');
+      const resp = await fetch(`${API_BASE_URL}/api/problems/${picked.key}?title=${encodeURIComponent(picked.title)}`);
+      if (resp.ok) {
+        const generated = await resp.json();
+        if (generated) {
+          detail = {
+            ...detail,
+            description: generated.description || detail.description,
+            starterCode: generated.starterCode || detail.starterCode,
+            testCases: generated.testCases || [],
+          };
+        }
+      }
+    } catch (e) {
+      console.error("Backend fetch failed for interview:", e);
+    }
+
     setProblem({ ...picked, detail });
     setCode(detail.starterCode);
     setTimeLeft(timeLimit * 60);
     setAiFeedback('');
     setPhase('coding');
+    setLoading(false);
   };
 
   const handleSubmit = async () => {

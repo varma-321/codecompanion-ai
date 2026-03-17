@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Play, FlaskConical, Loader2, CheckCircle2, XCircle, Brain, ChevronRight, Code2, GitCompare, Cloud, Keyboard, Sparkles, AlertTriangle, Zap, TrendingUp, Trophy, Eye, EyeOff, BarChart3, ChevronDown, ChevronUp, MessageSquare, FileText, Bot, Square } from 'lucide-react';
+import { ArrowLeft, Play, FlaskConical, Loader2, CheckCircle2, XCircle, Brain, ChevronRight, Code2, GitCompare, Cloud, Keyboard, Sparkles, AlertTriangle, Zap, TrendingUp, Trophy, Eye, EyeOff, BarChart3, ChevronDown, ChevronUp, MessageSquare, FileText, Bot, Square, Workflow } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAutosave } from '@/hooks/use-autosave';
 import { Button } from '@/components/ui/button';
@@ -135,11 +135,17 @@ const ProblemWorkspace = () => {
   const [isExplaining, setIsExplaining] = useState(false);
   const [showFullExplanation, setShowFullExplanation] = useState(false);
 
-  // Autosave active approach code to Supabase + localStorage
+  // Save to localStorage immediately on every code change so navigating away never loses work
+  useEffect(() => {
+    if (!key) return;
+    const saveKey = `${key}__${activeApproach}`;
+    try { localStorage.setItem(`workspace-code-${saveKey}`, code); } catch {}
+  }, [code, key, activeApproach]);
+
+  // Debounced Supabase autosave (every 2s)
   const autosaveWorkspaceCode = useCallback(async (val: string) => {
     if (!authUser || !key) return;
     const saveKey = `${key}__${activeApproach}`;
-    try { localStorage.setItem(`workspace-code-${saveKey}`, val); } catch {}
     try {
       const { error } = await supabase.from('user_code_saves').upsert({
         user_id: authUser.id,
@@ -163,14 +169,14 @@ const ProblemWorkspace = () => {
     wsResetSaved(codes[activeApproach]);
   }, [activeApproach]);
 
-  // Auto-generate full problem details if not hardcoded
+  // Fetch full problem details from Java Spring Boot Backend
   const generateFullDetail = useCallback(async () => {
     if (!roadmapProblem || !key || hasHardcodedDetail) return;
     const cached = getCachedDetail(key);
-    if (cached && cached.testCases.length >= 3) {
+    if (cached && cached.testCases && cached.testCases.length >= 3) {
       setDetail(cached);
       // Only set starter code if codes haven't been loaded from DB yet
-      if (!codesLoadedFromDb.current) {
+      if (!codesLoadedFromDb.current && cached.starterCode) {
         setCodes(prev => {
           const starter = cached.starterCode;
           return {
@@ -185,20 +191,19 @@ const ProblemWorkspace = () => {
     setIsGenerating(true);
     setGenerateError('');
     try {
-      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-problem-detail`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({
-          title: roadmapProblem.title,
-          difficulty: roadmapProblem.difficulty,
-          topic: (roadmapProblem as any).topic || '',
-        }),
+      const url = new URL(`${API_BASE_URL}/api/problems/${key}`);
+      const searchParams = new URLSearchParams(window.location.search);
+      const queryTitle = searchParams.get('title');
+      const finalTitle = queryTitle || roadmapProblem?.title;
+
+      if (finalTitle) {
+        url.searchParams.append('title', finalTitle);
+      }
+      const resp = await fetch(url.toString(), {
+        method: 'GET',
       });
-      if (!resp.ok) throw new Error('Failed to generate');
-      const { detail: generated } = await resp.json();
+      if (!resp.ok) throw new Error('Failed to fetch problem data');
+      const generated = await resp.json();
       if (generated) {
         const enhanced: EnhancedDetail = {
           key,
@@ -206,26 +211,39 @@ const ProblemWorkspace = () => {
           examples: generated.examples || [],
           starterCode: generated.starterCode || detail.starterCode,
           testCases: generated.testCases || [],
-          functionName: generated.functionName || 'solve',
-          returnType: generated.returnType || 'void',
-          params: generated.params || [],
-          constraints: generated.constraints,
-          hints: generated.hints,
+          functionName: generated.methodSignature?.name || 'solve',
+          returnType: generated.methodSignature?.returnType || 'void',
+          params: generated.methodSignature?.params || [],
+          constraints: generated.constraints || [],
+          hints: generated.hints || [],
           approach: generated.approach,
         };
         setCachedDetail(key, enhanced);
         setDetail(enhanced);
-        // Only update codes if they haven't been loaded from DB
-        if (generated.starterCode && !codesLoadedFromDb.current) {
-          setCodes(prev => ({
-            brute: prev.brute === detail.starterCode ? generated.starterCode : prev.brute,
-            better: prev.better === detail.starterCode ? generated.starterCode : prev.better,
-            optimal: prev.optimal === detail.starterCode ? generated.starterCode : prev.optimal,
-          }));
+        // Only set starter code if we don't already have something better
+        if (generated.starterCode) {
+          setCodes(prev => {
+            const isPlaceholder = (c: string) => !c || c.trim().length < 50 || c.includes('// 🤖 AI is generating') || c.includes('public void solve()');
+            const newBrute = isPlaceholder(prev.brute) ? generated.starterCode : prev.brute;
+            const newBetter = isPlaceholder(prev.better) ? generated.starterCode : prev.better;
+            const newOptimal = isPlaceholder(prev.optimal) ? generated.starterCode : prev.optimal;
+            
+            // If we actually updated something, toast the user
+            if (newBrute !== prev.brute) {
+               toast.success('🚀 AI has generated the official problem signature!');
+            }
+
+            return {
+              brute: newBrute,
+              better: newBetter,
+              optimal: newOptimal,
+            };
+          });
         }
       }
     } catch (err: any) {
-      setGenerateError('Could not auto-generate problem details. You can still code!');
+      console.error(err);
+      setGenerateError('Could not fetch problem details from backend. You can still code!');
     }
     setIsGenerating(false);
   }, [key, roadmapProblem, hasHardcodedDetail]);
@@ -331,18 +349,60 @@ const ProblemWorkspace = () => {
     addConsoleEntry('system', '▶ Compiling and running...');
     const startTime = Date.now();
     try {
-      const result = await executeJavaCode(code, (s) => setExecStatus(s));
-      const execTime = Date.now() - startTime;
-      if (result.success) {
-        if (result.output) addConsoleEntry('output', result.output);
-        addConsoleEntry('info', `✓ Execution completed (${execTime}ms)`);
+      // If we have a backend problem key, use the proper test-harness endpoint
+      // (runs only visible test cases, just like LeetCode's "Run" button).
+      // Fall back to raw /api/run-java only for freeform code with no problem context.
+      if (key) {
+        const response = await fetch(`${API_BASE_URL}/api/problems/${key}/run`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code }),
+        });
+        const data = await response.json();
+        const execTime = data.executionTimeMs || (Date.now() - startTime);
+
+        if (data.success) {
+          addConsoleEntry('info', `✅ All visible tests passed! (${execTime}ms)`);
+          setExecStatus('complete');
+        } else if (data.error) {
+          // API returned error string (e.g. problem not found)
+          addConsoleEntry('error', data.error);
+          setExecStatus('failed');
+        } else {
+          const results: TestResult[] = data.results || [];
+          results.forEach((r: any) => {
+            addConsoleEntry(
+              r.status === 'PASSED' ? 'info' : 'error',
+              `Test ${r.test} ${r.status}${r.status === 'FAILED' ? ` — expected: ${r.expected}, got: ${r.actual}` : ''}`
+            );
+          });
+          addConsoleEntry('error', `❌ ${data.status || 'FAILED'}: ${data.message || ''} (${execTime}ms)`);
+          setExecStatus('failed');
+        }
+
+        const testResults: TestResult[] = (data.results || []);
+        setTestResults(testResults);
+        setBottomTab('results');
+
+        if (authUser && key) {
+          await saveExecutionHistory(authUser.id, key, code, testResults, data.success, execTime);
+          setHistoryRefreshKey(prev => prev + 1);
+        }
       } else {
-        if (result.error) addConsoleEntry('error', result.error);
-      }
-      // Save to history
-      if (authUser && key) {
-        await saveExecutionHistory(authUser.id, key, code, [], result.success, execTime);
-        setHistoryRefreshKey(prev => prev + 1);
+        // Freeform (no problem context) — raw execution
+        const { executeJavaCode } = await import('@/lib/executor');
+        const result = await executeJavaCode(code, (s) => setExecStatus(s));
+        const execTime = Date.now() - startTime;
+        if (result.success) {
+          if (result.output) addConsoleEntry('output', result.output);
+          addConsoleEntry('info', `✓ Execution completed (${execTime}ms)`);
+        } else {
+          if (result.error) addConsoleEntry('error', result.error);
+        }
+        if (authUser && key) {
+          await saveExecutionHistory(authUser.id, key, code, [], result.success, execTime);
+          setHistoryRefreshKey(prev => prev + 1);
+        }
       }
     } catch (err: any) {
       addConsoleEntry('error', err?.message || 'Execution failed');
@@ -351,72 +411,133 @@ const ProblemWorkspace = () => {
     setIsRunning(false);
   };
 
-  // Run Tests: runs ALL test cases, saves progress, shows celebration
+  // Run Tests: runs ONLY VISIBLE test cases
   const handleRunTests = async () => {
     if (isRunningTests || detail.testCases.length === 0) return;
     setIsRunningTests(true);
     setTestResults([]);
     setBottomTab('console');
-    addConsoleEntry('system', `▶ Running ${detail.testCases.length} test(s)...`);
+    addConsoleEntry('system', `▶ Running ${detail.testCases.length} visible test(s)...`);
     const startTime = Date.now();
 
-    const { runAllTests } = await import('@/lib/test-runner');
-    const tcInputs = detail.testCases.map(tc => ({ inputs: tc.inputs || {}, expected: (tc.expected || '').trim() }));
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/problems/${key}/run`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      });
+      const data = await response.json();
+      const results = data.results || [];
+      const passed = data.passedTests || 0;
+      const allPassed = data.success;
+      const execTime = data.executionTimeMs || (Date.now() - startTime);
+      
+      results.forEach((r: any) => {
+        addConsoleEntry(
+          r.status === 'PASSED' ? 'info' : 'error',
+          `Test ${r.test} ${r.status}${r.status === 'FAILED' ? ` (expected: ${r.expected}, got: ${r.actual})` : ''}`
+        );
+      });
 
-    const results = await runAllTests(code, tcInputs, setExecStatus, (idx, r) => {
-      addConsoleEntry(
-        r.status === 'PASSED' ? 'info' : 'error',
-        `Test ${r.test} ${r.status}${r.status === 'FAILED' ? ` (expected: ${r.expected}, got: ${r.actual})` : ''}`
-      );
-    });
+      addConsoleEntry('system', `\n${passed}/${data.totalTests} visible tests passed (${execTime}ms).`);
+      setTestResults(results);
+      setBottomTab('results');
+      setExecStatus(allPassed ? 'complete' : 'failed');
 
-    const execTime = Date.now() - startTime;
-    const passed = results.filter(r => r.status === 'PASSED').length;
-    const allPassed = passed === results.length;
-    addConsoleEntry('system', `\n${passed}/${results.length} tests passed (${execTime}ms).`);
-    setTestResults(results);
-    setBottomTab('results');
-    setExecStatus('complete');
+      // Save execution history
+      if (authUser && key) {
+         saveExecutionHistory(authUser.id, key, code, results, allPassed, execTime).then(() => setHistoryRefreshKey(prev => prev + 1));
+      }
+    } catch (err: any) {
+      addConsoleEntry('error', 'Execution failed: ' + err.message);
+      setExecStatus('failed');
+    }
     setIsRunningTests(false);
+  };
 
-    // Save execution history
-    if (authUser && key) {
-      await saveExecutionHistory(authUser.id, key, code, results, allPassed, execTime);
-      setHistoryRefreshKey(prev => prev + 1);
-    }
+  // Submit Code: runs ALL test cases including HIDDEN ones
+  const handleSubmitCode = async () => {
+    if (isRunningTests) return;
+    setIsRunningTests(true);
+    setTestResults([]);
+    setBottomTab('console');
+    addConsoleEntry('system', `▶ Submitting code and running against ALL test cases (parallel)...`);
+    const startTime = Date.now();
 
-    // Update progress in Supabase
-    if (authUser && key) {
-      try {
-        const { data: existing } = await supabase
-          .from('user_problem_progress')
-          .select('*')
-          .eq('user_id', authUser.id)
-          .eq('problem_key', key)
-          .maybeSingle();
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/problems/${key}/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      });
+      const data = await response.json();
+      const results: any[] = data.results || [];
+      const passed = data.passedTests || 0;
+      const total = data.totalTests || 0;
+      const allPassed = data.success;
+      const execTime = data.executionTimeMs || (Date.now() - startTime);
 
-        if (existing) {
-          await supabase.from('user_problem_progress').update({
-            attempts: (existing as any).attempts + 1,
-            last_attempted: new Date().toISOString(),
-            ...(allPassed ? { solved: true, solved_at: new Date().toISOString(), status: 'solved' } : { status: 'attempted' }),
-          } as any).eq('id', (existing as any).id);
-        } else {
-          await supabase.from('user_problem_progress').insert({
-            user_id: authUser.id,
-            problem_key: key,
-            attempts: 1,
-            last_attempted: new Date().toISOString(),
-            ...(allPassed ? { solved: true, solved_at: new Date().toISOString(), status: 'solved' } : { status: 'attempted' }),
-          } as any);
+      if (allPassed) {
+        addConsoleEntry('info', `✅ ACCEPTED — ${passed}/${total} test cases passed (${execTime}ms)`);
+        setExecStatus('complete');
+      } else {
+        addConsoleEntry('error', `❌ ${data.status || 'FAILED'} — ${passed}/${total} test cases passed (${execTime}ms)`);
+        // Show first failure details like LeetCode
+        const failed = results.find((r: any) => r.status === 'FAILED');
+        if (failed) {
+          addConsoleEntry('error', `\nFailed on Test ${failed.test}:`);
+          if (failed.input)    addConsoleEntry('error', `  Input:    ${failed.input}`);
+          if (failed.expected) addConsoleEntry('error', `  Expected: ${failed.expected}`);
+          if (failed.actual)   addConsoleEntry('error', `  Got:      ${failed.actual}`);
+          if (failed.explanation) addConsoleEntry('info', `  Note: ${failed.explanation}`);
         }
-        if (allPassed) toast.success('🎉 Problem solved! Progress saved.');
-      } catch {}
-    }
+        setExecStatus('failed');
+      }
 
-    // Show celebration modal
-    setCelebrationTime(execTime);
-    setShowCelebration(true);
+      setTestResults(results);
+      setBottomTab('results');
+
+      // Save execution history
+      if (authUser && key) {
+        saveExecutionHistory(authUser.id, key, code, results, allPassed, execTime).then(() => setHistoryRefreshKey(prev => prev + 1));
+
+        // Update progress in Supabase
+        try {
+          const { data: existing } = await supabase
+            .from('user_problem_progress')
+            .select('*')
+            .eq('user_id', authUser.id)
+            .eq('problem_key', key)
+            .maybeSingle();
+
+          if (existing) {
+            await supabase.from('user_problem_progress').update({
+              attempts: (existing as any).attempts + 1,
+              last_attempted: new Date().toISOString(),
+              ...(allPassed ? { solved: true, solved_at: new Date().toISOString(), status: 'solved' } : { status: 'attempted' }),
+            } as any).eq('id', (existing as any).id);
+          } else {
+            await supabase.from('user_problem_progress').insert({
+              user_id: authUser.id,
+              problem_key: key,
+              attempts: 1,
+              last_attempted: new Date().toISOString(),
+              ...(allPassed ? { solved: true, solved_at: new Date().toISOString(), status: 'solved' } : { status: 'attempted' }),
+            } as any);
+          }
+          if (allPassed) toast.success('🎉 Problem solved! Progress saved.');
+        } catch {}
+      }
+
+      if (allPassed) {
+        setCelebrationTime(execTime);
+        setShowCelebration(true);
+      }
+    } catch (err: any) {
+      addConsoleEntry('error', 'Submission failed: ' + err.message);
+      setExecStatus('failed');
+    }
+    setIsRunningTests(false);
   };
 
   const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
@@ -541,14 +662,18 @@ const ProblemWorkspace = () => {
             Run
           </Button>
           {(isRunning || isRunningTests) && (
-            <Button onClick={() => { stopExecution(); import('@/lib/test-runner').then(m => m.stopTestExecution()); setIsRunning(false); setIsRunningTests(false); setExecStatus('stopped' as any); }} size="sm" variant="destructive" className="h-7 gap-1 text-xs">
+            <Button onClick={() => { stopExecution(); setIsRunning(false); setIsRunningTests(false); setExecStatus('stopped' as any); }} size="sm" variant="destructive" className="h-7 gap-1 text-xs">
               <Square className="h-3 w-3" /> Stop
             </Button>
           )}
-          <Button onClick={handleRunTests} disabled={isRunning || isRunningTests || detail.testCases.length === 0} size="sm" variant="outline" className="h-7 gap-1 text-xs">
+          <Button onClick={handleRunTests} disabled={isRunning || isRunningTests || detail.testCases.length === 0} size="sm" variant="secondary" className="h-7 gap-1 text-xs">
             {isRunningTests ? <Loader2 className="h-3 w-3 animate-spin" /> : <FlaskConical className="h-3 w-3" />}
-            <span className="hidden md:inline">Run Tests ({detail.testCases.length})</span>
-            <span className="md:hidden">Test</span>
+            <span className="hidden md:inline">Run Tests</span>
+            <span className="md:hidden">Run</span>
+          </Button>
+          <Button onClick={handleSubmitCode} disabled={isRunning || isRunningTests || detail.testCases.length === 0} size="sm" variant="default" className="h-7 gap-1 text-xs bg-emerald-600 hover:bg-emerald-700 text-white">
+            {isRunningTests ? <Loader2 className="h-3 w-3 animate-spin" /> : <Code2 className="h-3 w-3" />}
+            <span>Submit</span>
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -556,9 +681,22 @@ const ProblemWorkspace = () => {
                 <Sparkles className="h-3 w-3" /> AI Tools <ChevronDown className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__vibe__' }))}>
+                <Sparkles className="h-3.5 w-3.5 mr-2 text-primary" /> AI Code Aura (Vibes)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__visualize__' }))}>
+                <Eye className="h-3.5 w-3.5 mr-2 text-blue-500" /> Visualize Logic Flow
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__performance__' }))}>
+                <BarChart3 className="h-3.5 w-3.5 mr-2 text-orange-500" /> Performance Audit
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__dry_run__' }))}>
+                <Workflow className="h-3.5 w-3.5 mr-2 text-purple-500" /> Step-by-Step Trace
+              </DropdownMenuItem>
+              <div className="h-px bg-panel-border my-1" />
               <DropdownMenuItem onClick={handleAnalyze} disabled={isAnalyzing || !code.trim()}>
-                <BarChart3 className="h-3.5 w-3.5 mr-2" /> Analyze Code
+                <TrendingUp className="h-3.5 w-3.5 mr-2" /> Complexity Analysis
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__mistakes__' }))}>
                 <AlertTriangle className="h-3.5 w-3.5 mr-2" /> Find Mistakes
@@ -566,21 +704,11 @@ const ProblemWorkspace = () => {
               <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__hints__' }))}>
                 <Brain className="h-3.5 w-3.5 mr-2" /> Hints
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => {
-                /* trigger AI test case generation via the edge function */
-                const genEvent = new CustomEvent('trigger-explain', { detail: '__generate_tests__' });
-                window.dispatchEvent(genEvent);
-              }}>
+              <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__generate_tests__' }))}>
                 <FlaskConical className="h-3.5 w-3.5 mr-2" /> Generate Test Cases
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__brute__' }))}>
-                <Zap className="h-3.5 w-3.5 mr-2" /> Brute Force Solution
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__optimal__' }))}>
                 <Trophy className="h-3.5 w-3.5 mr-2" /> Optimal Solution
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__patterns__' }))}>
-                <TrendingUp className="h-3.5 w-3.5 mr-2" /> Detect Pattern
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -681,18 +809,25 @@ const ProblemWorkspace = () => {
               <Sparkles className="h-3 w-3" /> AI Tools
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-48">
+          <DropdownMenuContent align="start" className="w-56">
+            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__vibe__' }))}>
+              <Sparkles className="h-3.5 w-3.5 mr-2 text-primary" /> Code Aura
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__visualize__' }))}>
+              <Eye className="h-3.5 w-3.5 mr-2 text-blue-500" /> Visualize Logic
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__performance__' }))}>
+              <BarChart3 className="h-3.5 w-3.5 mr-2 text-orange-500" /> Performance Audit
+            </DropdownMenuItem>
+            <div className="h-px bg-panel-border my-1" />
             <DropdownMenuItem onClick={handleAnalyze} disabled={isAnalyzing || !code.trim()}>
-              <BarChart3 className="h-3.5 w-3.5 mr-2" /> Analyze Code
+              <TrendingUp className="h-3.5 w-3.5 mr-2" /> Complexity Analysis
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__mistakes__' }))}>
               <AlertTriangle className="h-3.5 w-3.5 mr-2" /> Find Mistakes
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__hints__' }))}>
               <Brain className="h-3.5 w-3.5 mr-2" /> Hints
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__patterns__' }))}>
-              <TrendingUp className="h-3.5 w-3.5 mr-2" /> Detect Pattern
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
