@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, memo, useMemo, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Brain, Send, Loader2, AlertCircle, Lightbulb, Zap, Code2, Bug, BookOpen, FlaskConical, Sparkles, Trash2, Copy, ArrowUpRight, BarChart3, Workflow, Trophy, Volume2, VolumeX, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -19,13 +19,19 @@ mermaid.initialize({
   fontFamily: 'Inter, sans-serif',
 });
 
-const Mermaid = ({ chart }: { chart: string }) => {
-  const ref = useRef<HTMLDivElement>(null);
+interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp: Date;
+}
+
+const Mermaid = memo(({ chart }: { chart: string }) => {
   const [svg, setSvg] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (ref.current && chart) {
+    if (chart) {
       setError(null);
       // Clean up common AI hallucinations in Mermaid
       const cleanedChart = chart
@@ -59,20 +65,105 @@ const Mermaid = ({ chart }: { chart: string }) => {
   return (
     <div className="my-4 p-4 rounded-xl bg-black/20 border border-white/5 overflow-x-auto shadow-inner transition-all duration-500 hover:border-primary/20">
       <div 
-        ref={ref} 
         className="flex justify-center"
         dangerouslySetInnerHTML={{ __html: svg }} 
       />
     </div>
   );
-};
+});
 
-interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  timestamp: Date;
+Mermaid.displayName = 'Mermaid';
+
+interface MessageBubbleProps {
+  msg: ChatMessage;
+  onInsertCode: (code: string) => void;
 }
+
+const MessageBubble = memo(({ msg, onInsertCode }: MessageBubbleProps) => {
+  const isAssistant = msg.role === 'assistant';
+  const isUser = msg.role === 'user';
+  const isSystem = msg.role === 'system';
+
+  const markdownComponents = useMemo(() => ({
+    code({ node, inline, className, children, ...props }: any) {
+      const match = /language-(\w+)/.exec(className || '');
+      const codeStr = String(children).replace(/\n$/, '');
+      if (!inline && match && match[1] === 'mermaid') {
+        return <Mermaid chart={codeStr} />;
+      }
+      const isBlock = !inline && match;
+      const isJava = match && match[1] === 'java';
+      if (isBlock) {
+        return (
+          <div className="relative group/code mt-2 mb-2">
+            <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover/code:opacity-100 transition-opacity z-10">
+              <Button 
+                size="icon" 
+                variant="secondary" 
+                className="h-7 w-7 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10"
+                onClick={() => {
+                  navigator.clipboard.writeText(codeStr);
+                  toast.success('Copied to clipboard');
+                }}
+                title="Copy code"
+              >
+                <Copy className="h-3 w-3" />
+              </Button>
+              {isJava && (
+                <Button 
+                  size="icon" 
+                  variant="secondary" 
+                  className="h-7 w-7 bg-primary/30 hover:bg-primary/50 backdrop-blur-md border border-primary/30"
+                  onClick={() => onInsertCode(codeStr)}
+                  title="Insert into editor"
+                >
+                  <ArrowUpRight className="h-3.5 w-3.5 text-white" />
+                </Button>
+              )}
+            </div>
+            <pre className="!bg-[#0d1117] !text-gray-100 rounded-xl p-4 overflow-x-auto text-[11.5px] font-mono border border-white/10" {...props}>
+              <code className="!text-gray-100 font-mono">{children}</code>
+            </pre>
+          </div>
+        );
+      }
+      return <code className="bg-secondary/40 text-primary px-1 py-0.5 rounded text-[11px] font-mono" {...props}>{children}</code>;
+    }
+  }), [onInsertCode]);
+
+  return (
+    <div className={`mb-4 flex flex-col group ${isUser ? 'items-end' : 'items-start'}`}>
+      <div className="flex items-center gap-2 mb-1 px-1">
+        {isAssistant && <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 shadow-sm"><Brain className="h-3 w-3 text-primary" /></div>}
+        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+          {isUser ? 'You' : isAssistant ? 'AI Architect' : 'System'}
+        </span>
+      </div>
+      
+      <div className={`relative max-w-[95%] rounded-2xl px-4 py-3 text-sm shadow-sm transition-all duration-300 backdrop-blur-md border ${
+        isUser 
+          ? 'bg-primary/90 text-primary-foreground border-primary/20 rounded-tr-none' 
+          : isSystem 
+          ? 'bg-warning/10 text-warning border-warning/20 rounded-tl-none italic' 
+          : 'bg-card/50 text-card-foreground border-panel-border rounded-tl-none'
+      }`}>
+        {isAssistant ? (
+          <div className="prose prose-sm max-w-none dark:prose-invert text-[12.5px] leading-relaxed 
+            [&_pre]:mt-3 [&_pre]:mb-3 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:bg-[#0d1117] [&_pre]:p-4 [&_pre]:border [&_pre]:border-white/10 [&_pre]:shadow-inner [&_pre]:text-gray-100
+            [&_code]:font-mono [&_code]:text-[11.5px] [&_code]:text-gray-100 [&_table]:mt-3 [&_table]:mb-3 [&_table]:border-collapse [&_th]:bg-secondary/20 [&_th]:p-2 [&_td]:p-2 [&_td]:border [&_td]:border-panel-border">
+            <ReactMarkdown components={markdownComponents}>
+              {msg.content}
+            </ReactMarkdown>
+          </div>
+        ) : (
+          <span>{msg.content}</span>
+        )}
+      </div>
+    </div>
+  );
+});
+
+MessageBubble.displayName = 'MessageBubble';
 
 interface AIChatPanelProps {
   code: string;
@@ -146,10 +237,10 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
     return msg;
   };
 
-  const handleInsertCode = (newCode: string) => {
+  const handleInsertCode = useCallback((newCode: string) => {
     window.dispatchEvent(new CustomEvent('update-code', { detail: newCode }));
     toast.success('Code inserted into editor!');
-  };
+  }, []);
 
   const handleSend = async (customPrompt?: string) => {
     const text = customPrompt || input.trim();
@@ -230,7 +321,7 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
     }
 
     setIsLoading(false);
-    inputRef.current?.focus();
+    if (inputRef.current) inputRef.current.focus();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -246,93 +337,8 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
     window.speechSynthesis.cancel();
   };
 
-  const MessageBubble = ({ msg }: { msg: ChatMessage }) => {
-    const isAssistant = msg.role === 'assistant';
-    const isUser = msg.role === 'user';
-    const isSystem = msg.role === 'system';
-
-    return (
-      <div className={`mb-4 flex flex-col group ${isUser ? 'items-end' : 'items-start'}`}>
-        <div className="flex items-center gap-2 mb-1 px-1">
-          {isAssistant && <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 shadow-sm"><Brain className="h-3 w-3 text-primary" /></div>}
-          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-            {isUser ? 'You' : isAssistant ? 'AI Architect' : 'System'}
-          </span>
-        </div>
-        
-        <div className={`relative max-w-[95%] rounded-2xl px-4 py-3 text-sm shadow-sm transition-all duration-300 backdrop-blur-md border ${
-          isUser 
-            ? 'bg-primary/90 text-primary-foreground border-primary/20 rounded-tr-none' 
-            : isSystem 
-            ? 'bg-warning/10 text-warning border-warning/20 rounded-tl-none italic' 
-            : 'bg-card/50 text-card-foreground border-panel-border rounded-tl-none'
-        }`}>
-          {isAssistant ? (
-            <div className="prose prose-sm max-w-none dark:prose-invert text-[12.5px] leading-relaxed 
-              [&_pre]:mt-3 [&_pre]:mb-3 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:bg-[#0d1117] [&_pre]:p-4 [&_pre]:border [&_pre]:border-white/10 [&_pre]:shadow-inner [&_pre]:text-gray-100
-              [&_code]:font-mono [&_code]:text-[11.5px] [&_code]:text-gray-100 [&_table]:mt-3 [&_table]:mb-3 [&_table]:border-collapse [&_th]:bg-secondary/20 [&_th]:p-2 [&_td]:p-2 [&_td]:border [&_td]:border-panel-border">
-              <ReactMarkdown 
-                components={{
-                  code({ node, inline, className, children, ...props }: any) {
-                    const match = /language-(\w+)/.exec(className || '');
-                    const codeStr = String(children).replace(/\n$/, '');
-                    if (!inline && match && match[1] === 'mermaid') {
-                      return <Mermaid chart={codeStr} />;
-                    }
-                    const isBlock = !inline && match;
-                    const isJava = match && match[1] === 'java';
-                    if (isBlock) {
-                      return (
-                        <div className="relative group/code mt-2 mb-2">
-                          <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover/code:opacity-100 transition-opacity z-10">
-                            <Button 
-                              size="icon" 
-                              variant="secondary" 
-                              className="h-7 w-7 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10"
-                              onClick={() => {
-                                navigator.clipboard.writeText(codeStr);
-                                toast.success('Copied to clipboard');
-                              }}
-                              title="Copy code"
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                            {isJava && (
-                              <Button 
-                                size="icon" 
-                                variant="secondary" 
-                                className="h-7 w-7 bg-primary/30 hover:bg-primary/50 backdrop-blur-md border border-primary/30"
-                                onClick={() => handleInsertCode(codeStr)}
-                                title="Insert into editor"
-                              >
-                                <ArrowUpRight className="h-3.5 w-3.5 text-white" />
-                              </Button>
-                            )}
-                          </div>
-                          <pre className="!bg-[#0d1117] !text-gray-100 rounded-xl p-4 overflow-x-auto text-[11.5px] font-mono border border-white/10" {...props}>
-                            <code className="!text-gray-100 font-mono">{children}</code>
-                          </pre>
-                        </div>
-                      );
-                    }
-                    return <code className="bg-secondary/40 text-primary px-1 py-0.5 rounded text-[11px] font-mono" {...props}>{children}</code>;
-                  }
-                }}
-              >
-                {msg.content}
-              </ReactMarkdown>
-            </div>
-          ) : (
-            <span>{msg.content}</span>
-          )}
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div className="flex h-full flex-col bg-ide-sidebar overflow-hidden relative">
-      {/* Premium Header */}
       <div className="flex items-center justify-between border-b border-panel-border bg-gradient-to-r from-background to-secondary/10 px-4 py-3 backdrop-blur-xl z-20">
         <div className="flex items-center gap-2.5">
           <div className="p-1.5 rounded-lg bg-primary/10 border border-primary/20 shadow-sm relative overflow-hidden group">
@@ -367,7 +373,6 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
         </div>
       </div>
 
-      {/* Messages Area */}
       <div className="flex-1 overflow-y-auto px-4 py-4 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-panel-border">
         {messages.length === 0 && !isLoading && (
           <div className="flex h-full flex-col items-center justify-center gap-5 text-center px-4">
@@ -387,7 +392,7 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
         )}
 
         {messages.map((msg) => (
-          <MessageBubble key={msg.id} msg={msg} />
+          <MessageBubble key={msg.id} msg={msg} onInsertCode={handleInsertCode} />
         ))}
 
         {isLoading && (
@@ -404,9 +409,7 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Optimized Floating Quick Actions Bar */}
       <div className="px-3 py-2 border-t border-panel-border bg-secondary/5 backdrop-blur-md relative overflow-hidden group/actions">
-        {/* Subtle Side Fades to indicate more content */}
         <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-ide-sidebar to-transparent z-20 pointer-events-none opacity-0 group-hover/actions:opacity-100 transition-opacity" />
         <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-ide-sidebar to-transparent z-20 pointer-events-none opacity-60 group-hover/actions:opacity-100 transition-opacity" />
         
@@ -427,7 +430,6 @@ const AIChatPanel = ({ code, problemId, aiEnabled = true }: AIChatPanelProps) =>
         </div>
       </div>
 
-      {/* Modern Input Bar */}
       <div className="p-3 bg-ide-sidebar border-t border-panel-border backdrop-blur-2xl">
         <div className="relative group transition-all duration-300 focus-within:ring-2 focus-within:ring-primary/20 rounded-2xl overflow-hidden shadow-sm border border-white/5 inset-shadow-sm">
           <textarea
