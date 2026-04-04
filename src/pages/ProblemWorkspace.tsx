@@ -349,47 +349,33 @@ const ProblemWorkspace = () => {
     addConsoleEntry('system', '▶ Compiling and running...');
     const startTime = Date.now();
     try {
-      // If we have a backend problem key, use the proper test-harness endpoint
-      // (runs only visible test cases, just like LeetCode's "Run" button).
-      // Fall back to raw /api/run-java only for freeform code with no problem context.
-      if (key) {
-        const response = await fetch(`${API_BASE_URL}/api/problems/${key}/run`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code }),
+      if (detail.testCases.length > 0) {
+        // Run against built-in test cases using local test-runner
+        const { runAllTests } = await import('@/lib/test-runner');
+        const tcInputs = detail.testCases.map(tc => ({
+          inputs: tc.inputs || {},
+          expected: tc.expected || '',
+        }));
+        const results = await runAllTests(code, tcInputs, setExecStatus, (idx, r) => {
+          addConsoleEntry(
+            r.status === 'PASSED' ? 'info' : 'error',
+            `Test ${r.test} ${r.status}${r.status === 'FAILED' ? ` — expected: ${r.expected}, got: ${r.actual}` : ''}`
+          );
         });
-        const data = await response.json();
-        const execTime = data.executionTimeMs || (Date.now() - startTime);
-
-        if (data.success) {
-          addConsoleEntry('info', `✅ All visible tests passed! (${execTime}ms)`);
-          setExecStatus('complete');
-        } else if (data.error) {
-          // API returned error string (e.g. problem not found)
-          addConsoleEntry('error', data.error);
-          setExecStatus('failed');
-        } else {
-          const results: TestResult[] = data.results || [];
-          results.forEach((r: any) => {
-            addConsoleEntry(
-              r.status === 'PASSED' ? 'info' : 'error',
-              `Test ${r.test} ${r.status}${r.status === 'FAILED' ? ` — expected: ${r.expected}, got: ${r.actual}` : ''}`
-            );
-          });
-          addConsoleEntry('error', `❌ ${data.status || 'FAILED'}: ${data.message || ''} (${execTime}ms)`);
-          setExecStatus('failed');
-        }
-
-        const testResults: TestResult[] = (data.results || []);
-        setTestResults(testResults);
+        const execTime = Date.now() - startTime;
+        const passed = results.filter(r => r.status === 'PASSED').length;
+        const allPassed = passed === results.length;
+        addConsoleEntry('system', `\n${passed}/${results.length} tests passed (${execTime}ms).`);
+        setTestResults(results);
         setBottomTab('results');
+        setExecStatus(allPassed ? 'complete' : 'failed');
 
         if (authUser && key) {
-          await saveExecutionHistory(authUser.id, key, code, testResults, data.success, execTime);
+          await saveExecutionHistory(authUser.id, key, code, results, allPassed, execTime);
           setHistoryRefreshKey(prev => prev + 1);
         }
       } else {
-        // Freeform (no problem context) — raw execution
+        // Freeform execution
         const { executeJavaCode } = await import('@/lib/executor');
         const result = await executeJavaCode(code, (s) => setExecStatus(s));
         const execTime = Date.now() - startTime;
@@ -411,7 +397,7 @@ const ProblemWorkspace = () => {
     setIsRunning(false);
   };
 
-  // Run Tests: runs ONLY VISIBLE test cases
+  // Run Tests: runs ONLY VISIBLE test cases using local test-runner
   const handleRunTests = async () => {
     if (isRunningTests || detail.testCases.length === 0) return;
     setIsRunningTests(true);
@@ -421,32 +407,27 @@ const ProblemWorkspace = () => {
     const startTime = Date.now();
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/problems/${key}/run`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code }),
-      });
-      const data = await response.json();
-      const results = data.results || [];
-      const passed = data.passedTests || 0;
-      const allPassed = data.success;
-      const execTime = data.executionTimeMs || (Date.now() - startTime);
-      
-      results.forEach((r: any) => {
+      const { runAllTests } = await import('@/lib/test-runner');
+      const tcInputs = detail.testCases.map(tc => ({
+        inputs: tc.inputs || {},
+        expected: tc.expected || '',
+      }));
+      const results = await runAllTests(code, tcInputs, setExecStatus, (idx, r) => {
         addConsoleEntry(
           r.status === 'PASSED' ? 'info' : 'error',
           `Test ${r.test} ${r.status}${r.status === 'FAILED' ? ` (expected: ${r.expected}, got: ${r.actual})` : ''}`
         );
       });
-
-      addConsoleEntry('system', `\n${passed}/${data.totalTests} visible tests passed (${execTime}ms).`);
+      const execTime = Date.now() - startTime;
+      const passed = results.filter(r => r.status === 'PASSED').length;
+      const allPassed = passed === results.length;
+      addConsoleEntry('system', `\n${passed}/${results.length} visible tests passed (${execTime}ms).`);
       setTestResults(results);
       setBottomTab('results');
       setExecStatus(allPassed ? 'complete' : 'failed');
 
-      // Save execution history
       if (authUser && key) {
-         saveExecutionHistory(authUser.id, key, code, results, allPassed, execTime).then(() => setHistoryRefreshKey(prev => prev + 1));
+        saveExecutionHistory(authUser.id, key, code, results, allPassed, execTime).then(() => setHistoryRefreshKey(prev => prev + 1));
       }
     } catch (err: any) {
       addConsoleEntry('error', 'Execution failed: ' + err.message);
@@ -455,41 +436,42 @@ const ProblemWorkspace = () => {
     setIsRunningTests(false);
   };
 
-  // Submit Code: runs ALL test cases including HIDDEN ones
+  // Submit Code: runs all test cases (same as run tests for now)
   const handleSubmitCode = async () => {
     if (isRunningTests) return;
     setIsRunningTests(true);
     setTestResults([]);
     setBottomTab('console');
-    addConsoleEntry('system', `▶ Submitting code and running against ALL test cases (parallel)...`);
+    addConsoleEntry('system', `▶ Submitting code — running ALL test cases...`);
     const startTime = Date.now();
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/problems/${key}/submit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code }),
+      const { runAllTests } = await import('@/lib/test-runner');
+      const tcInputs = detail.testCases.map(tc => ({
+        inputs: tc.inputs || {},
+        expected: tc.expected || '',
+      }));
+      const results = await runAllTests(code, tcInputs, setExecStatus, (idx, r) => {
+        addConsoleEntry(
+          r.status === 'PASSED' ? 'info' : 'error',
+          `Test ${r.test} ${r.status}${r.status === 'FAILED' ? ` — expected: ${r.expected}, got: ${r.actual}` : ''}`
+        );
       });
-      const data = await response.json();
-      const results: any[] = data.results || [];
-      const passed = data.passedTests || 0;
-      const total = data.totalTests || 0;
-      const allPassed = data.success;
-      const execTime = data.executionTimeMs || (Date.now() - startTime);
+      const execTime = Date.now() - startTime;
+      const passed = results.filter(r => r.status === 'PASSED').length;
+      const total = results.length;
+      const allPassed = passed === total;
 
       if (allPassed) {
         addConsoleEntry('info', `✅ ACCEPTED — ${passed}/${total} test cases passed (${execTime}ms)`);
         setExecStatus('complete');
       } else {
-        addConsoleEntry('error', `❌ ${data.status || 'FAILED'} — ${passed}/${total} test cases passed (${execTime}ms)`);
-        // Show first failure details like LeetCode
-        const failed = results.find((r: any) => r.status === 'FAILED');
+        addConsoleEntry('error', `❌ FAILED — ${passed}/${total} test cases passed (${execTime}ms)`);
+        const failed = results.find(r => r.status === 'FAILED');
         if (failed) {
           addConsoleEntry('error', `\nFailed on Test ${failed.test}:`);
-          if (failed.input)    addConsoleEntry('error', `  Input:    ${failed.input}`);
-          if (failed.expected) addConsoleEntry('error', `  Expected: ${failed.expected}`);
-          if (failed.actual)   addConsoleEntry('error', `  Got:      ${failed.actual}`);
-          if (failed.explanation) addConsoleEntry('info', `  Note: ${failed.explanation}`);
+          addConsoleEntry('error', `  Expected: ${failed.expected}`);
+          addConsoleEntry('error', `  Got:      ${failed.actual}`);
         }
         setExecStatus('failed');
       }
@@ -497,11 +479,10 @@ const ProblemWorkspace = () => {
       setTestResults(results);
       setBottomTab('results');
 
-      // Save execution history
+      // Save execution history & update progress
       if (authUser && key) {
         saveExecutionHistory(authUser.id, key, code, results, allPassed, execTime).then(() => setHistoryRefreshKey(prev => prev + 1));
 
-        // Update progress in Supabase
         try {
           const { data: existing } = await supabase
             .from('user_problem_progress')
