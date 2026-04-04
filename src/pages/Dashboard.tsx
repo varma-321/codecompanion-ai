@@ -322,6 +322,7 @@ const Dashboard = () => {
     console: 'Console',
     tests: `Tests (${testCases.length})`,
     results: testResults.length > 0 ? `Results (${testResults.filter(r => r.status === 'PASSED').length}/${testResults.length})` : 'Results',
+    stdin: '⌨ Input',
     debugger: 'Debug',
     notes: 'Notes',
     recursion: 'Recursion',
