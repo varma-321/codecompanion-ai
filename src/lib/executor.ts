@@ -36,7 +36,8 @@ export function isExecuting(): boolean {
 
 export async function executeJavaCode(
   code: string,
-  onStatus?: (status: ExecutionStatus) => void
+  onStatus?: (status: ExecutionStatus) => void,
+  stdin?: string
 ): Promise<ExecutionResult> {
   // Abort any previous execution
   stopExecution();
@@ -56,7 +57,7 @@ export async function executeJavaCode(
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ code }),
+      body: JSON.stringify({ code, ...(stdin ? { stdin } : {}) }),
       signal: controller.signal,
     });
 

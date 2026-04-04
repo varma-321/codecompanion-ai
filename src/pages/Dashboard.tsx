@@ -50,13 +50,14 @@ const Dashboard = () => {
   const [consoleCollapsed, setConsoleCollapsed] = useState(false);
   const [consoleFullscreen, setConsoleFullscreen] = useState(false);
   const [consoleHeight, setConsoleHeight] = useState(288);
+  const [stdinInput, setStdinInput] = useState('');
 
   // LeetCode mode state
   const [testCases, setTestCases] = useState<DbTestCase[]>([]);
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [isGeneratingTests, setIsGeneratingTests] = useState(false);
   const [isRunningTests, setIsRunningTests] = useState(false);
-  const [bottomTab, setBottomTab] = useState<'console' | 'tests' | 'results' | 'debugger' | 'daily' | 'notes' | 'streak' | 'recursion' | 'snippets' | 'solutions'>('tests');
+  const [bottomTab, setBottomTab] = useState<'console' | 'tests' | 'results' | 'debugger' | 'daily' | 'notes' | 'streak' | 'recursion' | 'snippets' | 'solutions' | 'stdin'>('tests');
 
   // Execution analytics
   const [execTimeMs, setExecTimeMs] = useState<number | null>(null);
@@ -135,13 +136,13 @@ const Dashboard = () => {
     addConsoleEntry('system', '▶ Compiling and running...');
     const startTime = Date.now();
     try {
-      const result = await executeJavaCode(code, (status) => setExecStatus(status));
+      // If stdin input is provided, pass it to the executor
+      const result = await executeJavaCode(code, (status) => setExecStatus(status), stdinInput || undefined);
       const elapsed = Date.now() - startTime;
       setExecTimeMs(elapsed);
       if (result.success) {
         if (result.output) addConsoleEntry('output', result.output);
         addConsoleEntry('info', `✓ Execution completed in ${elapsed}ms`);
-        // Analyze complexity in background
         if (aiEnabled) {
           setIsAnalyzingComplexity(true);
           supabase.functions.invoke('analyze-complexity', { body: { code, executionTimeMs: elapsed } })
@@ -321,6 +322,7 @@ const Dashboard = () => {
     console: 'Console',
     tests: `Tests (${testCases.length})`,
     results: testResults.length > 0 ? `Results (${testResults.filter(r => r.status === 'PASSED').length}/${testResults.length})` : 'Results',
+    stdin: '⌨ Input',
     debugger: 'Debug',
     notes: 'Notes',
     recursion: 'Recursion',
@@ -406,28 +408,34 @@ const Dashboard = () => {
           </div>
 
           {!consoleFullscreen && (
-          <div className="flex items-center gap-1 sm:gap-2 border-t border-border bg-card px-2 sm:px-4 py-2 overflow-x-auto scrollbar-none">
-              <Button onClick={handleRun} disabled={isRunning || isRunningTests} size="sm" className="h-8 gap-1.5 px-3 sm:px-4 text-xs font-medium rounded-lg shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 border-t border-border bg-card/80 backdrop-blur-sm px-2 sm:px-4 py-1.5 overflow-x-auto scrollbar-none">
+              <Button onClick={handleRun} disabled={isRunning || isRunningTests} size="sm" className="h-8 gap-1.5 px-4 text-xs font-semibold rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shrink-0 shadow-sm">
                 {isRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
-                {isRunning ? 'Running...' : 'Run'}
+                {isRunning ? 'Running...' : 'Run Code'}
               </Button>
               {(isRunning || isRunningTests) && (
-                <Button onClick={() => { stopExecution(); import('@/lib/test-runner').then(m => m.stopTestExecution()); setIsRunning(false); setIsRunningTests(false); setExecStatus('stopped' as any); }} size="sm" variant="destructive" className="h-8 gap-1.5 px-3 text-xs font-medium rounded-lg shrink-0">
+                <Button onClick={() => { stopExecution(); import('@/lib/test-runner').then(m => m.stopTestExecution()); setIsRunning(false); setIsRunningTests(false); setExecStatus('stopped' as any); }} size="sm" variant="destructive" className="h-8 gap-1.5 px-3 text-xs font-semibold rounded-md shrink-0">
                   <Square className="h-3.5 w-3.5" /> Stop
                 </Button>
               )}
-              <Button onClick={handleRunTests} disabled={isRunning || isRunningTests || testCases.length === 0} size="sm" variant="outline" className="h-8 gap-1.5 px-3 sm:px-4 text-xs font-medium rounded-lg shrink-0">
-                {isRunningTests ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FlaskConical className="h-3.5 w-3.5" />}
+              <Button onClick={handleRunTests} disabled={isRunning || isRunningTests || testCases.length === 0} size="sm" variant="outline" className="h-8 gap-1.5 px-3 sm:px-4 text-xs font-semibold rounded-md shrink-0 border-primary/30 hover:bg-primary/10">
+                {isRunningTests ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FlaskConical className="h-3.5 w-3.5 text-primary" />}
                 <span className="hidden sm:inline">{isRunningTests ? 'Testing...' : `Run Tests (${testCases.length})`}</span>
                 <span className="sm:hidden">Test</span>
               </Button>
-              <Button onClick={handleExplain} disabled={isExplaining || !aiEnabled} size="sm" variant="outline" className="h-8 gap-1.5 px-3 sm:px-4 text-xs font-medium rounded-lg shrink-0 hidden sm:flex">
+              <Button onClick={handleExplain} disabled={isExplaining || !aiEnabled} size="sm" variant="ghost" className="h-8 gap-1.5 px-3 text-xs font-medium rounded-md shrink-0 hidden sm:flex">
                 {isExplaining ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Brain className="h-3.5 w-3.5" />}
                 Explain
               </Button>
-              <div className="h-5 w-px bg-border mx-1 hidden sm:block" />
-              <div className="hidden sm:block"><ProblemTimer problemId={activeProblem?.id || null} /></div>
-              <ExecutionStatus status={execStatus} />
+              <div className="ml-auto flex items-center gap-2 shrink-0">
+                <div className="hidden sm:block"><ProblemTimer problemId={activeProblem?.id || null} /></div>
+                <ExecutionStatus status={execStatus} />
+                {stdinInput.trim() && (
+                  <span className="text-[10px] text-primary font-medium bg-primary/10 px-2 py-0.5 rounded-full hidden sm:inline">
+                    stdin active
+                  </span>
+                )}
+              </div>
             </div>
           )}
 
@@ -443,7 +451,7 @@ const Dashboard = () => {
           >
             {/* Tab bar */}
             <div className="flex items-center border-b border-border bg-card px-1 overflow-x-auto scrollbar-none">
-              {(['console', 'tests', 'results', 'debugger', 'notes', 'recursion', 'snippets', 'solutions', 'streak', 'daily'] as const).map(tab => (
+              {(['console', 'tests', 'results', 'stdin', 'debugger', 'notes', 'recursion', 'snippets', 'solutions', 'streak', 'daily'] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => { setBottomTab(tab); setConsoleCollapsed(false); }}
@@ -509,6 +517,29 @@ const Dashboard = () => {
                         Run tests to see results
                       </div>
                     )}
+                  </div>
+                  <div className="hidden lg:block w-[380px] xl:w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
+                    <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
+                  </div>
+                </div>
+              )}
+
+              {bottomTab === 'stdin' && (
+                <div className="flex flex-1 flex-col lg:flex-row">
+                  <div className="flex-1 overflow-hidden p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Standard Input (stdin)</span>
+                      <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => setStdinInput('')}>Clear</Button>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Enter input values that your program reads via <code className="bg-secondary px-1 rounded text-[10px]">Scanner</code> / <code className="bg-secondary px-1 rounded text-[10px]">System.in</code>. Each line becomes a line of input.
+                    </p>
+                    <textarea
+                      value={stdinInput}
+                      onChange={e => setStdinInput(e.target.value)}
+                      placeholder={"Enter input here...\nExample:\n5\n1 2 3 4 5"}
+                      className="w-full flex-1 min-h-[120px] rounded-lg border border-border bg-secondary/30 p-3 font-mono text-xs text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
                   </div>
                   <div className="hidden lg:block w-[380px] xl:w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
                     <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
