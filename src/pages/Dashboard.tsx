@@ -57,7 +57,7 @@ const Dashboard = () => {
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [isGeneratingTests, setIsGeneratingTests] = useState(false);
   const [isRunningTests, setIsRunningTests] = useState(false);
-  const [bottomTab, setBottomTab] = useState<'console' | 'tests' | 'results' | 'debugger' | 'daily' | 'notes' | 'streak' | 'recursion' | 'snippets' | 'solutions'>('tests');
+  const [bottomTab, setBottomTab] = useState<'console' | 'tests' | 'results' | 'debugger' | 'daily' | 'notes' | 'streak' | 'recursion' | 'snippets' | 'solutions' | 'stdin'>('tests');
 
   // Execution analytics
   const [execTimeMs, setExecTimeMs] = useState<number | null>(null);
