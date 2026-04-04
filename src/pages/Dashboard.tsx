@@ -408,28 +408,34 @@ const Dashboard = () => {
           </div>
 
           {!consoleFullscreen && (
-          <div className="flex items-center gap-1 sm:gap-2 border-t border-border bg-card px-2 sm:px-4 py-2 overflow-x-auto scrollbar-none">
-              <Button onClick={handleRun} disabled={isRunning || isRunningTests} size="sm" className="h-8 gap-1.5 px-3 sm:px-4 text-xs font-medium rounded-lg shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 border-t border-border bg-card/80 backdrop-blur-sm px-2 sm:px-4 py-1.5 overflow-x-auto scrollbar-none">
+              <Button onClick={handleRun} disabled={isRunning || isRunningTests} size="sm" className="h-8 gap-1.5 px-4 text-xs font-semibold rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shrink-0 shadow-sm">
                 {isRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
-                {isRunning ? 'Running...' : 'Run'}
+                {isRunning ? 'Running...' : 'Run Code'}
               </Button>
               {(isRunning || isRunningTests) && (
-                <Button onClick={() => { stopExecution(); import('@/lib/test-runner').then(m => m.stopTestExecution()); setIsRunning(false); setIsRunningTests(false); setExecStatus('stopped' as any); }} size="sm" variant="destructive" className="h-8 gap-1.5 px-3 text-xs font-medium rounded-lg shrink-0">
+                <Button onClick={() => { stopExecution(); import('@/lib/test-runner').then(m => m.stopTestExecution()); setIsRunning(false); setIsRunningTests(false); setExecStatus('stopped' as any); }} size="sm" variant="destructive" className="h-8 gap-1.5 px-3 text-xs font-semibold rounded-md shrink-0">
                   <Square className="h-3.5 w-3.5" /> Stop
                 </Button>
               )}
-              <Button onClick={handleRunTests} disabled={isRunning || isRunningTests || testCases.length === 0} size="sm" variant="outline" className="h-8 gap-1.5 px-3 sm:px-4 text-xs font-medium rounded-lg shrink-0">
-                {isRunningTests ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FlaskConical className="h-3.5 w-3.5" />}
+              <Button onClick={handleRunTests} disabled={isRunning || isRunningTests || testCases.length === 0} size="sm" variant="outline" className="h-8 gap-1.5 px-3 sm:px-4 text-xs font-semibold rounded-md shrink-0 border-primary/30 hover:bg-primary/10">
+                {isRunningTests ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FlaskConical className="h-3.5 w-3.5 text-primary" />}
                 <span className="hidden sm:inline">{isRunningTests ? 'Testing...' : `Run Tests (${testCases.length})`}</span>
                 <span className="sm:hidden">Test</span>
               </Button>
-              <Button onClick={handleExplain} disabled={isExplaining || !aiEnabled} size="sm" variant="outline" className="h-8 gap-1.5 px-3 sm:px-4 text-xs font-medium rounded-lg shrink-0 hidden sm:flex">
+              <Button onClick={handleExplain} disabled={isExplaining || !aiEnabled} size="sm" variant="ghost" className="h-8 gap-1.5 px-3 text-xs font-medium rounded-md shrink-0 hidden sm:flex">
                 {isExplaining ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Brain className="h-3.5 w-3.5" />}
                 Explain
               </Button>
-              <div className="h-5 w-px bg-border mx-1 hidden sm:block" />
-              <div className="hidden sm:block"><ProblemTimer problemId={activeProblem?.id || null} /></div>
-              <ExecutionStatus status={execStatus} />
+              <div className="ml-auto flex items-center gap-2 shrink-0">
+                <div className="hidden sm:block"><ProblemTimer problemId={activeProblem?.id || null} /></div>
+                <ExecutionStatus status={execStatus} />
+                {stdinInput.trim() && (
+                  <span className="text-[10px] text-primary font-medium bg-primary/10 px-2 py-0.5 rounded-full hidden sm:inline">
+                    stdin active
+                  </span>
+                )}
+              </div>
             </div>
           )}
 
