@@ -518,6 +518,29 @@ const Dashboard = () => {
                 </div>
               )}
 
+              {bottomTab === 'stdin' && (
+                <div className="flex flex-1 flex-col lg:flex-row">
+                  <div className="flex-1 overflow-hidden p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Standard Input (stdin)</span>
+                      <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => setStdinInput('')}>Clear</Button>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Enter input values that your program reads via <code className="bg-secondary px-1 rounded text-[10px]">Scanner</code> / <code className="bg-secondary px-1 rounded text-[10px]">System.in</code>. Each line becomes a line of input.
+                    </p>
+                    <textarea
+                      value={stdinInput}
+                      onChange={e => setStdinInput(e.target.value)}
+                      placeholder={"Enter input here...\nExample:\n5\n1 2 3 4 5"}
+                      className="w-full flex-1 min-h-[120px] rounded-lg border border-border bg-secondary/30 p-3 font-mono text-xs text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                  <div className="hidden lg:block w-[380px] xl:w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
+                    <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
+                  </div>
+                </div>
+              )}
+
               {bottomTab === 'debugger' && (
                 <div className="flex flex-1 flex-col lg:flex-row">
                   <div className="flex-1 overflow-hidden">
