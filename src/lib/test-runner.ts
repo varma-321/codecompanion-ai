@@ -81,6 +81,13 @@ function toJavaLiteral(value: string, javaType: string): string {
     case 'float[]':
     case 'short[]':
     case 'byte[]': {
+      // Parse JSON array and build Java array initializer
+      try {
+        const items = JSON.parse(v);
+        if (Array.isArray(items)) {
+          return `new ${javaType}{${items.join(', ')}}`;
+        }
+      } catch {}
       const inner = v.replace(/^\[/, '{').replace(/\]$/, '}');
       return `new ${javaType}${inner}`;
     }
@@ -95,6 +102,12 @@ function toJavaLiteral(value: string, javaType: string): string {
       return `new char[]${inner}`;
     }
     case 'String[]': {
+      try {
+        const items = JSON.parse(v);
+        if (Array.isArray(items)) {
+          return `new String[]{${items.map((s: string) => `"${s}"`).join(', ')}}`;
+        }
+      } catch {}
       return `new String[]${v.replace('[', '{').replace(/\]$/, '}')}`;
     }
     case 'Integer[]': {
@@ -109,12 +122,40 @@ function toJavaLiteral(value: string, javaType: string): string {
     case 'int[][]':
     case 'long[][]':
     case 'double[][]': {
+      // Parse nested JSON array properly
+      try {
+        const outer = JSON.parse(v);
+        if (Array.isArray(outer)) {
+          const baseType = javaType.replace('[][]', '');
+          const rows = outer.map((row: any[]) => `{${row.join(', ')}}`).join(', ');
+          return `new ${baseType}[][]{${rows}}`;
+        }
+      } catch {}
+      // Fallback: replace brackets
       let s = v.replace(/\[/g, '{').replace(/\]/g, '}');
       return `new ${javaType}${s}`;
     }
     case 'char[][]': {
+      try {
+        const outer = JSON.parse(v);
+        if (Array.isArray(outer)) {
+          const rows = outer.map((row: any[]) => `{${row.map((c: string) => `'${c}'`).join(', ')}}`).join(', ');
+          return `new char[][]{${rows}}`;
+        }
+      } catch {}
       let s = v.replace(/\[/g, '{').replace(/\]/g, '}');
       return `new char[][]${s}`;
+    }
+    case 'String[][]': {
+      try {
+        const outer = JSON.parse(v);
+        if (Array.isArray(outer)) {
+          const rows = outer.map((row: any[]) => `{${row.map((s: string) => `"${s}"`).join(', ')}}`).join(', ');
+          return `new String[][]{${rows}}`;
+        }
+      } catch {}
+      let s = v.replace(/\[/g, '{').replace(/\]/g, '}');
+      return `new String[][]${s}`;
     }
     case 'List<Integer>':
     case 'List<String>':
@@ -187,6 +228,12 @@ function toJavaLiteral(value: string, javaType: string): string {
     }
     default:
       if (v.startsWith('[')) {
+        try {
+          const items = JSON.parse(v);
+          if (Array.isArray(items)) {
+            return `new ${javaType}{${items.join(', ')}}`;
+          }
+        } catch {}
         const inner = v.replace(/^\[/, '{').replace(/\]$/, '}');
         return `new ${javaType}${inner}`;
       }
@@ -213,6 +260,7 @@ function buildOutputPrint(returnType: string): string {
     case 'long[][]':
     case 'double[][]':
     case 'String[][]':
+    case 'char[][]':
       return 'System.out.println(java.util.Arrays.deepToString(result));';
     case 'List<Integer>':
     case 'List<String>':
@@ -314,8 +362,6 @@ function getDefaultForType(javaType: string): string {
 }
 
 // ─── Build wrapped code for a single test case ───────────────────
-// NEW: Keeps the user's class (e.g. Solution) intact and generates
-// a separate public class Main that instantiates and calls it.
 
 export function buildTestWrapper(
   userCode: string,
@@ -380,7 +426,6 @@ export function buildTestWrapper(
     const resultType = methodSig.returnType;
     const printStmt = buildOutputPrint(resultType);
     
-    // Always instantiate user's class for non-static methods
     const caller = methodSig.isStatic 
       ? `${className}.${methodSig.name}` 
       : `new ${className}().${methodSig.name}`;
@@ -445,7 +490,6 @@ export async function runAllTests(
 ): Promise<TestResult[]> {
   if (testCases.length === 0) return [];
 
-  // Create a new abort controller for this test run
   const controller = new AbortController();
   testAbortController = controller;
 
@@ -454,7 +498,6 @@ export async function runAllTests(
   const results: TestResult[] = [];
 
   for (let i = 0; i < testCases.length; i++) {
-    // Check if aborted
     if (controller.signal.aborted) {
       const result: TestResult = {
         test: i + 1,
@@ -470,7 +513,6 @@ export async function runAllTests(
     const tc = testCases[i];
     onStatus?.('running');
 
-    // Validate inputs aren't empty
     const validInputs: Record<string, string> = {};
     if (tc.inputs && typeof tc.inputs === 'object') {
       for (const [k, v] of Object.entries(tc.inputs)) {
@@ -481,7 +523,6 @@ export async function runAllTests(
     }
 
     if (Object.keys(validInputs).length === 0) {
-      // If inputs are empty but we have a method with no params, still run
       if (methodSig && methodSig.params.length === 0) {
         // proceed with empty inputs
       } else {
@@ -508,7 +549,6 @@ export async function runAllTests(
       });
 
       if (!response.ok) {
-        const errText = await response.text();
         const result: TestResult = {
           test: i + 1,
           status: 'FAILED',
@@ -562,4 +602,39 @@ export async function runAllTests(
   testAbortController = null;
   onStatus?.('complete');
   return results;
+}
+
+// ─── Execute code with stdin input ───────────────────────────────
+
+export async function executeWithStdin(
+  userCode: string,
+  stdinInput: string,
+  onStatus?: (status: ExecutionStatus) => void,
+): Promise<{ success: boolean; output: string; error: string }> {
+  onStatus?.('sending');
+
+  // For stdin-based execution, we send the code as-is (user writes main method)
+  try {
+    const response = await fetch(BACKEND_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: userCode, stdin: stdinInput }),
+    });
+
+    if (!response.ok) {
+      onStatus?.('failed');
+      return { success: false, output: '', error: `Server error: ${response.status}` };
+    }
+
+    const data = await response.json();
+    onStatus?.('complete');
+    return {
+      success: data.success || false,
+      output: data.output || '',
+      error: data.error || '',
+    };
+  } catch (err: any) {
+    onStatus?.('failed');
+    return { success: false, output: '', error: err.message || 'Execution failed' };
+  }
 }
