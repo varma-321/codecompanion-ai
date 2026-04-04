@@ -36,7 +36,8 @@ export function isExecuting(): boolean {
 
 export async function executeJavaCode(
   code: string,
-  onStatus?: (status: ExecutionStatus) => void
+  onStatus?: (status: ExecutionStatus) => void,
+  stdin?: string
 ): Promise<ExecutionResult> {
   // Abort any previous execution
   stopExecution();
