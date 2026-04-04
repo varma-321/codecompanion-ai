@@ -175,7 +175,6 @@ const ProblemWorkspace = () => {
     const cached = getCachedDetail(key);
     if (cached && cached.testCases && cached.testCases.length >= 3) {
       setDetail(cached);
-      // Only set starter code if codes haven't been loaded from DB yet
       if (!codesLoadedFromDb.current && cached.starterCode) {
         setCodes(prev => {
           const starter = cached.starterCode;
@@ -191,59 +190,52 @@ const ProblemWorkspace = () => {
     setIsGenerating(true);
     setGenerateError('');
     try {
-      const url = new URL(`${API_BASE_URL}/api/problems/${key}`);
-      const searchParams = new URLSearchParams(window.location.search);
-      const queryTitle = searchParams.get('title');
-      const finalTitle = queryTitle || roadmapProblem?.title;
-
-      if (finalTitle) {
-        url.searchParams.append('title', finalTitle);
-      }
-      const resp = await fetch(url.toString(), {
-        method: 'GET',
+      // Use Supabase edge function instead of external Spring Boot backend
+      const { data, error } = await supabase.functions.invoke('generate-problem-detail', {
+        body: {
+          title: roadmapProblem.title,
+          difficulty: roadmapProblem.difficulty,
+          topic: (roadmapProblem as any).topic || '',
+        },
       });
-      if (!resp.ok) throw new Error('Failed to fetch problem data');
-      const generated = await resp.json();
+
+      if (error) throw new Error('Failed to generate problem details');
+      const generated = data?.detail;
       if (generated) {
         const enhanced: EnhancedDetail = {
           key,
-          description: generated.description,
+          description: generated.description || detail.description,
           examples: generated.examples || [],
           starterCode: generated.starterCode || detail.starterCode,
-          testCases: generated.testCases || [],
-          functionName: generated.methodSignature?.name || 'solve',
-          returnType: generated.methodSignature?.returnType || 'void',
-          params: generated.methodSignature?.params || [],
+          testCases: (generated.testCases || []).map((tc: any) => ({
+            inputs: tc.inputs || {},
+            expected: tc.expected || tc.expectedOutput || '',
+          })),
+          functionName: generated.functionName || 'solve',
+          returnType: generated.returnType || 'void',
+          params: generated.params || [],
           constraints: generated.constraints || [],
           hints: generated.hints || [],
           approach: generated.approach,
         };
         setCachedDetail(key, enhanced);
         setDetail(enhanced);
-        // Only set starter code if we don't already have something better
         if (generated.starterCode) {
           setCodes(prev => {
             const isPlaceholder = (c: string) => !c || c.trim().length < 50 || c.includes('// 🤖 AI is generating') || c.includes('public void solve()');
             const newBrute = isPlaceholder(prev.brute) ? generated.starterCode : prev.brute;
             const newBetter = isPlaceholder(prev.better) ? generated.starterCode : prev.better;
             const newOptimal = isPlaceholder(prev.optimal) ? generated.starterCode : prev.optimal;
-            
-            // If we actually updated something, toast the user
             if (newBrute !== prev.brute) {
                toast.success('🚀 AI has generated the official problem signature!');
             }
-
-            return {
-              brute: newBrute,
-              better: newBetter,
-              optimal: newOptimal,
-            };
+            return { brute: newBrute, better: newBetter, optimal: newOptimal };
           });
         }
       }
     } catch (err: any) {
       console.error(err);
-      setGenerateError('Could not fetch problem details from backend. You can still code!');
+      setGenerateError('Could not generate problem details. You can still code!');
     }
     setIsGenerating(false);
   }, [key, roadmapProblem, hasHardcodedDetail]);
