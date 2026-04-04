@@ -136,13 +136,13 @@ const Dashboard = () => {
     addConsoleEntry('system', '▶ Compiling and running...');
     const startTime = Date.now();
     try {
-      const result = await executeJavaCode(code, (status) => setExecStatus(status));
+      // If stdin input is provided, pass it to the executor
+      const result = await executeJavaCode(code, (status) => setExecStatus(status), stdinInput || undefined);
       const elapsed = Date.now() - startTime;
       setExecTimeMs(elapsed);
       if (result.success) {
         if (result.output) addConsoleEntry('output', result.output);
         addConsoleEntry('info', `✓ Execution completed in ${elapsed}ms`);
-        // Analyze complexity in background
         if (aiEnabled) {
           setIsAnalyzingComplexity(true);
           supabase.functions.invoke('analyze-complexity', { body: { code, executionTimeMs: elapsed } })
