@@ -50,6 +50,7 @@ const Dashboard = () => {
   const [consoleCollapsed, setConsoleCollapsed] = useState(false);
   const [consoleFullscreen, setConsoleFullscreen] = useState(false);
   const [consoleHeight, setConsoleHeight] = useState(288);
+  const [stdinInput, setStdinInput] = useState('');
 
   // LeetCode mode state
   const [testCases, setTestCases] = useState<DbTestCase[]>([]);
