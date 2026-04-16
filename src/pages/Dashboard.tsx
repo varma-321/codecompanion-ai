@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
-import { Play, Brain, Loader2, FlaskConical, Bug, Zap, CloudOff, Cloud, FolderOpen, MessageSquare, Square } from 'lucide-react';
+import { Play, Brain, Loader2, FlaskConical, Square, FolderOpen, MessageSquare, Send } from 'lucide-react';
 import { useAutosave } from '@/hooks/use-autosave';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -10,16 +10,12 @@ import AIChatPanel from '@/components/AIChatPanel';
 import ConsolePanel, { ConsoleEntry } from '@/components/ConsolePanel';
 import TestCasePanel, { TestResult } from '@/components/TestCasePanel';
 import TestResultsTable from '@/components/TestResultsTable';
-import VisualDebugger from '@/components/VisualDebugger';
-import ExecutionAnalyticsPanel from '@/components/ExecutionAnalyticsPanel';
 import DailyChallenge from '@/components/DailyChallenge';
 import NotesPanel from '@/components/NotesPanel';
 import StreakPanel from '@/components/StreakPanel';
-import RecursionTreePanel from '@/components/RecursionTreePanel';
 import Toolbar from '@/components/Toolbar';
 import ExecutionStatus from '@/components/ExecutionStatus';
 import ProblemTimer from '@/components/ProblemTimer';
-import CodeSnippets from '@/components/CodeSnippets';
 import SolutionComparison from '@/components/SolutionComparison';
 import SettingsDialog from '@/components/SettingsDialog';
 import { useUser } from '@/lib/user-context';
@@ -31,6 +27,7 @@ import { executeJavaCode, stopExecution, type ExecutionStatus as ExecStatusType 
 import { detectProblemTitle } from '@/lib/ai-backend';
 import { supabase } from '@/integrations/supabase/client';
 import { API_BASE_URL } from '@/lib/api';
+import { isMainClassStyle } from '@/lib/test-runner';
 
 const Dashboard = () => {
   const { authUser, profile } = useUser();
@@ -50,14 +47,18 @@ const Dashboard = () => {
   const [consoleCollapsed, setConsoleCollapsed] = useState(false);
   const [consoleFullscreen, setConsoleFullscreen] = useState(false);
   const [consoleHeight, setConsoleHeight] = useState(288);
-  const [stdinInput, setStdinInput] = useState('');
+  
+  // Interactive stdin
+  const [pendingStdin, setPendingStdin] = useState('');
+  const [waitingForInput, setWaitingForInput] = useState(false);
+  const stdinBufferRef = useRef('');
 
-  // LeetCode mode state
+  // Test case state
   const [testCases, setTestCases] = useState<DbTestCase[]>([]);
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [isGeneratingTests, setIsGeneratingTests] = useState(false);
   const [isRunningTests, setIsRunningTests] = useState(false);
-  const [bottomTab, setBottomTab] = useState<'console' | 'tests' | 'results' | 'debugger' | 'daily' | 'notes' | 'streak' | 'recursion' | 'snippets' | 'solutions' | 'stdin'>('tests');
+  const [bottomTab, setBottomTab] = useState<'console' | 'tests' | 'results' | 'notes' | 'solutions' | 'streak' | 'daily'>('console');
 
   // Execution analytics
   const [execTimeMs, setExecTimeMs] = useState<number | null>(null);
@@ -86,7 +87,6 @@ const Dashboard = () => {
     }
   }, [userId]);
 
-  // Load test cases when problem changes
   useEffect(() => {
     if (activeProblem) {
       fetchTestCases(activeProblem.id).then(setTestCases).catch(() => {});
@@ -102,7 +102,6 @@ const Dashboard = () => {
     try { setProblems(await fetchProblems(userId)); } catch {}
   }, [userId]);
 
-  // Autosave code
   const autosaveCode = useCallback(async (val: string) => {
     if (!activeProblem) return;
     await updateProblem(activeProblem.id, { code: val });
@@ -126,6 +125,13 @@ const Dashboard = () => {
     }]);
   };
 
+  const handleStdinSubmit = () => {
+    if (!pendingStdin.trim()) return;
+    stdinBufferRef.current += pendingStdin + '\n';
+    addConsoleEntry('output', `> ${pendingStdin}`);
+    setPendingStdin('');
+  };
+
   const handleRun = async () => {
     if (isRunning) return;
     setIsRunning(true);
@@ -133,13 +139,29 @@ const Dashboard = () => {
     setConsoleCollapsed(false);
     setBottomTab('console');
     setExecTimeMs(null);
+    stdinBufferRef.current = '';
+    
+    // Check if code uses Scanner - if so, show input prompt
+    const usesScanner = /Scanner|System\.in|BufferedReader.*System\.in/.test(code);
+    
+    if (usesScanner && !stdinBufferRef.current) {
+      setWaitingForInput(true);
+      addConsoleEntry('system', '▶ Program requires input. Enter values below and press Send, then click Run again.');
+      addConsoleEntry('info', '💡 Tip: Enter all input values (one per line), press Send, then Run Code.');
+      setIsRunning(false);
+      setExecStatus('ready');
+      return;
+    }
+    
     addConsoleEntry('system', '▶ Compiling and running...');
     const startTime = Date.now();
     try {
-      // If stdin input is provided, pass it to the executor
-      const result = await executeJavaCode(code, (status) => setExecStatus(status), stdinInput || undefined);
+      const stdin = stdinBufferRef.current || undefined;
+      const result = await executeJavaCode(code, (status) => setExecStatus(status), stdin);
       const elapsed = Date.now() - startTime;
       setExecTimeMs(elapsed);
+      setWaitingForInput(false);
+      stdinBufferRef.current = '';
       if (result.success) {
         if (result.output) addConsoleEntry('output', result.output);
         addConsoleEntry('info', `✓ Execution completed in ${elapsed}ms`);
@@ -162,6 +184,34 @@ const Dashboard = () => {
         if (result.status.description !== 'Compilation Error') {
           addConsoleEntry('system', `Status: ${result.status.description}`);
         }
+      }
+    } catch (err: any) {
+      addConsoleEntry('error', err?.message || 'Execution failed');
+      setExecStatus('failed');
+    }
+    setIsRunning(false);
+  };
+
+  const handleRunWithInput = async () => {
+    if (!stdinBufferRef.current.trim()) {
+      toast.error('Please enter input values first');
+      return;
+    }
+    setWaitingForInput(false);
+    setIsRunning(true);
+    setExecStatus('sending');
+    addConsoleEntry('system', '▶ Compiling and running with input...');
+    const startTime = Date.now();
+    try {
+      const result = await executeJavaCode(code, (status) => setExecStatus(status), stdinBufferRef.current);
+      const elapsed = Date.now() - startTime;
+      setExecTimeMs(elapsed);
+      stdinBufferRef.current = '';
+      if (result.success) {
+        if (result.output) addConsoleEntry('output', result.output);
+        addConsoleEntry('info', `✓ Execution completed in ${elapsed}ms`);
+      } else {
+        if (result.error) addConsoleEntry('error', result.error);
       }
     } catch (err: any) {
       addConsoleEntry('error', err?.message || 'Execution failed');
@@ -239,7 +289,6 @@ const Dashboard = () => {
 
       const newCases: DbTestCase[] = [];
       for (const tc of generated) {
-        // Support both new multi-input format and legacy single-input format
         const inputs: Record<string, string> = tc.inputs || { [tc.variableName || 'arr']: tc.input || '' };
         const saved = await insertTestCase(userId, activeProblem.id, inputs, tc.expectedOutput || '');
         newCases.push(saved);
@@ -322,15 +371,13 @@ const Dashboard = () => {
     console: 'Console',
     tests: `Tests (${testCases.length})`,
     results: testResults.length > 0 ? `Results (${testResults.filter(r => r.status === 'PASSED').length}/${testResults.length})` : 'Results',
-    stdin: '⌨ Input',
-    debugger: 'Debug',
     notes: 'Notes',
-    recursion: 'Recursion',
-    snippets: 'Templates',
     solutions: 'Solutions',
     streak: 'Streak',
     daily: 'Daily',
   };
+
+  const codeIsMainStyle = isMainClassStyle(code);
 
   return (
     <div className="flex h-screen flex-col bg-background">
@@ -350,7 +397,7 @@ const Dashboard = () => {
         codeIsDirty={codeIsDirty}
       />
 
-      {/* Mobile action bar for hidden panels */}
+      {/* Mobile action bar */}
       <div className="flex md:hidden items-center gap-2 border-b border-border bg-card px-3 py-2">
         <Sheet>
           <SheetTrigger asChild>
@@ -391,7 +438,7 @@ const Dashboard = () => {
       </div>
 
       <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
-        {/* Left: Problem Explorer - hidden on mobile */}
+        {/* Left: Problem Explorer */}
         <div className="hidden md:block w-56 shrink-0 border-r border-border">
           <ProblemExplorer
             problems={problems}
@@ -418,6 +465,11 @@ const Dashboard = () => {
                   <Square className="h-3.5 w-3.5" /> Stop
                 </Button>
               )}
+              {waitingForInput && (
+                <Button onClick={handleRunWithInput} size="sm" className="h-8 gap-1.5 px-3 text-xs font-semibold rounded-md bg-blue-600 hover:bg-blue-700 text-white shrink-0">
+                  <Play className="h-3.5 w-3.5" /> Run with Input
+                </Button>
+              )}
               <Button onClick={handleRunTests} disabled={isRunning || isRunningTests || testCases.length === 0} size="sm" variant="outline" className="h-8 gap-1.5 px-3 sm:px-4 text-xs font-semibold rounded-md shrink-0 border-primary/30 hover:bg-primary/10">
                 {isRunningTests ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FlaskConical className="h-3.5 w-3.5 text-primary" />}
                 <span className="hidden sm:inline">{isRunningTests ? 'Testing...' : `Run Tests (${testCases.length})`}</span>
@@ -427,14 +479,14 @@ const Dashboard = () => {
                 {isExplaining ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Brain className="h-3.5 w-3.5" />}
                 Explain
               </Button>
+              {codeIsMainStyle && (
+                <span className="text-[10px] text-emerald-500 font-medium bg-emerald-500/10 px-2 py-0.5 rounded-full hidden sm:inline">
+                  Main Mode
+                </span>
+              )}
               <div className="ml-auto flex items-center gap-2 shrink-0">
                 <div className="hidden sm:block"><ProblemTimer problemId={activeProblem?.id || null} /></div>
                 <ExecutionStatus status={execStatus} />
-                {stdinInput.trim() && (
-                  <span className="text-[10px] text-primary font-medium bg-primary/10 px-2 py-0.5 rounded-full hidden sm:inline">
-                    stdin active
-                  </span>
-                )}
               </div>
             </div>
           )}
@@ -449,9 +501,8 @@ const Dashboard = () => {
             className={`shrink-0 border-t border-border ${consoleFullscreen ? 'flex-1' : ''}`}
             style={consoleFullscreen ? {} : { height: consoleCollapsed ? 36 : consoleHeight }}
           >
-            {/* Tab bar */}
             <div className="flex items-center border-b border-border bg-card px-1 overflow-x-auto scrollbar-none">
-              {(['console', 'tests', 'results', 'stdin', 'debugger', 'notes', 'recursion', 'snippets', 'solutions', 'streak', 'daily'] as const).map(tab => (
+              {(['console', 'tests', 'results', 'notes', 'solutions', 'streak', 'daily'] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => { setBottomTab(tab); setConsoleCollapsed(false); }}
@@ -468,23 +519,39 @@ const Dashboard = () => {
 
             <div className="flex h-[calc(100%-32px)]">
               {bottomTab === 'console' && (
-                <div className="flex flex-1 flex-col lg:flex-row">
-                  <div className="flex-1 overflow-hidden border-r border-panel-border">
+                <div className="flex flex-1 flex-col">
+                  <div className="flex-1 overflow-hidden">
                     <ConsolePanel
                       entries={consoleEntries}
                       isRunning={isRunning || isRunningTests}
-                      onClear={() => setConsoleEntries([])}
+                      onClear={() => { setConsoleEntries([]); setWaitingForInput(false); stdinBufferRef.current = ''; }}
                       isCollapsed={consoleCollapsed}
                       onToggleCollapse={() => setConsoleCollapsed(c => !c)}
                       isFullscreen={consoleFullscreen}
                       onToggleFullscreen={() => setConsoleFullscreen(f => !f)}
                     />
                   </div>
-                  {!consoleCollapsed && (
-                    <div className="hidden lg:block w-[380px] xl:w-[420px] shrink-0 overflow-hidden">
-                      <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
-                    </div>
-                  )}
+                  {/* Interactive stdin input bar */}
+                  <div className="flex items-center gap-2 border-t border-border bg-secondary/30 px-3 py-1.5">
+                    <span className="text-[10px] text-muted-foreground font-mono shrink-0">{'>'}</span>
+                    <input
+                      type="text"
+                      value={pendingStdin}
+                      onChange={e => setPendingStdin(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') handleStdinSubmit(); }}
+                      placeholder="Enter input value..."
+                      className="flex-1 bg-transparent border-none outline-none text-xs font-mono text-foreground placeholder:text-muted-foreground/50"
+                    />
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleStdinSubmit}
+                      className="h-6 w-6 p-0"
+                      disabled={!pendingStdin.trim()}
+                    >
+                      <Send className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </div>
               )}
 
@@ -524,40 +591,6 @@ const Dashboard = () => {
                 </div>
               )}
 
-              {bottomTab === 'stdin' && (
-                <div className="flex flex-1 flex-col lg:flex-row">
-                  <div className="flex-1 overflow-hidden p-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Standard Input (stdin)</span>
-                      <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => setStdinInput('')}>Clear</Button>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground">
-                      Enter input values that your program reads via <code className="bg-secondary px-1 rounded text-[10px]">Scanner</code> / <code className="bg-secondary px-1 rounded text-[10px]">System.in</code>. Each line becomes a line of input.
-                    </p>
-                    <textarea
-                      value={stdinInput}
-                      onChange={e => setStdinInput(e.target.value)}
-                      placeholder={"Enter input here...\nExample:\n5\n1 2 3 4 5"}
-                      className="w-full flex-1 min-h-[120px] rounded-lg border border-border bg-secondary/30 p-3 font-mono text-xs text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none focus:ring-1 focus:ring-primary"
-                    />
-                  </div>
-                  <div className="hidden lg:block w-[380px] xl:w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
-                    <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
-                  </div>
-                </div>
-              )}
-
-              {bottomTab === 'debugger' && (
-                <div className="flex flex-1 flex-col lg:flex-row">
-                  <div className="flex-1 overflow-hidden">
-                    <VisualDebugger code={code} isVisible={true} />
-                  </div>
-                  <div className="hidden lg:block w-[380px] xl:w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
-                    <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
-                  </div>
-                </div>
-              )}
-
               {bottomTab === 'daily' && (
                 <div className="flex flex-1 flex-col lg:flex-row">
                   <div className="flex-1 overflow-auto p-3">
@@ -580,32 +613,10 @@ const Dashboard = () => {
                 </div>
               )}
 
-              {bottomTab === 'recursion' && (
-                <div className="flex flex-1 flex-col lg:flex-row">
-                  <div className="flex-1 overflow-hidden">
-                    <RecursionTreePanel code={code} />
-                  </div>
-                  <div className="hidden lg:block w-[380px] xl:w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
-                    <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
-                  </div>
-                </div>
-              )}
-
               {bottomTab === 'streak' && (
                 <div className="flex flex-1 flex-col lg:flex-row">
                   <div className="flex-1 overflow-auto">
                     <StreakPanel />
-                  </div>
-                  <div className="hidden lg:block w-[380px] xl:w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
-                    <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
-                  </div>
-                </div>
-              )}
-
-              {bottomTab === 'snippets' && (
-                <div className="flex flex-1 flex-col lg:flex-row">
-                  <div className="flex-1 overflow-hidden">
-                    <CodeSnippets onInsert={(snippet) => setCode(prev => prev + snippet)} />
                   </div>
                   <div className="hidden lg:block w-[380px] xl:w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
                     <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />

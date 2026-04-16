@@ -1,10 +1,7 @@
 /**
- * Smart Java test runner that parses test case variables,
- * detects the user's method signature, generates a wrapper Main.java,
- * and executes each test case against the backend.
- * 
- * KEY: Keeps user's class intact (e.g. Solution) and generates a separate
- * public class Main that instantiates and calls the user's class.
+ * Smart Java test runner that supports TWO modes:
+ * 1. LeetCode-style: User writes Solution class, test runner wraps with Main
+ * 2. Main-class-style: User writes Main with Scanner, test cases passed as stdin
  */
 
 import { API_BASE_URL } from './api';
@@ -13,7 +10,6 @@ import type { ExecutionStatus } from './executor';
 
 const BACKEND_URL = `${API_BASE_URL}/api/run-java`;
 
-// Global abort controller for stopping test runs
 let testAbortController: AbortController | null = null;
 
 export function stopTestExecution() {
@@ -81,7 +77,6 @@ function toJavaLiteral(value: string, javaType: string): string {
     case 'float[]':
     case 'short[]':
     case 'byte[]': {
-      // Parse JSON array and build Java array initializer
       try {
         const items = JSON.parse(v);
         if (Array.isArray(items)) {
@@ -122,7 +117,6 @@ function toJavaLiteral(value: string, javaType: string): string {
     case 'int[][]':
     case 'long[][]':
     case 'double[][]': {
-      // Parse nested JSON array properly
       try {
         const outer = JSON.parse(v);
         if (Array.isArray(outer)) {
@@ -131,7 +125,6 @@ function toJavaLiteral(value: string, javaType: string): string {
           return `new ${baseType}[][]{${rows}}`;
         }
       } catch {}
-      // Fallback: replace brackets
       let s = v.replace(/\[/g, '{').replace(/\]/g, '}');
       return `new ${javaType}${s}`;
     }
@@ -289,7 +282,6 @@ interface MethodSignature {
 }
 
 function parseMethodSignature(code: string): MethodSignature | null {
-  // Remove comments to avoid false matches
   const cleaned = code.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
   
   const patterns = [
@@ -330,6 +322,14 @@ function detectClassName(code: string): string | null {
   return match ? match[1] : null;
 }
 
+// ─── Detect if code is Main-class style (has Main class + main method) ──
+
+export function isMainClassStyle(code: string): boolean {
+  const cleaned = code.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
+  return /class\s+Main\s*\{/.test(cleaned) && 
+         /public\s+static\s+void\s+main\s*\(\s*String\s*\[\s*\]\s+\w+\s*\)/.test(cleaned);
+}
+
 // ─── Default value for a Java type ──────────────────────────────
 
 function getDefaultForType(javaType: string): string {
@@ -361,7 +361,40 @@ function getDefaultForType(javaType: string): string {
   }
 }
 
-// ─── Build wrapped code for a single test case ───────────────────
+// ─── Build stdin string from test case inputs ────────────────────
+// Converts test case variables to stdin lines that Scanner can read
+
+function buildStdinFromInputs(inputs: Record<string, string>): string {
+  const lines: string[] = [];
+  for (const [, value] of Object.entries(inputs)) {
+    const v = value.trim();
+    // If it's an array like [1,2,3], put each element on separate line or as space-separated
+    if (v.startsWith('[') && v.endsWith(']')) {
+      try {
+        const arr = JSON.parse(v);
+        if (Array.isArray(arr)) {
+          // If it's a 2D array, flatten with newlines
+          if (Array.isArray(arr[0])) {
+            lines.push(String(arr.length)); // number of rows
+            for (const row of arr) {
+              lines.push(row.join(' '));
+            }
+          } else {
+            lines.push(String(arr.length)); // array length first
+            lines.push(arr.join(' ')); // elements space-separated
+          }
+          continue;
+        }
+      } catch {}
+    }
+    // For simple values, just add as a line
+    const cleaned = v.replace(/^["']|["']$/g, '');
+    lines.push(cleaned);
+  }
+  return lines.join('\n');
+}
+
+// ─── Build wrapped code for LeetCode-style (Solution class) ──────
 
 export function buildTestWrapper(
   userCode: string,
@@ -370,7 +403,6 @@ export function buildTestWrapper(
 ): string {
   const imports = `import java.util.*;\nimport java.io.*;\nimport java.math.*;\n`;
   
-  // Ensure inputs is a valid object with string values
   const safeInputs: Record<string, string> = {};
   if (inputs && typeof inputs === 'object') {
     for (const [k, v] of Object.entries(inputs)) {
@@ -380,10 +412,8 @@ export function buildTestWrapper(
     }
   }
 
-  // Detect the user's class name
   const className = detectClassName(userCode) || 'Solution';
   
-  // Build variable declarations using method signature types when available
   const varDecls: string[] = [];
   const varNames: string[] = [];
   
@@ -406,7 +436,6 @@ export function buildTestWrapper(
       jType = inferJavaType(value);
     }
     const literal = toJavaLiteral(value, jType);
-    // Use the method param name if positional match and names differ
     const varName = (methodSig && i < methodSig.params.length && !paramTypeMap[name]) 
       ? methodSig.params[i].name 
       : name;
@@ -414,7 +443,6 @@ export function buildTestWrapper(
     varNames.push(varName);
   }
 
-  // Build the method call code
   let callCode: string;
   if (methodSig && varNames.length > 0) {
     const args = methodSig.params.map((param, idx) => {
@@ -454,8 +482,6 @@ export function buildTestWrapper(
     callCode = '            // Could not detect method signature - running code as-is';
   }
 
-  // Keep user's class intact, just remove `public` modifier so it doesn't
-  // conflict with public class Main
   let userClass = userCode.trim();
   userClass = userClass.replace(/^public\s+class\s+/, 'class ');
 
@@ -494,7 +520,10 @@ export async function runAllTests(
   testAbortController = controller;
 
   onStatus?.('sending');
-  const methodSig = parseMethodSignature(userCode);
+  
+  // Detect execution mode
+  const mainStyle = isMainClassStyle(userCode);
+  const methodSig = mainStyle ? null : parseMethodSignature(userCode);
   const results: TestResult[] = [];
 
   for (let i = 0; i < testCases.length; i++) {
@@ -522,31 +551,40 @@ export async function runAllTests(
       }
     }
 
-    if (Object.keys(validInputs).length === 0) {
-      if (methodSig && methodSig.params.length === 0) {
-        // proceed with empty inputs
-      } else {
-        const result: TestResult = {
-          test: i + 1,
-          status: 'FAILED',
-          expected: tc.expected,
-          actual: 'ERROR: Empty or invalid test inputs',
-        };
-        results.push(result);
-        onTestResult?.(i, result);
-        continue;
-      }
-    }
-
-    const wrappedCode = buildTestWrapper(userCode, validInputs, methodSig);
-
     try {
-      const response = await fetch(BACKEND_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: wrappedCode }),
-        signal: controller.signal,
-      });
+      let response: Response;
+
+      if (mainStyle) {
+        // Main-class mode: pass test case values as stdin
+        const stdinData = buildStdinFromInputs(validInputs);
+        response = await fetch(BACKEND_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: userCode, stdin: stdinData }),
+          signal: controller.signal,
+        });
+      } else {
+        // LeetCode mode: wrap with Main class
+        if (Object.keys(validInputs).length === 0 && methodSig && methodSig.params.length > 0) {
+          const result: TestResult = {
+            test: i + 1,
+            status: 'FAILED',
+            expected: tc.expected,
+            actual: 'ERROR: Empty or invalid test inputs',
+          };
+          results.push(result);
+          onTestResult?.(i, result);
+          continue;
+        }
+
+        const wrappedCode = buildTestWrapper(userCode, validInputs, methodSig);
+        response = await fetch(BACKEND_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: wrappedCode }),
+          signal: controller.signal,
+        });
+      }
 
       if (!response.ok) {
         const result: TestResult = {
@@ -564,7 +602,6 @@ export async function runAllTests(
       const actual = (data.success ? (data.output || '') : (data.error || '')).trim();
       const expected = tc.expected.trim();
       
-      // Normalize comparison
       const normalize = (s: string) => {
         const trimmed = s.trim();
         if (/^\[[\s\S]*\]$/.test(trimmed)) {
@@ -613,7 +650,6 @@ export async function executeWithStdin(
 ): Promise<{ success: boolean; output: string; error: string }> {
   onStatus?.('sending');
 
-  // For stdin-based execution, we send the code as-is (user writes main method)
   try {
     const response = await fetch(BACKEND_URL, {
       method: 'POST',
