@@ -179,7 +179,40 @@ This should match the REAL LeetCode problem if it exists. Include full descripti
           const hasExpected = expectedField !== undefined && String(expectedField).trim() !== "";
           return hasInputs && hasExpected;
         }).slice(0, 5);
+      } else {
+        detail.testCases = [];
       }
+
+      // Fallback: derive test cases from examples when AI returned none.
+      // Parse "name = value, name2 = value2" style example inputs into an inputs map.
+      if (detail.testCases.length === 0 && Array.isArray(detail.examples) && Array.isArray(detail.params)) {
+        const paramNames: string[] = detail.params.map((p: any) => p?.name).filter(Boolean);
+        const derived = detail.examples.map((ex: any) => {
+          const raw = String(ex?.input ?? "");
+          const inputs: Record<string, string> = {};
+          // Try "name = value" pattern split by commas at top level (best-effort).
+          const assignments = raw.split(/,\s*(?=[a-zA-Z_]\w*\s*=)/);
+          let matched = 0;
+          for (const part of assignments) {
+            const m = part.match(/^\s*([a-zA-Z_]\w*)\s*=\s*([\s\S]+?)\s*$/);
+            if (m && paramNames.includes(m[1])) {
+              inputs[m[1]] = m[2];
+              matched++;
+            }
+          }
+          // Fallback: assign whole raw string to the first param.
+          if (matched === 0 && paramNames.length === 1) {
+            inputs[paramNames[0]] = raw.replace(/^[a-zA-Z_]\w*\s*=\s*/, "");
+          }
+          return {
+            inputs,
+            expected: String(ex?.output ?? "").trim(),
+            category: "normal",
+          };
+        }).filter((tc: any) => Object.keys(tc.inputs).length > 0 && tc.expected);
+        detail.testCases = derived.slice(0, 5);
+      }
+
       return new Response(JSON.stringify({ detail }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
