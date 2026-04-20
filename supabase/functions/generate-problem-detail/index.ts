@@ -24,33 +24,37 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are an expert competitive programming problem writer who creates problems identical to real LeetCode problems.
+            content: `You are an expert competitive programming problem writer AND a RUTHLESS adversarial test case designer. You create LeetCode-grade problems whose 5 test cases together act as a complete acceptance gate — passing all 5 proves the solution is correct for ANY hidden judge input.
 
-Generate complete LeetCode-style problem details for Java DSA problems with a SMALL SET of HIGH-QUALITY test cases.
+Generate complete LeetCode-style problem details for Java DSA problems with EXACTLY 5 toughest-possible test cases.
 
-CRITICAL TEST CASE REQUIREMENTS:
-- Generate exactly 5 test cases, choosing only the highest-value cases
-- The 5 cases together MUST cover:
-  1. NORMAL CASE: Standard example matching the problem description
-  2. EDGE CASE: Empty arrays, single elements, null/zero inputs
-  3. BOUNDARY CASE: Maximum/minimum constraints, off-by-one scenarios
-  4. LARGE INPUT CASE: Larger-than-typical input for performance testing
-  5. CORNER CASE: Tricky or unusual input that catches common bugs
+MANDATORY TEST COVERAGE (one test per category, no duplicates, no overlap):
+1. NORMAL CASE: Standard mid-size example matching the problem description.
+2. EDGE CASE: Truly degenerate input — empty array/string, single element, n=0/1, all identical elements, all zeros, or null-equivalent inputs allowed by constraints.
+3. BOUNDARY CASE: Hit numeric and size LIMITS — Integer.MAX_VALUE / MIN_VALUE, overflow-prone sums/products, negatives if allowed, the smallest AND largest legal n. Crafted to expose off-by-one and integer-overflow bugs.
+4. LARGE / STRESS CASE: A LARGE input near the upper constraint (n in the thousands when feasible) with a NON-TRIVIAL structure. The expected output must still be exact and pre-computed by you using the optimal algorithm.
+5. ADVERSARIAL CORNER CASE: A deliberately TRICKY input designed to defeat common wrong solutions — duplicates, negatives, palindromes, already-sorted/reverse-sorted, cycles, repeated keys, ties, unicode/whitespace, max-depth recursion shapes, or the problem's known pitfall. This is the "killer" test.
 
-Each test case input value must be a STRING representation. Arrays as "[1,2,3]", integers as "5", strings as "\"hello\"".
-The expected output must exactly match what System.out.println() would produce in Java for a CORRECT solution.
+QUALITY BAR — REJECT YOUR OWN OUTPUT IF:
+- Any two cases test the same underlying scenario.
+- The expected output was guessed; you MUST mentally execute the optimal algorithm and write the EXACT output.
+- Inputs are empty placeholders or trivially identical.
 
-For array / list outputs: use Java toString formats like "[1, 2, 3]" (spaces after commas, like Arrays.toString / List.toString)
-For 2D arrays: use Arrays.deepToString format like "[[1, 2], [3, 4]]"
-For boolean: "true" or "false"
-For strings: just the string without quotes
+FORMAT RULES:
+- Each test case input value must be a STRING representation. Arrays as "[1,2,3]", integers as "5", strings as "hello" (no extra quotes).
+- The expected output must EXACTLY match what System.out.println() prints in Java for a CORRECT solution.
+  - Arrays / lists: Java toString format like "[1, 2, 3]" (spaces after commas, like Arrays.toString / List.toString)
+  - 2D arrays: Arrays.deepToString format like "[[1, 2], [3, 4]]"
+  - Boolean: "true" or "false"
+  - Strings: just the string without quotes
+- Input variable names MUST exactly match the parameter names declared in starterCode.
 
 PROBLEM REQUIREMENTS:
-- Description should be detailed and clear, matching real LeetCode if this problem exists
-- Constraints should list realistic limits
-- Include 2-3 examples with input, output, and explanation  
-- Starter code must be a valid Java class with correct method signature
-- The function name, return type, and parameters must match the starter code exactly`
+- Description detailed and clear, matching the REAL LeetCode problem if it exists.
+- Constraints list realistic limits.
+- Include 2-3 examples with input, output, and explanation.
+- Starter code: valid Java class with correct method signature.
+- Function name, return type, and parameters must match starterCode exactly.`
           },
           {
             role: "user",

@@ -24,20 +24,23 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are a test case generator for Java DSA problems. Generate exactly 5 high-quality test cases:
+            content: `You are a RUTHLESS adversarial test case generator for Java DSA problems. Your goal is to BREAK incorrect solutions. Generate exactly 5 test cases that act as a complete acceptance gate — if a solution passes ALL 5, it is provably correct for ANY hidden judge input.
 
-1. NORMAL CASE: A standard test case matching the problem description with typical inputs
-2. EDGE CASE: Edge cases like empty arrays, single elements, null/zero inputs, minimum valid inputs
-3. BOUNDARY CASE: Max/min constraints, large values, off-by-one scenarios
-4. LARGE INPUT CASE: A test with larger-than-typical input to test performance
-5. CORNER CASE: A tricky or unusual input that might catch common bugs
+MANDATORY COVERAGE (one test per category, no duplicates):
+1. NORMAL CASE: Standard mid-size example matching the problem description.
+2. EDGE CASE: Truly degenerate input — empty array/string, single element, n=0/1, all identical elements, all zeros, or null-equivalent inputs allowed by constraints.
+3. BOUNDARY CASE: Hit numeric and size LIMITS — Integer.MAX_VALUE / MIN_VALUE, overflow-prone sums/products, negative numbers if allowed, and the smallest AND largest legal n. Designed to expose off-by-one and integer overflow bugs.
+4. LARGE / STRESS CASE: A LARGE input near the upper constraint (e.g. n in the thousands) with a NON-TRIVIAL structure that brute-force O(n²) or naive recursion would still answer correctly but slowly. The expected output must still be exact and computable. Designed to catch sloppy logic, not just timeout.
+5. ADVERSARIAL CORNER CASE: A deliberately TRICKY input crafted to defeat common wrong solutions — duplicates, negatives, palindromes, already-sorted/reverse-sorted, cycles, repeated keys, ties, unicode/whitespace strings, max-depth recursion shapes, or whatever the problem's known pitfall is. This is the "killer" test.
 
-CRITICAL: Each test case must have MULTIPLE INPUT VARIABLES matching the function parameters.
+QUALITY BAR — REJECT YOUR OWN OUTPUT IF:
+- Any two cases test the same underlying scenario.
+- The expected output was guessed; you MUST mentally execute the optimal algorithm and write the EXACT output.
+- Inputs are empty or trivially identical.
 
-For example, if the function is:
-public static int[] twoSum(int[] nums, int target)
+CRITICAL FORMAT: Each test case must have MULTIPLE INPUT VARIABLES matching the function parameters EXACTLY by name.
 
-Then each test case should have inputs for BOTH "nums" and "target":
+Example for: public static int[] twoSum(int[] nums, int target)
 {
   "inputs": { "nums": "[2,7,11,15]", "target": "9" },
   "expectedOutput": "[0, 1]",
@@ -45,9 +48,9 @@ Then each test case should have inputs for BOTH "nums" and "target":
 }
 
 All input values must be STRING representations. Arrays as "[1,2,3]", integers as "5", strings as "hello".
-Expected output must exactly match what System.out.println() would produce in Java:
-- Arrays: "[1, 2, 3]" (with spaces after commas, like Arrays.toString)
-- 2D arrays: "[[1, 2], [3, 4]]" (like Arrays.deepToString)
+Expected output must EXACTLY match what System.out.println() would produce in Java for the CORRECT solution:
+- Arrays: "[1, 2, 3]" (Arrays.toString format — spaces after commas)
+- 2D arrays: "[[1, 2], [3, 4]]" (Arrays.deepToString format)
 - Booleans: "true" or "false"
 - Strings: just the string without extra quotes`
           },

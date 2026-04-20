@@ -357,57 +357,54 @@ const ProblemWorkspace = () => {
     }]);
   };
 
+  // Run: SYNTAX / COMPILE CHECK ONLY — no test cases executed.
+  // Wraps the user's code in a no-op Main if needed and reports compile errors.
   const handleRun = async () => {
     if (isRunning) return;
     setIsRunning(true);
-    setExecStatus('sending');
+    setExecStatus('compiling');
     setBottomTab('console');
-    addConsoleEntry('system', '▶ Compiling and running...');
+    addConsoleEntry('system', '▶ Checking syntax (compile only)...');
     const startTime = Date.now();
     try {
-      if (detail.testCases.length > 0) {
-        // Run against built-in test cases using local test-runner
-        const { runAllTests } = await import('@/lib/test-runner');
-        const tcInputs = detail.testCases.map(tc => ({
-          inputs: tc.inputs || {},
-          expected: tc.expected || '',
-        }));
-        const results = await runAllTests(code, tcInputs, setExecStatus, (idx, r) => {
-          addConsoleEntry(
-            r.status === 'PASSED' ? 'info' : 'error',
-            `Test ${r.test} ${r.status}${r.status === 'FAILED' ? ` — expected: ${r.expected}, got: ${r.actual}` : ''}`
-          );
-        });
-        const execTime = Date.now() - startTime;
-        const passed = results.filter(r => r.status === 'PASSED').length;
-        const allPassed = passed === results.length;
-        addConsoleEntry('system', `\n${passed}/${results.length} tests passed (${execTime}ms).`);
-        setTestResults(results);
-        setBottomTab('results');
-        setExecStatus(allPassed ? 'complete' : 'failed');
+      const { executeJavaCode } = await import('@/lib/executor');
 
-        if (authUser && key) {
-          await saveExecutionHistory(authUser.id, key, code, results, allPassed, execTime);
-          setHistoryRefreshKey(prev => prev + 1);
-        }
+      // Build a minimal compile harness: if user already has a public class with main, run as-is.
+      // Otherwise wrap their Solution in a Main shell so javac validates the source.
+      const hasMain = /public\s+static\s+void\s+main\s*\(/.test(code);
+      const harness = hasMain
+        ? code
+        : `${code}\n\npublic class Main { public static void main(String[] args) { /* syntax check only */ } }`;
+
+      const result = await executeJavaCode(harness, (s) => setExecStatus(s));
+      const execTime = Date.now() - startTime;
+
+      // Detect compilation errors specifically
+      const errText = (result.error || '').toLowerCase();
+      const isCompileError =
+        result.status?.id === 6 ||
+        result.status?.description?.toLowerCase().includes('compil') ||
+        errText.includes('error:') ||
+        errText.includes('cannot find symbol') ||
+        errText.includes('compilation');
+
+      if (isCompileError) {
+        addConsoleEntry('error', '✗ Compilation failed:');
+        if (result.error) addConsoleEntry('error', result.error);
+        setExecStatus('compile_error');
+      } else if (!result.success) {
+        // Runtime error during the empty main is still surfaced, but syntax is OK
+        addConsoleEntry('info', `✓ Syntax OK — code compiles cleanly (${execTime}ms)`);
+        if (result.output) addConsoleEntry('output', result.output);
+        setExecStatus('complete');
       } else {
-        // Freeform execution
-        const { executeJavaCode } = await import('@/lib/executor');
-        const result = await executeJavaCode(code, (s) => setExecStatus(s));
-        const execTime = Date.now() - startTime;
-        if (result.success) {
-          if (result.output) addConsoleEntry('output', result.output);
-          addConsoleEntry('info', `✓ Execution completed (${execTime}ms)`);
-        } else {
-          if (result.error) addConsoleEntry('error', result.error);
-        }
-        if (authUser && key) {
-          await saveExecutionHistory(authUser.id, key, code, [], result.success, execTime);
-          setHistoryRefreshKey(prev => prev + 1);
-        }
+        addConsoleEntry('info', `✓ Syntax OK — code compiles cleanly (${execTime}ms)`);
+        if (result.output) addConsoleEntry('output', result.output);
+        addConsoleEntry('system', 'Use "Run Tests" to execute against test cases, or "Submit" to grade.');
+        setExecStatus('complete');
       }
     } catch (err: any) {
-      addConsoleEntry('error', err?.message || 'Execution failed');
+      addConsoleEntry('error', err?.message || 'Syntax check failed');
       setExecStatus('failed');
     }
     setIsRunning(false);
