@@ -119,7 +119,17 @@ Expected output must exactly match what System.out.println() would produce in Ja
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
     if (toolCall) {
       const args = JSON.parse(toolCall.function.arguments);
-      return new Response(JSON.stringify({ testCases: args.testCases }), {
+      // Strict validation: every test case must have non-empty inputs and expectedOutput
+      const validCases = (args.testCases || []).filter((tc: any) => {
+        if (!tc || typeof tc !== "object") return false;
+        if (!tc.inputs || typeof tc.inputs !== "object") return false;
+        const hasInputs = Object.values(tc.inputs).some(
+          (v) => v !== null && v !== undefined && String(v).trim() !== ""
+        );
+        const hasExpected = tc.expectedOutput && String(tc.expectedOutput).trim() !== "";
+        return hasInputs && hasExpected;
+      }).slice(0, 5);
+      return new Response(JSON.stringify({ testCases: validCases }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

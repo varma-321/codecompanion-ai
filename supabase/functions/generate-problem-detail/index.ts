@@ -167,6 +167,19 @@ This should match the REAL LeetCode problem if it exists. Include full descripti
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
     if (toolCall) {
       const detail = JSON.parse(toolCall.function.arguments);
+      // Strict validation: filter out test cases with missing inputs/expected
+      if (Array.isArray(detail.testCases)) {
+        detail.testCases = detail.testCases.filter((tc: any) => {
+          if (!tc || typeof tc !== "object") return false;
+          if (!tc.inputs || typeof tc.inputs !== "object") return false;
+          const hasInputs = Object.values(tc.inputs).some(
+            (v) => v !== null && v !== undefined && String(v).trim() !== ""
+          );
+          const expectedField = tc.expected ?? tc.expectedOutput;
+          const hasExpected = expectedField !== undefined && String(expectedField).trim() !== "";
+          return hasInputs && hasExpected;
+        }).slice(0, 5);
+      }
       return new Response(JSON.stringify({ detail }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

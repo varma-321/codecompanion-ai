@@ -601,18 +601,38 @@ export async function runAllTests(
       const data = await response.json();
       const actual = (data.success ? (data.output || '') : (data.error || '')).trim();
       const expected = tc.expected.trim();
-      
-      const normalize = (s: string) => {
-        const trimmed = s.trim();
-        if (/^\[[\s\S]*\]$/.test(trimmed)) {
-          const noOuterSpace = trimmed.replace(/\s*\[\s*/g, '[').replace(/\s*\]\s*/g, ']');
-          const compactCommas = noOuterSpace.replace(/,\s+/g, ',');
-          return compactCommas.toLowerCase();
-        }
-        return trimmed.replace(/\s+/g, ' ').toLowerCase();
-      };
 
-      const passed = normalize(actual) === normalize(expected);
+      // Deep-equality JSON comparison handles array/object formatting differences
+      const tryParse = (s: string): any => {
+        const t = s.trim();
+        if (t === 'true' || t === 'false' || t === 'null') return JSON.parse(t);
+        if (/^-?\d+(\.\d+)?$/.test(t)) return Number(t);
+        try { return JSON.parse(t); } catch {}
+        try { return JSON.parse(t.replace(/'/g, '"')); } catch {}
+        return undefined;
+      };
+      const deepEq = (a: any, b: any): boolean => {
+        if (a === b) return true;
+        if (Array.isArray(a) && Array.isArray(b)) {
+          if (a.length !== b.length) return false;
+          return a.every((v, i) => deepEq(v, b[i]));
+        }
+        if (a && b && typeof a === 'object' && typeof b === 'object') {
+          const ak = Object.keys(a), bk = Object.keys(b);
+          if (ak.length !== bk.length) return false;
+          return ak.every((k) => deepEq(a[k], b[k]));
+        }
+        return String(a) === String(b);
+      };
+      const aJson = tryParse(actual);
+      const eJson = tryParse(expected);
+      let passed: boolean;
+      if (aJson !== undefined && eJson !== undefined) {
+        passed = deepEq(aJson, eJson);
+      } else {
+        const norm = (s: string) => s.trim().replace(/\s+/g, '').toLowerCase();
+        passed = norm(actual) === norm(expected);
+      }
 
       const result: TestResult = {
         test: i + 1,
