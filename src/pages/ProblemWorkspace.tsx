@@ -173,7 +173,7 @@ const ProblemWorkspace = () => {
   const generateFullDetail = useCallback(async () => {
     if (!roadmapProblem || !key || hasHardcodedDetail) return;
     const cached = getCachedDetail(key);
-    if (cached && cached.testCases && cached.testCases.length >= 3) {
+    if (cached && cached.testCases && cached.testCases.length >= 1) {
       setDetail(cached);
       if (!codesLoadedFromDb.current && cached.starterCode) {
         setCodes(prev => {
@@ -202,15 +202,39 @@ const ProblemWorkspace = () => {
       if (error) throw new Error('Failed to generate problem details');
       const generated = data?.detail;
       if (generated) {
+        // Client-side fallback: derive test cases from examples if AI returned none.
+        let testCases = (generated.testCases || []).map((tc: any) => ({
+          inputs: tc.inputs || {},
+          expected: tc.expected || tc.expectedOutput || '',
+        })).filter((tc: any) => Object.keys(tc.inputs).length > 0 && tc.expected);
+
+        if (testCases.length === 0 && Array.isArray(generated.examples) && Array.isArray(generated.params)) {
+          const paramNames: string[] = generated.params.map((p: any) => p?.name).filter(Boolean);
+          testCases = generated.examples.map((ex: any) => {
+            const raw = String(ex?.input ?? '');
+            const inputs: Record<string, string> = {};
+            const assignments = raw.split(/,\s*(?=[a-zA-Z_]\w*\s*=)/);
+            let matched = 0;
+            for (const part of assignments) {
+              const m = part.match(/^\s*([a-zA-Z_]\w*)\s*=\s*([\s\S]+?)\s*$/);
+              if (m && paramNames.includes(m[1])) {
+                inputs[m[1]] = m[2];
+                matched++;
+              }
+            }
+            if (matched === 0 && paramNames.length === 1) {
+              inputs[paramNames[0]] = raw.replace(/^[a-zA-Z_]\w*\s*=\s*/, '');
+            }
+            return { inputs, expected: String(ex?.output ?? '').trim() };
+          }).filter((tc: any) => Object.keys(tc.inputs).length > 0 && tc.expected);
+        }
+
         const enhanced: EnhancedDetail = {
           key,
           description: generated.description || detail.description,
           examples: generated.examples || [],
           starterCode: generated.starterCode || detail.starterCode,
-          testCases: (generated.testCases || []).map((tc: any) => ({
-            inputs: tc.inputs || {},
-            expected: tc.expected || tc.expectedOutput || '',
-          })),
+          testCases,
           functionName: generated.functionName || 'solve',
           returnType: generated.returnType || 'void',
           params: generated.params || [],
