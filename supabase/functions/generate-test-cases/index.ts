@@ -129,7 +129,6 @@ Expected output must EXACTLY match what System.out.println() would produce in Ja
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
     if (toolCall) {
       const args = JSON.parse(toolCall.function.arguments);
-      // Strict validation: every test case must have non-empty inputs and expectedOutput
       const validCases = (args.testCases || []).filter((tc: any) => {
         if (!tc || typeof tc !== "object") return false;
         if (!tc.inputs || typeof tc.inputs !== "object") return false;
@@ -139,6 +138,46 @@ Expected output must EXACTLY match what System.out.println() would produce in Ja
         const hasExpected = tc.expectedOutput && String(tc.expectedOutput).trim() !== "";
         return hasInputs && hasExpected;
       }).slice(0, 5);
+
+      // Best-effort: merge into shared cache so other users benefit
+      if (problem_key && validCases.length > 0) {
+        try {
+          const normalized = validCases.map((tc: any) => ({
+            inputs: tc.inputs,
+            expected: tc.expectedOutput,
+            category: tc.category || "normal",
+          }));
+          const { data: existing } = await adminClient
+            .from("problem_test_cases")
+            .select("id, test_cases")
+            .eq("problem_key", problem_key)
+            .maybeSingle();
+          if (existing) {
+            const merged = Array.isArray((existing as any).test_cases) && (existing as any).test_cases.length > 0
+              ? (existing as any).test_cases
+              : normalized;
+            await adminClient.from("problem_test_cases").update({ test_cases: merged }).eq("id", (existing as any).id);
+          } else {
+            const authHeader = req.headers.get("Authorization") || "";
+            let userId: string | null = null;
+            try {
+              const token = authHeader.replace("Bearer ", "");
+              const payload = JSON.parse(atob(token.split(".")[1] || ""));
+              userId = payload?.sub || null;
+            } catch {}
+            await adminClient.from("problem_test_cases").insert({
+              problem_key,
+              title: title || "",
+              difficulty: difficulty || "Medium",
+              test_cases: normalized,
+              generated_by: userId,
+            });
+          }
+        } catch (cacheErr) {
+          console.error("test-cases cache write failed:", cacheErr);
+        }
+      }
+
       return new Response(JSON.stringify({ testCases: validCases }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
