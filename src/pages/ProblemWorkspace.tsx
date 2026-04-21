@@ -190,9 +190,37 @@ const ProblemWorkspace = () => {
     setIsGenerating(true);
     setGenerateError('');
     try {
-      // Use Supabase edge function instead of external Spring Boot backend
+      // First check shared DB cache (populated by any previous user)
+      const { data: cachedRow } = await supabase
+        .from('problem_test_cases')
+        .select('*')
+        .eq('problem_key', key)
+        .maybeSingle();
+
+      if (cachedRow && Array.isArray((cachedRow as any).test_cases) && (cachedRow as any).test_cases.length >= 1) {
+        const c: any = cachedRow;
+        const enhanced: EnhancedDetail = {
+          key,
+          description: c.description || detail.description,
+          examples: c.examples || [],
+          starterCode: c.starter_code || detail.starterCode,
+          testCases: c.test_cases,
+          functionName: c.function_name || 'solve',
+          returnType: c.return_type || 'void',
+          params: c.params || [],
+          constraints: c.constraints || [],
+          hints: c.hints || [],
+        };
+        setCachedDetail(key, enhanced);
+        setDetail(enhanced);
+        setIsGenerating(false);
+        return;
+      }
+
+      // Cache miss → invoke edge function (which itself caches and writes to DB)
       const { data, error } = await supabase.functions.invoke('generate-problem-detail', {
         body: {
+          problem_key: key,
           title: roadmapProblem.title,
           difficulty: roadmapProblem.difficulty,
           topic: (roadmapProblem as any).topic || '',
@@ -620,75 +648,76 @@ const ProblemWorkspace = () => {
 
   return (
     <div className="flex h-screen flex-col bg-background">
-      {/* Header - scrollable on mobile */}
-      {/* Header */}
-      <div className="flex items-center gap-1 sm:gap-2 border-b border-panel-border bg-ide-toolbar px-2 sm:px-3 py-1.5 overflow-x-auto scrollbar-none">
-        <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="h-7 gap-1 text-xs shrink-0">
-          <ArrowLeft className="h-3 w-3" /> <span className="hidden sm:inline">Back</span>
+      {/* Header — refined LeetCode-style top bar */}
+      <header className="flex h-11 items-center gap-2 border-b border-panel-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 px-3 overflow-x-auto scrollbar-none">
+        <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="h-7 gap-1.5 text-xs shrink-0 -ml-1">
+          <ArrowLeft className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Back</span>
         </Button>
-        <ChevronRight className="h-3 w-3 text-muted-foreground hidden sm:block" />
-        <Badge variant="outline" className="text-[10px] hidden md:inline-flex">{(roadmapProblem as any).topic}</Badge>
-        <span className="text-xs sm:text-sm font-bold text-foreground truncate max-w-[120px] sm:max-w-none">{roadmapProblem.title}</span>
-        <Badge className={`text-[10px] shrink-0 ${getDifficultyBg(roadmapProblem.difficulty)}`}>
-          {roadmapProblem.difficulty}
-        </Badge>
-        <div className="ml-auto flex items-center gap-1 sm:gap-2 shrink-0">
-          <span className="text-[10px] text-muted-foreground items-center gap-1 hidden md:flex">
+        <div className="h-4 w-px bg-border hidden sm:block" />
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-sm font-semibold text-foreground truncate max-w-[160px] sm:max-w-[280px] tracking-tight">{roadmapProblem.title}</span>
+          <Badge variant="outline" className={`text-[10px] font-medium shrink-0 ${getDifficultyBg(roadmapProblem.difficulty)}`}>
+            {roadmapProblem.difficulty}
+          </Badge>
+          <Badge variant="secondary" className="text-[10px] font-normal hidden md:inline-flex shrink-0">{(roadmapProblem as any).topic}</Badge>
+        </div>
+        <div className="ml-auto flex items-center gap-1.5 shrink-0">
+          <span className="text-[11px] text-muted-foreground items-center gap-1.5 hidden md:flex">
             {wsAutoSaving ? (
-              <><Loader2 className="h-3 w-3 animate-spin" /> Saving...</>
+              <><Loader2 className="h-3 w-3 animate-spin" /> Saving</>
             ) : wsCodeDirty ? (
-              <span className="text-yellow-500">● Unsaved</span>
+              <span className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-warning animate-pulse" /> Unsaved</span>
             ) : (
-              <><Cloud className="h-3 w-3 text-green-500" /> Auto-saved</>
+              <span className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-success" /> Saved</span>
             )}
           </span>
-          <div className="h-4 w-px bg-panel-border hidden sm:block" />
-          <div className="hidden sm:block"><ProblemTimer problemId={key || null} onTimeUpdate={setTimeSpent} /></div>
-          <div className="h-4 w-px bg-panel-border hidden sm:block" />
-          <Button variant="ghost" size="sm" onClick={() => setFocusMode(!focusMode)} className={`h-7 w-7 p-0 ${focusMode ? 'text-primary' : ''}`} title="Focus Mode">
+          <div className="h-4 w-px bg-border hidden md:block" />
+          <div className="hidden md:block"><ProblemTimer problemId={key || null} onTimeUpdate={setTimeSpent} /></div>
+          <div className="h-4 w-px bg-border hidden md:block" />
+          <Button variant="ghost" size="sm" onClick={() => setFocusMode(!focusMode)} className={`h-7 w-7 p-0 ${focusMode ? 'text-foreground bg-accent' : 'text-muted-foreground'}`} title="Focus Mode">
             {focusMode ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => setShowShortcuts(true)} className="h-7 w-7 p-0 hidden sm:flex" title="Keyboard Shortcuts (Ctrl+K)">
+          <Button variant="ghost" size="sm" onClick={() => setShowShortcuts(true)} className="h-7 w-7 p-0 hidden sm:flex text-muted-foreground" title="Keyboard Shortcuts (Ctrl+K)">
             <Keyboard className="h-3.5 w-3.5" />
           </Button>
-          <Button onClick={handleRun} disabled={isRunning || isRunningTests} size="sm" className="h-7 gap-1 text-xs">
+          <div className="h-4 w-px bg-border hidden sm:block mx-0.5" />
+          <Button onClick={handleRun} disabled={isRunning || isRunningTests} size="sm" variant="outline" className="h-7 gap-1.5 text-xs font-medium">
             {isRunning ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
             Run
           </Button>
           {(isRunning || isRunningTests) && (
-            <Button onClick={() => { stopExecution(); setIsRunning(false); setIsRunningTests(false); setExecStatus('stopped' as any); }} size="sm" variant="destructive" className="h-7 gap-1 text-xs">
+            <Button onClick={() => { stopExecution(); setIsRunning(false); setIsRunningTests(false); setExecStatus('stopped' as any); }} size="sm" variant="destructive" className="h-7 gap-1.5 text-xs">
               <Square className="h-3 w-3" /> Stop
             </Button>
           )}
-          <Button onClick={handleRunTests} disabled={isRunning || isRunningTests || detail.testCases.length === 0} size="sm" variant="secondary" className="h-7 gap-1 text-xs">
+          <Button onClick={handleRunTests} disabled={isRunning || isRunningTests || detail.testCases.length === 0} size="sm" variant="secondary" className="h-7 gap-1.5 text-xs font-medium">
             {isRunningTests ? <Loader2 className="h-3 w-3 animate-spin" /> : <FlaskConical className="h-3 w-3" />}
-            <span className="hidden md:inline">Run Tests</span>
-            <span className="md:hidden">Run</span>
+            <span className="hidden md:inline">Test</span>
           </Button>
-          <Button onClick={handleSubmitCode} disabled={isRunning || isRunningTests || detail.testCases.length === 0} size="sm" variant="default" className="h-7 gap-1 text-xs bg-emerald-600 hover:bg-emerald-700 text-white">
+          <Button onClick={handleSubmitCode} disabled={isRunning || isRunningTests || detail.testCases.length === 0} size="sm" className="h-7 gap-1.5 text-xs font-semibold bg-success hover:bg-success/90 text-success-foreground">
             {isRunningTests ? <Loader2 className="h-3 w-3 animate-spin" /> : <Code2 className="h-3 w-3" />}
-            <span>Submit</span>
+            Submit
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button size="sm" variant="outline" className="h-7 gap-1 text-xs hidden sm:flex">
-                <Sparkles className="h-3 w-3" /> AI Tools <ChevronDown className="h-3 w-3" />
+              <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs hidden sm:flex text-muted-foreground hover:text-foreground">
+                <Sparkles className="h-3 w-3" /> AI <ChevronDown className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__vibe__' }))}>
-                <Sparkles className="h-3.5 w-3.5 mr-2 text-primary" /> AI Code Aura (Vibes)
+                <Sparkles className="h-3.5 w-3.5 mr-2" /> AI Code Aura
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__visualize__' }))}>
-                <Eye className="h-3.5 w-3.5 mr-2 text-blue-500" /> Visualize Logic Flow
+                <Eye className="h-3.5 w-3.5 mr-2" /> Visualize Logic Flow
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__performance__' }))}>
-                <BarChart3 className="h-3.5 w-3.5 mr-2 text-orange-500" /> Performance Audit
+                <BarChart3 className="h-3.5 w-3.5 mr-2" /> Performance Audit
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__dry_run__' }))}>
-                <Workflow className="h-3.5 w-3.5 mr-2 text-purple-500" /> Step-by-Step Trace
+                <Workflow className="h-3.5 w-3.5 mr-2" /> Step-by-Step Trace
               </DropdownMenuItem>
-              <div className="h-px bg-panel-border my-1" />
+              <div className="h-px bg-border my-1" />
               <DropdownMenuItem onClick={handleAnalyze} disabled={isAnalyzing || !code.trim()}>
                 <TrendingUp className="h-3.5 w-3.5 mr-2" /> Complexity Analysis
               </DropdownMenuItem>
@@ -706,12 +735,12 @@ const ProblemWorkspace = () => {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button onClick={() => navigate(`/discuss?problem=${key}`)} size="sm" variant="ghost" className="h-7 gap-1 text-xs hidden lg:flex">
-            <MessageSquare className="h-3 w-3" /> Discuss
+          <Button onClick={() => navigate(`/discuss?problem=${key}`)} size="sm" variant="ghost" className="h-7 w-7 p-0 hidden lg:flex text-muted-foreground" title="Discuss">
+            <MessageSquare className="h-3.5 w-3.5" />
           </Button>
           <ExecutionStatus status={execStatus} />
         </div>
-      </div>
+      </header>
 
       {/* Mobile action bar - visible only on small screens */}
       <div className="flex sm:hidden items-center gap-1.5 border-b border-panel-border bg-card px-2 py-1.5 overflow-x-auto scrollbar-none">
@@ -950,45 +979,47 @@ const ProblemWorkspace = () => {
             </Button>
           )}
 
-          {/* Approach Tabs */}
-          <div className="flex items-center gap-0 border-b border-panel-border bg-ide-toolbar px-1">
-            {APPROACHES.map(approach => (
-              <button
-                key={approach.key}
-                onClick={() => {
-                  setActiveApproach(approach.key);
-                  wsResetSaved(codes[approach.key]);
-                }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors border-b-2 ${
-                  activeApproach === approach.key
-                    ? `${approach.color} border-current`
-                    : 'text-muted-foreground border-transparent hover:text-foreground'
-                }`}
-              >
-                {approach.icon}
-                {approach.label}
-              </button>
-            ))}
-            <span className="ml-auto text-[10px] text-muted-foreground pr-2">
-              {APPROACHES.find(a => a.key === activeApproach)?.label} approach
-            </span>
+          {/* Approach Tabs — refined segmented look */}
+          <div className="flex items-center border-b border-panel-border bg-card/60 px-2 h-9">
+            <div className="flex items-center gap-0.5 p-0.5 rounded-md bg-muted/40">
+              {APPROACHES.map(approach => (
+                <button
+                  key={approach.key}
+                  onClick={() => {
+                    setActiveApproach(approach.key);
+                    wsResetSaved(codes[approach.key]);
+                  }}
+                  className={`flex items-center gap-1.5 px-3 h-7 rounded text-[11px] font-medium transition-all ${
+                    activeApproach === approach.key
+                      ? 'bg-card text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {approach.icon}
+                  {approach.label}
+                </button>
+              ))}
+            </div>
+            <span className="ml-auto text-[11px] text-muted-foreground tracking-tight font-mono">Java</span>
           </div>
 
           <div className="flex-1 overflow-hidden">
             <CodeEditor code={code} onChange={setCode} />
           </div>
 
-          <div onMouseDown={handleDividerMouseDown} className="resize-handle h-1 cursor-row-resize border-t border-panel-border hover:bg-primary/30 transition-colors" />
+          <div onMouseDown={handleDividerMouseDown} className="resize-handle h-1 cursor-row-resize border-t border-panel-border hover:bg-primary/40 transition-colors" />
 
           {/* Bottom panel */}
-          <div className="shrink-0 border-t border-panel-border" style={{ height: consoleHeight }}>
-            <div className="flex items-center border-b border-panel-border bg-ide-toolbar overflow-x-auto scrollbar-none">
+          <div className="shrink-0 border-t border-panel-border bg-card/40" style={{ height: consoleHeight }}>
+            <div className="flex items-center border-b border-panel-border bg-card/60 px-1 h-9 overflow-x-auto scrollbar-none">
               {tabItems.map(tab => (
                 <button
                   key={tab.key}
                   onClick={() => setBottomTab(tab.key)}
-                  className={`px-2 sm:px-3 py-1.5 text-[10px] sm:text-xs font-semibold uppercase tracking-wider transition-colors whitespace-nowrap shrink-0 ${
-                    bottomTab === tab.key ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'
+                  className={`relative px-3 h-9 text-[11px] font-medium transition-colors whitespace-nowrap shrink-0 ${
+                    bottomTab === tab.key
+                      ? 'text-foreground after:absolute after:left-2 after:right-2 after:bottom-0 after:h-0.5 after:bg-foreground after:rounded-full'
+                      : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   {tab.label}
