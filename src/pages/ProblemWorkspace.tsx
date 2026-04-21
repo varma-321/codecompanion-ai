@@ -190,9 +190,37 @@ const ProblemWorkspace = () => {
     setIsGenerating(true);
     setGenerateError('');
     try {
-      // Use Supabase edge function instead of external Spring Boot backend
+      // First check shared DB cache (populated by any previous user)
+      const { data: cachedRow } = await supabase
+        .from('problem_test_cases')
+        .select('*')
+        .eq('problem_key', key)
+        .maybeSingle();
+
+      if (cachedRow && Array.isArray((cachedRow as any).test_cases) && (cachedRow as any).test_cases.length >= 1) {
+        const c: any = cachedRow;
+        const enhanced: EnhancedDetail = {
+          key,
+          description: c.description || detail.description,
+          examples: c.examples || [],
+          starterCode: c.starter_code || detail.starterCode,
+          testCases: c.test_cases,
+          functionName: c.function_name || 'solve',
+          returnType: c.return_type || 'void',
+          params: c.params || [],
+          constraints: c.constraints || [],
+          hints: c.hints || [],
+        };
+        setCachedDetail(key, enhanced);
+        setDetail(enhanced);
+        setIsGenerating(false);
+        return;
+      }
+
+      // Cache miss → invoke edge function (which itself caches and writes to DB)
       const { data, error } = await supabase.functions.invoke('generate-problem-detail', {
         body: {
+          problem_key: key,
           title: roadmapProblem.title,
           difficulty: roadmapProblem.difficulty,
           topic: (roadmapProblem as any).topic || '',
