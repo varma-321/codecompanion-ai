@@ -1,15 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Flame, Target, Trophy, Brain, TrendingUp, Clock, Activity, Zap, BarChart3, BookOpen, AlertTriangle } from 'lucide-react';
+import { Flame, Target, Trophy, Brain, TrendingUp, Clock, Activity, Zap, BookOpen, AlertTriangle, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { useUser } from '@/lib/user-context';
 import { supabase } from '@/integrations/supabase/client';
 import { STRIVER_ROADMAP, getTotalProblems } from '@/lib/striver-roadmap-data';
 import { NEETCODE_ROADMAP, getNeetcodeTotalProblems } from '@/lib/neetcode-roadmap-data';
 import { LEETCODE_TOP150_ROADMAP, getLeetcodeTop150TotalProblems } from '@/lib/leetcode-top150-data';
+import AppShell from '@/components/AppShell';
 
 const ALL_ROADMAPS = [...STRIVER_ROADMAP, ...NEETCODE_ROADMAP, ...LEETCODE_TOP150_ROADMAP];
 
