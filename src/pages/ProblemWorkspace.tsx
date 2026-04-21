@@ -979,45 +979,47 @@ const ProblemWorkspace = () => {
             </Button>
           )}
 
-          {/* Approach Tabs */}
-          <div className="flex items-center gap-0 border-b border-panel-border bg-ide-toolbar px-1">
-            {APPROACHES.map(approach => (
-              <button
-                key={approach.key}
-                onClick={() => {
-                  setActiveApproach(approach.key);
-                  wsResetSaved(codes[approach.key]);
-                }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors border-b-2 ${
-                  activeApproach === approach.key
-                    ? `${approach.color} border-current`
-                    : 'text-muted-foreground border-transparent hover:text-foreground'
-                }`}
-              >
-                {approach.icon}
-                {approach.label}
-              </button>
-            ))}
-            <span className="ml-auto text-[10px] text-muted-foreground pr-2">
-              {APPROACHES.find(a => a.key === activeApproach)?.label} approach
-            </span>
+          {/* Approach Tabs — refined segmented look */}
+          <div className="flex items-center border-b border-panel-border bg-card/60 px-2 h-9">
+            <div className="flex items-center gap-0.5 p-0.5 rounded-md bg-muted/40">
+              {APPROACHES.map(approach => (
+                <button
+                  key={approach.key}
+                  onClick={() => {
+                    setActiveApproach(approach.key);
+                    wsResetSaved(codes[approach.key]);
+                  }}
+                  className={`flex items-center gap-1.5 px-3 h-7 rounded text-[11px] font-medium transition-all ${
+                    activeApproach === approach.key
+                      ? 'bg-card text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {approach.icon}
+                  {approach.label}
+                </button>
+              ))}
+            </div>
+            <span className="ml-auto text-[11px] text-muted-foreground tracking-tight font-mono">Java</span>
           </div>
 
           <div className="flex-1 overflow-hidden">
             <CodeEditor code={code} onChange={setCode} />
           </div>
 
-          <div onMouseDown={handleDividerMouseDown} className="resize-handle h-1 cursor-row-resize border-t border-panel-border hover:bg-primary/30 transition-colors" />
+          <div onMouseDown={handleDividerMouseDown} className="resize-handle h-1 cursor-row-resize border-t border-panel-border hover:bg-primary/40 transition-colors" />
 
           {/* Bottom panel */}
-          <div className="shrink-0 border-t border-panel-border" style={{ height: consoleHeight }}>
-            <div className="flex items-center border-b border-panel-border bg-ide-toolbar overflow-x-auto scrollbar-none">
+          <div className="shrink-0 border-t border-panel-border bg-card/40" style={{ height: consoleHeight }}>
+            <div className="flex items-center border-b border-panel-border bg-card/60 px-1 h-9 overflow-x-auto scrollbar-none">
               {tabItems.map(tab => (
                 <button
                   key={tab.key}
                   onClick={() => setBottomTab(tab.key)}
-                  className={`px-2 sm:px-3 py-1.5 text-[10px] sm:text-xs font-semibold uppercase tracking-wider transition-colors whitespace-nowrap shrink-0 ${
-                    bottomTab === tab.key ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'
+                  className={`relative px-3 h-9 text-[11px] font-medium transition-colors whitespace-nowrap shrink-0 ${
+                    bottomTab === tab.key
+                      ? 'text-foreground after:absolute after:left-2 after:right-2 after:bottom-0 after:h-0.5 after:bg-foreground after:rounded-full'
+                      : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   {tab.label}
