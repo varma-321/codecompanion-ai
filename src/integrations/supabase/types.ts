@@ -314,6 +314,66 @@ export type Database = {
         }
         Relationships: []
       }
+      problem_test_cases: {
+        Row: {
+          constraints: Json
+          created_at: string
+          description: string
+          difficulty: string
+          examples: Json
+          function_name: string
+          generated_by: string | null
+          hints: Json
+          id: string
+          params: Json
+          problem_key: string
+          return_type: string
+          starter_code: string
+          test_cases: Json
+          title: string
+          topic: string
+          updated_at: string
+        }
+        Insert: {
+          constraints?: Json
+          created_at?: string
+          description?: string
+          difficulty?: string
+          examples?: Json
+          function_name?: string
+          generated_by?: string | null
+          hints?: Json
+          id?: string
+          params?: Json
+          problem_key: string
+          return_type?: string
+          starter_code?: string
+          test_cases?: Json
+          title?: string
+          topic?: string
+          updated_at?: string
+        }
+        Update: {
+          constraints?: Json
+          created_at?: string
+          description?: string
+          difficulty?: string
+          examples?: Json
+          function_name?: string
+          generated_by?: string | null
+          hints?: Json
+          id?: string
+          params?: Json
+          problem_key?: string
+          return_type?: string
+          starter_code?: string
+          test_cases?: Json
+          title?: string
+          topic?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       problems: {
         Row: {
           bookmarked: boolean
