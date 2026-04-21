@@ -1,18 +1,15 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, ChevronDown, ChevronRight, CheckCircle2, Circle,
-  Bookmark, BookmarkCheck, Loader2, Target, Sparkles, RotateCcw,
+  ChevronDown, ChevronRight, CheckCircle2, Circle, Bookmark, BookmarkCheck,
+  Loader2, Target, Sparkles, RotateCcw, ArrowRight,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Button } from '@/components/ui/button';
 import { useUser } from '@/lib/user-context';
 import { supabase } from '@/integrations/supabase/client';
-import { getDifficultyBg, type RoadmapProblem, type RoadmapTopic } from '@/lib/striver-roadmap-data';
+import { type RoadmapProblem, type RoadmapTopic } from '@/lib/striver-roadmap-data';
+import AppShell from '@/components/AppShell';
 
 interface UserProgress {
   problem_key: string;
@@ -29,7 +26,10 @@ interface RoadmapPageProps {
   backPath?: string;
 }
 
-const RoadmapPage = ({ title, icon, roadmap, backPath = '/modules' }: RoadmapPageProps) => {
+const difficultyDot = (d: string) =>
+  d === 'Easy' ? 'bg-success' : d === 'Hard' ? 'bg-destructive' : 'bg-warning';
+
+const RoadmapPage = ({ title, roadmap }: RoadmapPageProps) => {
   const navigate = useNavigate();
   const { authUser } = useUser();
   const [progress, setProgress] = useState<Record<string, UserProgress>>({});
@@ -37,14 +37,12 @@ const RoadmapPage = ({ title, icon, roadmap, backPath = '/modules' }: RoadmapPag
   const [openTopics, setOpenTopics] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<'all' | 'solved' | 'unsolved' | 'revision'>('all');
 
-  // Collect all problem keys for this roadmap
   const allKeys = useMemo(() => roadmap.flatMap(t => t.problems.map(p => p.key)), [roadmap]);
 
   useEffect(() => {
-    if (!authUser) return;
-    const load = async () => {
+    if (!authUser) { setLoading(false); return; }
+    (async () => {
       setLoading(true);
-      // Fetch progress only for keys in this module
       const { data } = await supabase
         .from('user_problem_progress')
         .select('problem_key, status, solved, marked_for_revision, attempts')
@@ -54,8 +52,7 @@ const RoadmapPage = ({ title, icon, roadmap, backPath = '/modules' }: RoadmapPag
       (data || []).forEach((p: any) => { map[p.problem_key] = p; });
       setProgress(map);
       setLoading(false);
-    };
-    load();
+    })();
   }, [authUser, allKeys]);
 
   const stats = useMemo(() => {
@@ -81,17 +78,14 @@ const RoadmapPage = ({ title, icon, roadmap, backPath = '/modules' }: RoadmapPag
     return weakest.problem ? { topic: weakest.name, problem: weakest.problem } : null;
   }, [progress, roadmap]);
 
-  const toggleTopic = (name: string) => {
+  const toggleTopic = (name: string) =>
     setOpenTopics(prev => {
       const next = new Set(prev);
       next.has(name) ? next.delete(name) : next.add(name);
       return next;
     });
-  };
 
-  const handlePractice = (problem: RoadmapProblem) => {
-    navigate(`/problem/${problem.key}`);
-  };
+  const handlePractice = (problem: RoadmapProblem) => navigate(`/problem/${problem.key}`);
 
   const toggleSolved = async (problem: RoadmapProblem) => {
     if (!authUser) return;
@@ -106,41 +100,27 @@ const RoadmapPage = ({ title, icon, roadmap, backPath = '/modules' }: RoadmapPag
       last_attempted: new Date().toISOString(),
       ...(nowSolved ? { solved_at: new Date().toISOString() } : {}),
     };
-
     if (existing) {
       await supabase.from('user_problem_progress').update(upsertData as any).eq('user_id', authUser.id).eq('problem_key', problem.key);
     } else {
       await supabase.from('user_problem_progress').insert(upsertData as any);
     }
-
-    setProgress(prev => ({
-      ...prev,
-      [problem.key]: { ...prev[problem.key], ...upsertData } as UserProgress,
-    }));
+    setProgress(prev => ({ ...prev, [problem.key]: { ...prev[problem.key], ...upsertData } as UserProgress }));
   };
 
   const toggleRevision = async (problem: RoadmapProblem) => {
     if (!authUser) return;
     const existing = progress[problem.key];
     const newVal = !existing?.marked_for_revision;
-
     if (existing) {
       await supabase.from('user_problem_progress').update({ marked_for_revision: newVal } as any).eq('user_id', authUser.id).eq('problem_key', problem.key);
     } else {
       await supabase.from('user_problem_progress').insert({
-        user_id: authUser.id,
-        problem_key: problem.key,
-        status: 'not_started',
-        solved: false,
-        marked_for_revision: newVal,
-        attempts: 0,
+        user_id: authUser.id, problem_key: problem.key, status: 'not_started',
+        solved: false, marked_for_revision: newVal, attempts: 0,
       } as any);
     }
-
-    setProgress(prev => ({
-      ...prev,
-      [problem.key]: { ...prev[problem.key], problem_key: problem.key, marked_for_revision: newVal } as UserProgress,
-    }));
+    setProgress(prev => ({ ...prev, [problem.key]: { ...prev[problem.key], problem_key: problem.key, marked_for_revision: newVal } as UserProgress }));
   };
 
   const filterProblems = (problems: RoadmapProblem[]) => {
@@ -151,224 +131,165 @@ const RoadmapPage = ({ title, icon, roadmap, backPath = '/modules' }: RoadmapPag
     return problems;
   };
 
+  const overallPct = stats.total > 0 ? (stats.solved / stats.total) * 100 : 0;
+
   return (
-    <div className="flex h-screen flex-col bg-background">
-      {/* Header */}
-      <div className="flex items-center gap-2 sm:gap-3 border-b border-panel-border bg-ide-toolbar px-3 sm:px-4 py-2 overflow-x-auto scrollbar-none">
-        <Button variant="ghost" size="sm" onClick={() => navigate(backPath)} className="h-7 gap-1 text-xs shrink-0">
-          <ArrowLeft className="h-3 w-3" /> <span className="hidden sm:inline">Back</span>
-        </Button>
-        <div className="flex items-center gap-2 shrink-0">
-          {icon}
-          <span className="text-xs sm:text-sm font-bold truncate max-w-[150px] sm:max-w-none">{title}</span>
-        </div>
-        <Badge variant="secondary" className="text-xs shrink-0">{stats.solved}/{stats.total}</Badge>
-      </div>
-
-      <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
-        {/* Sidebar stats - hidden on mobile, shown as horizontal scroll on tablet */}
-        <div className="hidden md:block w-64 lg:w-72 shrink-0 border-r border-panel-border bg-ide-sidebar overflow-auto">
-          <div className="p-4 space-y-4">
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-semibold text-muted-foreground">Overall Progress</span>
-                <span className="text-xs font-bold text-primary">{stats.total > 0 ? Math.round((stats.solved / stats.total) * 100) : 0}%</span>
-              </div>
-              <Progress value={stats.total > 0 ? (stats.solved / stats.total) * 100 : 0} className="h-2" />
-              <div className="mt-1 text-[10px] text-muted-foreground">{stats.solved} of {stats.total} problems completed</div>
+    <AppShell title={title} subtitle={`${stats.solved} of ${stats.total} solved · ${Math.round(overallPct)}%`}>
+      <div className="max-w-6xl mx-auto px-6 py-8 grid lg:grid-cols-[280px,1fr] gap-8 animate-in-up">
+        {/* Side column */}
+        <aside className="space-y-5 lg:sticky lg:top-20 lg:self-start">
+          <div className="surface-elevated p-5 rounded-xl">
+            <div className="flex items-baseline justify-between mb-3">
+              <span className="text-[11px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">Progress</span>
+              <span className="text-sm font-semibold tabular-nums">{Math.round(overallPct)}%</span>
             </div>
-
-            <div className="space-y-2">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">By Difficulty</span>
-              <div className="flex items-center justify-between">
-                <Badge variant="outline" className="bg-success/10 text-success border-success/20 text-[10px]">Easy</Badge>
-                <span className="text-xs font-mono">{stats.easy}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20 text-[10px]">Medium</Badge>
-                <span className="text-xs font-mono">{stats.medium}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 text-[10px]">Hard</Badge>
-                <span className="text-xs font-mono">{stats.hard}</span>
-              </div>
+            <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+              <div className="h-full bg-foreground rounded-full transition-all duration-700" style={{ width: `${overallPct}%` }} />
             </div>
+            <div className="text-[11px] text-muted-foreground mt-2 tabular-nums">{stats.solved} / {stats.total} problems</div>
+          </div>
 
-            {recommendation && (
-              <Card className="border-primary/20 bg-primary/5">
-                <CardContent className="p-3">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <Sparkles className="h-3 w-3 text-primary" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Recommended Next</span>
-                  </div>
-                  <div className="text-xs font-medium text-foreground">{recommendation.problem.title}</div>
-                  <div className="text-[10px] text-muted-foreground mt-0.5">{recommendation.topic}</div>
-                  <Button size="sm" className="mt-2 h-6 text-[10px] w-full" onClick={() => handlePractice(recommendation.problem)}>
-                    Practice Now
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
+          <div className="surface p-5 rounded-xl space-y-3">
+            <div className="text-[11px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">Difficulty</div>
+            {[
+              { label: 'Easy', count: stats.easy },
+              { label: 'Medium', count: stats.medium },
+              { label: 'Hard', count: stats.hard },
+            ].map(d => (
+              <div key={d.label} className="flex items-center justify-between text-[13px]">
+                <span className="flex items-center gap-2">
+                  <span className={`h-1.5 w-1.5 rounded-full ${difficultyDot(d.label)}`} />
+                  {d.label}
+                </span>
+                <span className="text-muted-foreground tabular-nums font-mono text-xs">{d.count}</span>
+              </div>
+            ))}
+          </div>
 
-            {stats.revision > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full h-8 gap-1.5 text-xs"
-                onClick={() => setFilter(filter === 'revision' ? 'all' : 'revision')}
-              >
-                <RotateCcw className="h-3 w-3" />
-                Revision List ({stats.revision})
+          {recommendation && (
+            <div className="surface-elevated p-5 rounded-xl space-y-2">
+              <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">
+                <Sparkles className="h-3 w-3" /> Recommended next
+              </div>
+              <div className="text-[13px] font-medium leading-snug">{recommendation.problem.title}</div>
+              <div className="text-[11px] text-muted-foreground">{recommendation.topic}</div>
+              <Button size="sm" className="w-full h-8 mt-2 text-[12px] gap-1" onClick={() => handlePractice(recommendation.problem!)}>
+                Practice now <ArrowRight className="h-3 w-3" />
               </Button>
-            )}
-
-            <div className="space-y-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Filter</span>
-              <div className="flex flex-wrap gap-1">
-                {(['all', 'unsolved', 'solved', 'revision'] as const).map(f => (
-                  <Badge
-                    key={f}
-                    variant={filter === f ? 'default' : 'secondary'}
-                    className="cursor-pointer text-[10px]"
-                    onClick={() => setFilter(f)}
-                  >
-                    {f.charAt(0).toUpperCase() + f.slice(1)}
-                  </Badge>
-                ))}
-              </div>
             </div>
+          )}
 
-            <div className="space-y-1.5">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Topics</span>
-              {roadmap.map(topic => {
-                const solved = topic.problems.filter(p => progress[p.key]?.solved).length;
-                return (
+          <div className="space-y-2">
+            <div className="text-[11px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">Filter</div>
+            <div className="flex flex-wrap gap-1.5">
+              {(['all', 'unsolved', 'solved', 'revision'] as const).map(f => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={`text-[11px] px-2.5 py-1 rounded-full border transition-all ${
+                    filter === f
+                      ? 'bg-foreground text-background border-foreground'
+                      : 'border-border text-muted-foreground hover:text-foreground hover:border-foreground/30'
+                  }`}
+                >
+                  {f.charAt(0).toUpperCase() + f.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {stats.revision > 0 && (
+            <button
+              onClick={() => setFilter(filter === 'revision' ? 'all' : 'revision')}
+              className="flex items-center gap-2 text-[12px] text-muted-foreground hover:text-foreground transition-colors w-full"
+            >
+              <RotateCcw className="h-3 w-3" /> Revision list ({stats.revision})
+            </button>
+          )}
+        </aside>
+
+        {/* Main list */}
+        <div className="space-y-2 min-w-0">
+          {loading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 6 }).map((_, i) => <div key={i} className="surface h-16 animate-pulse rounded-xl" />)}
+            </div>
+          ) : (
+            roadmap.map((topic) => {
+              const filteredProblems = filterProblems(topic.problems);
+              const solvedCount = topic.problems.filter(p => progress[p.key]?.solved).length;
+              const pct = topic.problems.length > 0 ? (solvedCount / topic.problems.length) * 100 : 0;
+              const isOpen = openTopics.has(topic.name);
+              if (filter !== 'all' && filteredProblems.length === 0) return null;
+
+              return (
+                <div key={topic.name} className="surface rounded-xl overflow-hidden">
                   <button
-                    key={topic.name}
-                    onClick={() => {
-                      toggleTopic(topic.name);
-                      document.getElementById(`topic-${topic.name}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }}
-                    className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors hover:bg-muted"
+                    onClick={() => toggleTopic(topic.name)}
+                    className="w-full flex items-center gap-3 p-4 hover:bg-secondary/50 transition-colors text-left"
                   >
-                    <span>{topic.icon}</span>
-                    <span className="flex-1 text-left truncate">{topic.name}</span>
-                    <span className="text-[10px] text-muted-foreground font-mono">{solved}/{topic.problems.length}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Main content */}
-        <ScrollArea className="flex-1">
-          <div className="p-3 sm:p-6 max-w-4xl mx-auto space-y-3">
-            {loading ? (
-              <div className="flex justify-center py-20">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              </div>
-            ) : (
-              roadmap.map(topic => {
-                const filteredProblems = filterProblems(topic.problems);
-                const solvedCount = topic.problems.filter(p => progress[p.key]?.solved).length;
-                const pct = topic.problems.length > 0 ? (solvedCount / topic.problems.length) * 100 : 0;
-                const isOpen = openTopics.has(topic.name);
-
-                if (filter !== 'all' && filteredProblems.length === 0) return null;
-
-                return (
-                  <Collapsible key={topic.name} open={isOpen} onOpenChange={() => toggleTopic(topic.name)}>
-                    <div id={`topic-${topic.name}`}>
-                      <CollapsibleTrigger asChild>
-                        <Card className={`cursor-pointer transition-all hover:border-primary/30 ${isOpen ? 'border-primary/30 shadow-sm' : ''}`}>
-                          <CardContent className="p-4">
-                            <div className="flex items-center gap-3">
-                              <span className="text-2xl">{topic.icon}</span>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm font-bold text-foreground">{topic.name}</span>
-                                  <Badge variant="secondary" className="text-[10px]">{topic.problems.length} problems</Badge>
-                                  {pct >= 80 && <Badge className="bg-success text-[10px]">Mastered</Badge>}
-                                </div>
-                                <div className="flex items-center gap-2 mt-1.5">
-                                  <Progress value={pct} className="h-1.5 flex-1" />
-                                  <span className="text-[10px] font-mono text-muted-foreground w-16 text-right">
-                                    {solvedCount}/{topic.problems.length}
-                                  </span>
-                                </div>
-                              </div>
-                              {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </CollapsibleTrigger>
-
-                      <CollapsibleContent>
-                        <div className="mt-1 space-y-0.5 pl-4">
-                          {filteredProblems.map((problem, idx) => {
-                            const p = progress[problem.key];
-                            const isSolved = p?.solved;
-                            const isRevision = p?.marked_for_revision;
-
-                            return (
-                              <div
-                                key={problem.key}
-                                className={`flex items-center gap-3 rounded-md px-3 py-2 text-xs transition-all animate-fade-in ${
-                                  isSolved ? 'bg-success/5' : 'hover:bg-muted/50'
-                                }`}
-                                style={{ animationDelay: `${idx * 20}ms` }}
-                              >
-                                <button onClick={() => toggleSolved(problem)} className="shrink-0">
-                                  {isSolved ? (
-                                    <CheckCircle2 className="h-4 w-4 text-success" />
-                                  ) : (
-                                    <Circle className="h-4 w-4 text-muted-foreground hover:text-primary transition-colors" />
-                                  )}
-                                </button>
-
-                                <span className="text-[10px] text-muted-foreground font-mono w-6">{idx + 1}</span>
-
-                                <button
-                                  onClick={() => handlePractice(problem)}
-                                  className={`flex-1 text-left font-medium transition-colors hover:text-primary ${
-                                    isSolved ? 'text-muted-foreground line-through' : 'text-foreground'
-                                  }`}
-                                >
-                                  {problem.title}
-                                </button>
-
-                                <Badge variant="outline" className={`text-[9px] ${getDifficultyBg(problem.difficulty)}`}>
-                                  {problem.difficulty}
-                                </Badge>
-
-                                {p?.attempts ? (
-                                  <span className="text-[9px] text-muted-foreground flex items-center gap-0.5">
-                                    <Target className="h-2.5 w-2.5" />{p.attempts}
-                                  </span>
-                                ) : null}
-
-                                <button onClick={() => toggleRevision(problem)} className="shrink-0">
-                                  {isRevision ? (
-                                    <BookmarkCheck className="h-3.5 w-3.5 text-warning" />
-                                  ) : (
-                                    <Bookmark className="h-3.5 w-3.5 text-muted-foreground hover:text-warning transition-colors" />
-                                  )}
-                                </button>
-                              </div>
-                            );
-                          })}
+                    <div className="text-xl shrink-0">{topic.icon}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[14px] font-semibold tracking-tight truncate">{topic.name}</span>
+                        {pct >= 100 && <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0" />}
+                      </div>
+                      <div className="flex items-center gap-3 mt-1.5">
+                        <div className="flex-1 h-1 bg-secondary rounded-full overflow-hidden max-w-xs">
+                          <div className="h-full bg-foreground rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
                         </div>
-                      </CollapsibleContent>
+                        <span className="text-[11px] text-muted-foreground tabular-nums font-mono">{solvedCount}/{topic.problems.length}</span>
+                      </div>
                     </div>
-                  </Collapsible>
-                );
-              })
-            )}
-          </div>
-        </ScrollArea>
+                    {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
+                  </button>
+
+                  {isOpen && (
+                    <div className="border-t border-border divide-y divide-border">
+                      {filteredProblems.map((problem, idx) => {
+                        const p = progress[problem.key];
+                        const isSolved = p?.solved;
+                        const isRevision = p?.marked_for_revision;
+                        return (
+                          <div
+                            key={problem.key}
+                            className="flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/40 transition-colors group animate-fade-in"
+                            style={{ animationDelay: `${Math.min(idx, 10) * 18}ms` }}
+                          >
+                            <button onClick={() => toggleSolved(problem)} aria-label="Toggle solved" className="shrink-0">
+                              {isSolved ? <CheckCircle2 className="h-4 w-4 text-success" /> : <Circle className="h-4 w-4 text-muted-foreground/60 hover:text-foreground transition-colors" />}
+                            </button>
+                            <span className="text-[10px] text-muted-foreground/70 font-mono tabular-nums w-6 text-right">{idx + 1}</span>
+                            <button
+                              onClick={() => handlePractice(problem)}
+                              className={`flex-1 text-left text-[13px] font-medium truncate transition-colors ${isSolved ? 'text-muted-foreground' : 'text-foreground hover:text-foreground'}`}
+                            >
+                              {problem.title}
+                            </button>
+                            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground shrink-0">
+                              <span className={`h-1.5 w-1.5 rounded-full ${difficultyDot(problem.difficulty)}`} />
+                              <span className="hidden sm:inline">{problem.difficulty}</span>
+                            </div>
+                            {p?.attempts ? (
+                              <span className="text-[10px] text-muted-foreground flex items-center gap-0.5 tabular-nums shrink-0">
+                                <Target className="h-2.5 w-2.5" />{p.attempts}
+                              </span>
+                            ) : null}
+                            <button onClick={() => toggleRevision(problem)} aria-label="Toggle revision" className="shrink-0 opacity-0 group-hover:opacity-100 data-[on=true]:opacity-100 transition-opacity" data-on={isRevision}>
+                              {isRevision ? <BookmarkCheck className="h-3.5 w-3.5 text-warning" /> : <Bookmark className="h-3.5 w-3.5 text-muted-foreground/70 hover:text-warning transition-colors" />}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
       </div>
-    </div>
+    </AppShell>
   );
 };
 
