@@ -102,136 +102,143 @@ const PerformanceDashboard = () => {
     };
   }, [progressData, execHistory, contestResults, learningHistory]);
 
-  if (loading) return <div className="flex h-screen items-center justify-center bg-background"><div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" /></div>;
-
-  return (
-    <div className="flex h-screen flex-col bg-background">
-      <div className="flex items-center gap-2 sm:gap-3 border-b border-border bg-card px-3 sm:px-5 py-3">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/modules')} className="h-8 gap-1.5 text-xs font-medium rounded-lg shrink-0">
-          <ArrowLeft className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Modules</span>
-        </Button>
-        <div className="h-4 w-px bg-border" />
-        <BarChart3 className="h-4 w-4 text-foreground" />
-        <span className="text-sm font-semibold tracking-tight">Performance Dashboard</span>
-      </div>
-
-      <div className="flex-1 overflow-auto">
-        <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-8">
-          {/* Hero Stats */}
-          <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 gap-2 sm:gap-3">
-            {[
-              { label: 'Solved', value: stats.totalSolved, icon: <Trophy className="h-4 w-4" />, color: 'text-primary' },
-              { label: 'Today', value: stats.todaySolved, icon: <Zap className="h-4 w-4" />, color: 'text-warning' },
-              { label: 'Streak', value: `${stats.streak}d`, icon: <Flame className="h-4 w-4" />, color: 'text-destructive' },
-              { label: 'Pass Rate', value: `${stats.passRate}%`, icon: <Target className="h-4 w-4" />, color: 'text-success' },
-              { label: 'Contests', value: stats.contestsPlayed, icon: <Activity className="h-4 w-4" />, color: 'text-primary' },
-              { label: 'Avg Tries', value: stats.avgAttempts, icon: <TrendingUp className="h-4 w-4" />, color: 'text-muted-foreground' },
-            ].map(s => (
-              <Card key={s.label} className="border-border">
-                <CardContent className="p-4 text-center">
-                  <div className={`${s.color} mx-auto mb-1`}>{s.icon}</div>
-                  <p className="text-2xl font-bold tabular-nums text-foreground">{s.value}</p>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">{s.label}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {/* Progress Bar */}
-          <div>
-            <div className="flex justify-between text-xs text-muted-foreground mb-1">
-              <span>Overall Progress</span>
-              <span>{stats.totalSolved} / {totalProblems} ({Math.round(stats.totalSolved / totalProblems * 100)}%)</span>
-            </div>
-            <Progress value={stats.totalSolved / totalProblems * 100} className="h-2" />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-            {/* Weekly Activity */}
-            <Card className="border-border">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2"><Activity className="h-4 w-4" /> This Week</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-end gap-2 h-24">
-                  {stats.weekActivity.map((d, i) => (
-                    <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                      <div className="w-full bg-primary/20 rounded-t" style={{ height: `${Math.max(d.count * 20, 4)}px` }}>
-                        <div className="w-full h-full bg-primary rounded-t" />
-                      </div>
-                      <span className="text-[9px] text-muted-foreground">{d.day}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Difficulty Breakdown */}
-            <Card className="border-border">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2"><Target className="h-4 w-4" /> By Difficulty</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {Object.entries(stats.diffMap).map(([diff, v]) => (
-                  <div key={diff}>
-                    <div className="flex justify-between text-xs mb-1">
-                      <Badge variant="outline" className={`text-[10px] ${diff === 'Easy' ? 'text-green-500' : diff === 'Medium' ? 'text-yellow-500' : 'text-red-500'}`}>{diff}</Badge>
-                      <span className="text-muted-foreground">{v.solved}/{v.total}</span>
-                    </div>
-                    <Progress value={v.total > 0 ? v.solved / v.total * 100 : 0} className="h-1.5" />
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            {/* Weak Topics */}
-            <Card className="border-border">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-destructive" /> Weak Topics</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {stats.weakTopics.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">No weak topics detected — keep going!</p>
-                ) : (
-                  <div className="space-y-2">
-                    {stats.weakTopics.map(([topic, v]) => (
-                      <div key={topic} className="flex items-center justify-between">
-                        <span className="text-xs text-foreground truncate">{topic}</span>
-                        <Badge variant="destructive" className="text-[10px]">{Math.round(v.solved / v.total * 100)}%</Badge>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <Button variant="outline" size="sm" className="mt-3 w-full text-xs" onClick={() => navigate('/weak-topics')}>
-                  View Full Analysis →
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Quick Actions */}
-            <Card className="border-border">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2"><Zap className="h-4 w-4" /> Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-2">
-                {[
-                  { label: 'Study Planner', icon: <Clock className="h-3.5 w-3.5" />, route: '/study-planner' },
-                  { label: 'Weak Topics', icon: <AlertTriangle className="h-3.5 w-3.5" />, route: '/weak-topics' },
-                  { label: 'Complexity', icon: <Activity className="h-3.5 w-3.5" />, route: '/complexity' },
-                  { label: 'Contest', icon: <Trophy className="h-3.5 w-3.5" />, route: '/contest' },
-                  { label: 'Learning Path', icon: <Brain className="h-3.5 w-3.5" />, route: '/learning-path' },
-                  { label: 'Spaced Review', icon: <BookOpen className="h-3.5 w-3.5" />, route: '/spaced-repetition' },
-                ].map(a => (
-                  <Button key={a.label} variant="outline" size="sm" className="h-9 text-xs gap-1.5 justify-start" onClick={() => navigate(a.route)}>
-                    {a.icon} {a.label}
-                  </Button>
-                ))}
-              </CardContent>
-            </Card>
+  if (loading) {
+    return (
+      <AppShell title="Performance">
+        <div className="max-w-6xl mx-auto p-6 space-y-6">
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+            {Array.from({ length: 6 }).map((_, i) => <div key={i} className="surface h-24 animate-pulse" />)}
           </div>
         </div>
+      </AppShell>
+    );
+  }
+
+  const overallPct = totalProblems > 0 ? (stats.totalSolved / totalProblems) * 100 : 0;
+
+  const heroCards = [
+    { label: 'Solved', value: stats.totalSolved, icon: Trophy },
+    { label: 'Today', value: stats.todaySolved, icon: Zap },
+    { label: 'Streak', value: `${stats.streak}d`, icon: Flame },
+    { label: 'Pass rate', value: `${stats.passRate}%`, icon: Target },
+    { label: 'Contests', value: stats.contestsPlayed, icon: Activity },
+    { label: 'Avg tries', value: stats.avgAttempts, icon: TrendingUp },
+  ];
+
+  return (
+    <AppShell title="Performance" subtitle="A calm overview of your practice">
+      <div className="max-w-6xl mx-auto px-6 py-10 space-y-10 animate-in-up">
+        {/* Hero stats */}
+        <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 animate-stagger">
+          {heroCards.map(s => (
+            <div key={s.label} className="surface p-4 rounded-xl">
+              <s.icon className="h-4 w-4 text-muted-foreground mb-3" />
+              <div className="text-2xl font-semibold tabular-nums tracking-tight">{s.value}</div>
+              <div className="text-[11px] text-muted-foreground uppercase tracking-wider mt-1 font-medium">{s.label}</div>
+            </div>
+          ))}
+        </section>
+
+        {/* Overall progress */}
+        <section className="surface-elevated p-6 rounded-2xl">
+          <div className="flex items-baseline justify-between mb-3">
+            <div>
+              <div className="text-xs uppercase tracking-[0.08em] text-muted-foreground font-semibold">Overall progress</div>
+              <div className="text-3xl font-semibold tabular-nums tracking-tight mt-1">{stats.totalSolved}<span className="text-muted-foreground text-lg font-normal"> / {totalProblems}</span></div>
+            </div>
+            <div className="text-2xl font-semibold tabular-nums tracking-tight text-muted-foreground">{Math.round(overallPct)}%</div>
+          </div>
+          <div className="h-2 bg-secondary rounded-full overflow-hidden">
+            <div className="h-full bg-foreground rounded-full transition-all duration-700" style={{ width: `${overallPct}%` }} />
+          </div>
+        </section>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Weekly */}
+          <section className="surface p-6 rounded-xl">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-5 flex items-center gap-2"><Activity className="h-3.5 w-3.5" /> This week</h3>
+            <div className="flex items-end gap-2 h-28">
+              {stats.weekActivity.map((d, i) => {
+                const max = Math.max(...stats.weekActivity.map(x => x.count), 1);
+                const h = (d.count / max) * 100;
+                return (
+                  <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
+                    <div className="w-full flex items-end h-full">
+                      <div className="w-full bg-foreground rounded-md transition-all duration-500" style={{ height: `${Math.max(h, 4)}%` }} />
+                    </div>
+                    <span className="text-[10px] text-muted-foreground tabular-nums">{d.day}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* Difficulty */}
+          <section className="surface p-6 rounded-xl">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-5 flex items-center gap-2"><Target className="h-3.5 w-3.5" /> By difficulty</h3>
+            <div className="space-y-4">
+              {Object.entries(stats.diffMap).map(([diff, v]) => {
+                const pct = v.total > 0 ? (v.solved / v.total) * 100 : 0;
+                return (
+                  <div key={diff} className="space-y-2">
+                    <div className="flex justify-between items-baseline text-[13px]">
+                      <span className="font-medium">{diff}</span>
+                      <span className="text-muted-foreground tabular-nums">{v.solved} <span className="text-muted-foreground/60">/ {v.total}</span></span>
+                    </div>
+                    <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                      <div className="h-full bg-foreground rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* Weak topics */}
+          <section className="surface p-6 rounded-xl">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-4 flex items-center gap-2"><AlertTriangle className="h-3.5 w-3.5" /> Weak topics</h3>
+            {stats.weakTopics.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No weak topics — keep going.</p>
+            ) : (
+              <div className="space-y-2.5">
+                {stats.weakTopics.map(([topic, v]) => (
+                  <div key={topic} className="flex items-center justify-between gap-3">
+                    <span className="text-[13px] truncate">{topic}</span>
+                    <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">{Math.round(v.solved / v.total * 100)}%</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <Button variant="ghost" size="sm" className="mt-4 w-full text-[12px] h-8 justify-between" onClick={() => navigate('/weak-topics')}>
+              View full analysis <ArrowRight className="h-3 w-3" />
+            </Button>
+          </section>
+
+          {/* Quick actions */}
+          <section className="surface p-6 rounded-xl">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-4 flex items-center gap-2"><Zap className="h-3.5 w-3.5" /> Quick actions</h3>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: 'Study Planner', icon: Clock, route: '/study-planner' },
+                { label: 'Weak Topics', icon: AlertTriangle, route: '/weak-topics' },
+                { label: 'Complexity', icon: Activity, route: '/complexity' },
+                { label: 'Contest', icon: Trophy, route: '/contest' },
+                { label: 'Learning Path', icon: Brain, route: '/learning-path' },
+                { label: 'Spaced Review', icon: BookOpen, route: '/spaced-repetition' },
+              ].map(a => (
+                <button
+                  key={a.label}
+                  onClick={() => navigate(a.route)}
+                  className="card-interactive group flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2.5 text-left text-[12px] font-medium"
+                >
+                  <a.icon className="h-3.5 w-3.5 text-muted-foreground" /> {a.label}
+                </button>
+              ))}
+            </div>
+          </section>
+        </div>
       </div>
-    </div>
+    </AppShell>
   );
 };
 
