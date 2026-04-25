@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Play, Timer, Loader2, CheckCircle2, Shuffle, Building2, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -64,7 +63,6 @@ const COMPANY_NAMES = Object.keys(COMPANY_TAGS);
 // ─── Component ───────────────────────────────────────────────────
 
 const InterviewSimulator = () => {
-  const navigate = useNavigate();
   const { authUser } = useUser();
   const [difficulty, setDifficulty] = useState('all');
   const [timeLimit, setTimeLimit] = useState(30);
