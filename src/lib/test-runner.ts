@@ -444,6 +444,30 @@ function toIntegerArrayLiteral(value: string): string {
   return 'new Integer[]{}';
 }
 
+function getSupportTypes(userCode: string, needsListNode: boolean, needsTreeNode: boolean): string {
+  const blocks: string[] = [];
+  if (needsListNode && !/class\s+ListNode\b/.test(userCode)) {
+    blocks.push(`class ListNode {
+    int val;
+    ListNode next;
+    ListNode() {}
+    ListNode(int val) { this.val = val; }
+    ListNode(int val, ListNode next) { this.val = val; this.next = next; }
+}`);
+  }
+  if (needsTreeNode && !/class\s+TreeNode\b/.test(userCode)) {
+    blocks.push(`class TreeNode {
+    int val;
+    TreeNode left;
+    TreeNode right;
+    TreeNode() {}
+    TreeNode(int val) { this.val = val; }
+    TreeNode(int val, TreeNode left, TreeNode right) { this.val = val; this.left = left; this.right = right; }
+}`);
+  }
+  return blocks.join('\n\n');
+}
+
 // ─── Build stdin string from test case inputs ────────────────────
 // Converts test case variables to stdin lines that Scanner can read
 
