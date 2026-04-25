@@ -401,6 +401,17 @@ function getListNodeBuilder(nodeType: string): string {
             node = node.next;
         }
         return out.toString();
+    }
+    private static int nodeIndex(${nodeType} head, ${nodeType} target) {
+        int idx = 0;
+        java.util.Set<${nodeType}> seen = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+        while (head != null && !seen.contains(head) && idx < 10000) {
+            if (head == target) return idx;
+            seen.add(head);
+            head = head.next;
+            idx++;
+        }
+        return -1;
     }`;
 }
 
