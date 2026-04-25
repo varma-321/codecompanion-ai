@@ -603,7 +603,9 @@ export function buildTestWrapper(
       : `new ${className}().${methodSig.name}`;
 
     if (resultType === 'void') {
-      callCode = `            ${caller}(${args});\n            System.out.println("void");`;
+      const firstParam = methodSig.params[0];
+      const mutatedPrint = firstParam ? buildValuePrint(normalizeNodeType(firstParam.type, userCode, className), firstParam.name) : 'System.out.println("void");';
+      callCode = `            ${caller}(${args});\n            ${mutatedPrint}`;
     } else {
       callCode = `            ${resultType} result = ${caller}(${args});\n            ${printStmt}`;
     }
