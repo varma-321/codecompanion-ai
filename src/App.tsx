@@ -64,7 +64,7 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
-              <Route path="/" element={shell(<Index />, "Home", "AI CodeCompiler · DSA Lab")} />
+              <Route path="/" element={<Index />} />
               <Route path="/modules" element={<ModuleSelector />} />
               <Route path="/striver" element={<StriverRoadmap />} />
               <Route path="/neetcode" element={<NeetCodeRoadmap />} />
@@ -74,7 +74,7 @@ const App = () => (
               <Route path="/spaced-repetition" element={shell(<SpacedRepetition />, "Spaced Repetition", "Review problems at the right interval")} />
               <Route path="/patterns" element={shell(<PatternsLibrary />, "Patterns", "Reusable DSA pattern library")} />
               <Route path="/leaderboard" element={shell(<Leaderboard />, "Leaderboard", "Community progress and rankings")} />
-              <Route path="/problem/:key" element={bareShell(<ProblemWorkspace />)} />
+              <Route path="/problem/:key" element={<ProblemWorkspace />} />
               <Route path="/analytics" element={shell(<StudyAnalytics />, "Study Analytics", "Practice insights and learning trends")} />
               <Route path="/generate" element={shell(<ProblemGenerator />, "Problem Generator", "Generate Java DSA drills")} />
               <Route path="/generator" element={shell(<ProblemGenerator />, "Problem Generator", "Generate Java DSA drills")} />
