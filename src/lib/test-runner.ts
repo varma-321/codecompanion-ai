@@ -560,8 +560,8 @@ export function buildTestWrapper(
       return getDefaultForType(param.type);
     }).join(', ');
 
-    const resultType = methodSig.returnType;
-    const printStmt = buildOutputPrint(resultType);
+    const resultType = normalizeNodeType(methodSig.returnType, userCode, className);
+    const printStmt = isLinkedListType(resultType) ? 'System.out.println(listToString(result));' : buildOutputPrint(resultType);
     
     const caller = methodSig.isStatic 
       ? `${className}.${methodSig.name}` 
@@ -574,8 +574,8 @@ export function buildTestWrapper(
     }
   } else if (methodSig && varNames.length === 0) {
     if (methodSig.params.length === 0) {
-      const resultType = methodSig.returnType;
-      const printStmt = buildOutputPrint(resultType);
+      const resultType = normalizeNodeType(methodSig.returnType, userCode, className);
+      const printStmt = isLinkedListType(resultType) ? 'System.out.println(listToString(result));' : buildOutputPrint(resultType);
       const caller = methodSig.isStatic 
         ? `${className}.${methodSig.name}` 
         : `new ${className}().${methodSig.name}`;
@@ -598,6 +598,7 @@ export function buildTestWrapper(
 ${userClass}
 
 public class Main {
+${helperBlocks.join('\n')}
     public static void main(String[] args) {
         try {
 ${varDecls.join('\n')}
