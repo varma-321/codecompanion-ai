@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import type { ReactNode } from "react";
 import { UserProvider } from "@/lib/user-context";
 import { ThemeProvider } from "@/lib/theme-context";
 import Index from "./pages/Index";
@@ -51,8 +52,8 @@ import AdminSignup from "./pages/AdminSignup";
 import AppShell from "./components/AppShell";
 
 const queryClient = new QueryClient();
-const shell = (element: React.ReactNode, title?: string, subtitle?: string) => <AppShell title={title} subtitle={subtitle}>{element}</AppShell>;
-const bareShell = (element: React.ReactNode) => <AppShell bare>{element}</AppShell>;
+const shell = (element: ReactNode, title?: string, subtitle?: string) => <AppShell title={title} subtitle={subtitle}>{element}</AppShell>;
+const bareShell = (element: ReactNode) => <AppShell bare>{element}</AppShell>;
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -97,19 +98,19 @@ const App = () => (
               <Route path="/complexity" element={shell(<ComplexityTracker />, "Complexity", "Track time and space complexity")} />
               <Route path="/reset-password" element={shell(<ResetPassword />, "Reset Password")} />
               <Route path="/dashboard" element={<PerformanceDashboard />} />
-              <Route path="/learning-path" element={<AdaptiveLearningPath />} />
-              <Route path="/code-review" element={<CodeReview />} />
-              <Route path="/discuss" element={<DiscussionForum />} />
-              <Route path="/today-review" element={<TodayReview />} />
-              <Route path="/search" element={<GlobalSearch />} />
-              <Route path="/streak-calendar" element={<StreakCalendar />} />
-              <Route path="/bigo" element={<BigOVisualizer />} />
+              <Route path="/learning-path" element={shell(<AdaptiveLearningPath />, "Adaptive Path", "Personalized Java DSA roadmap")} />
+              <Route path="/code-review" element={shell(<CodeReview />, "Code Review", "AI-assisted Java review")} />
+              <Route path="/discuss" element={shell(<DiscussionForum />, "Discussion", "Problem conversations")} />
+              <Route path="/today-review" element={shell(<TodayReview />, "Today’s Review", "Due problems and revisions")} />
+              <Route path="/search" element={shell(<GlobalSearch />, "Search", "Find problems, topics, and tools")} />
+              <Route path="/streak-calendar" element={shell(<StreakCalendar />, "Activity Calendar", "Consistency and streaks")} />
+              <Route path="/bigo" element={shell(<BigOVisualizer />, "Big-O Visualizer", "Explore complexity growth")} />
               <Route path="/profile" element={<UserProfile />} />
-              <Route path="/submissions" element={<SubmissionHistory />} />
-              <Route path="/admin-login" element={<AdminLogin />} />
-              <Route path="/admin/signup" element={<AdminSignup />} />
-              <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="*" element={<NotFound />} />
+              <Route path="/submissions" element={shell(<SubmissionHistory />, "Submissions", "Recent runs and attempts")} />
+              <Route path="/admin-login" element={shell(<AdminLogin />, "Admin Login")} />
+              <Route path="/admin/signup" element={shell(<AdminSignup />, "Admin Signup")} />
+              <Route path="/admin" element={shell(<AdminDashboard />, "Admin", "Moderation and user approvals")} />
+              <Route path="*" element={shell(<NotFound />, "Not Found")} />
             </Routes>
           </BrowserRouter>
         </TooltipProvider>
