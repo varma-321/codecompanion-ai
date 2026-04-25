@@ -402,7 +402,7 @@ const ProblemWorkspace = () => {
       const hasMain = /public\s+static\s+void\s+main\s*\(/.test(code);
       const harness = hasMain
         ? code
-        : `${code}\n\npublic class Main { public static void main(String[] args) { /* syntax check only */ } }`;
+        : `${code}\n\nclass Main { public static void main(String[] args) { /* syntax check only */ } }`;
 
       const result = await executeJavaCode(harness, (s) => setExecStatus(s));
       const execTime = Date.now() - startTime;
