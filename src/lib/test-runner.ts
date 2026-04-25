@@ -361,6 +361,68 @@ function getDefaultForType(javaType: string): string {
   }
 }
 
+function isLinkedListType(javaType: string): boolean {
+  return /(?:^|\.)ListNode$/.test(javaType.trim());
+}
+
+function isTreeType(javaType: string): boolean {
+  return /(?:^|\.)TreeNode$/.test(javaType.trim());
+}
+
+function normalizeNodeType(javaType: string, userCode: string, className: string): string {
+  const nestedList = new RegExp(`class\\s+${className}[\\s\\S]*?(?:static\\s+)?class\\s+ListNode`).test(userCode);
+  const nestedTree = new RegExp(`class\\s+${className}[\\s\\S]*?(?:static\\s+)?class\\s+TreeNode`).test(userCode);
+  if (javaType === 'ListNode' && nestedList) return `${className}.ListNode`;
+  if (javaType === 'TreeNode' && nestedTree) return `${className}.TreeNode`;
+  return javaType;
+}
+
+function getListNodeBuilder(nodeType: string): string {
+  return `
+    private static ${nodeType} buildList(int[] values, int pos) {
+        if (values == null || values.length == 0) return null;
+        ${nodeType} head = new ${nodeType}(values[0]);
+        ${nodeType} current = head;
+        ${nodeType} cycle = pos == 0 ? head : null;
+        for (int i = 1; i < values.length; i++) {
+            current.next = new ${nodeType}(values[i]);
+            current = current.next;
+            if (i == pos) cycle = current;
+        }
+        if (pos >= 0) current.next = cycle;
+        return head;
+    }
+    private static String listToString(${nodeType} node) {
+        java.util.List<Integer> out = new java.util.ArrayList<>();
+        java.util.Set<${nodeType}> seen = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+        while (node != null && !seen.contains(node) && out.size() < 10000) {
+            seen.add(node);
+            out.add(node.val);
+            node = node.next;
+        }
+        return out.toString();
+    }`;
+}
+
+function getTreeNodeBuilder(nodeType: string): string {
+  return `
+    private static ${nodeType} buildTree(Integer[] values) {
+        if (values == null || values.length == 0 || values[0] == null) return null;
+        ${nodeType} root = new ${nodeType}(values[0]);
+        java.util.Queue<${nodeType}> q = new java.util.LinkedList<>();
+        q.offer(root);
+        int i = 1;
+        while (!q.isEmpty() && i < values.length) {
+            ${nodeType} node = q.poll();
+            if (i < values.length && values[i] != null) { node.left = new ${nodeType}(values[i]); q.offer(node.left); }
+            i++;
+            if (i < values.length && values[i] != null) { node.right = new ${nodeType}(values[i]); q.offer(node.right); }
+            i++;
+        }
+        return root;
+    }`;
+}
+
 // ─── Build stdin string from test case inputs ────────────────────
 // Converts test case variables to stdin lines that Scanner can read
 
