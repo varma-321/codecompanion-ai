@@ -211,6 +211,36 @@
   .animate-stagger > *:nth-child(7) { animation-delay: 0.26s; }
   .animate-stagger > *:nth-child(8) { animation-delay: 0.30s; }
   .animate-stagger > *:nth-child(n+9) { animation-delay: 0.34s; }
+
+  .app-shell-main > .min-h-screen,
+  .app-shell-main > .h-screen,
+  .app-shell-main > .flex.h-screen {
+    min-height: 100%;
+    height: auto;
+    background: transparent;
+  }
+
+  .app-shell-main > .min-h-screen > .max-w-2xl,
+  .app-shell-main > .min-h-screen > .max-w-4xl,
+  .app-shell-main > .min-h-screen > .max-w-5xl,
+  .app-shell-main > .min-h-screen > .max-w-6xl,
+  .app-shell-main > .max-w-2xl,
+  .app-shell-main > .max-w-4xl,
+  .app-shell-main > .max-w-5xl,
+  .app-shell-main > .max-w-6xl {
+    padding: 2.5rem 1.5rem;
+  }
+
+  .app-shell-main .border-panel-border,
+  .app-shell-main .border-border {
+    border-color: hsl(var(--border));
+  }
+
+  .app-shell-main .bg-ide-toolbar,
+  .app-shell-main .bg-panel,
+  .app-shell-main .bg-panel-header {
+    background-color: hsl(var(--card));
+  }
 }
 
 @keyframes tab-slide { from { transform: scaleX(0); } to { transform: scaleX(1); } }

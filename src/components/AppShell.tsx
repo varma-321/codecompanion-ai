@@ -229,7 +229,7 @@ export default function AppShell({ children, title, subtitle, actions, bare = fa
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
           {!bare && <Topbar title={title} subtitle={subtitle} actions={actions} />}
-          <main className="flex-1 min-w-0 overflow-auto animate-fade-in">{children}</main>
+          <main className="app-shell-main flex-1 min-w-0 overflow-auto animate-fade-in">{children}</main>
         </div>
       </div>
     </SidebarProvider>
