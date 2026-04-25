@@ -272,6 +272,13 @@ function buildOutputPrint(returnType: string): string {
   }
 }
 
+function buildValuePrint(javaType: string, varName: string): string {
+  if (isLinkedListType(javaType)) return `System.out.println(listToString(${varName}));`;
+  if (/\[\]$/.test(javaType) && !/\[\]\[\]$/.test(javaType)) return `System.out.println(java.util.Arrays.toString(${varName}));`;
+  if (/\[\]\[\]$/.test(javaType)) return `System.out.println(java.util.Arrays.deepToString(${varName}));`;
+  return `System.out.println(${varName});`;
+}
+
 // ─── Parse method signature from user code ───────────────────────
 
 interface MethodSignature {
@@ -361,6 +368,113 @@ function getDefaultForType(javaType: string): string {
   }
 }
 
+function isLinkedListType(javaType: string): boolean {
+  return /(?:^|\.)ListNode$/.test(javaType.trim());
+}
+
+function isTreeType(javaType: string): boolean {
+  return /(?:^|\.)TreeNode$/.test(javaType.trim());
+}
+
+function normalizeNodeType(javaType: string, userCode: string, className: string): string {
+  const nestedList = new RegExp(`class\\s+${className}[\\s\\S]*?(?:static\\s+)?class\\s+ListNode`).test(userCode);
+  const nestedTree = new RegExp(`class\\s+${className}[\\s\\S]*?(?:static\\s+)?class\\s+TreeNode`).test(userCode);
+  if (javaType === 'ListNode' && nestedList) return `${className}.ListNode`;
+  if (javaType === 'TreeNode' && nestedTree) return `${className}.TreeNode`;
+  return javaType;
+}
+
+function getListNodeBuilder(nodeType: string): string {
+  return `
+    private static ${nodeType} buildList(int[] values, int pos) {
+        if (values == null || values.length == 0) return null;
+        ${nodeType} head = new ${nodeType}(values[0]);
+        ${nodeType} current = head;
+        ${nodeType} cycle = pos == 0 ? head : null;
+        for (int i = 1; i < values.length; i++) {
+            current.next = new ${nodeType}(values[i]);
+            current = current.next;
+            if (i == pos) cycle = current;
+        }
+        if (pos >= 0) current.next = cycle;
+        return head;
+    }
+    private static String listToString(${nodeType} node) {
+        java.util.List<Integer> out = new java.util.ArrayList<>();
+        java.util.Set<${nodeType}> seen = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+        while (node != null && !seen.contains(node) && out.size() < 10000) {
+            seen.add(node);
+            out.add(node.val);
+            node = node.next;
+        }
+        return out.toString();
+    }
+    private static int nodeIndex(${nodeType} head, ${nodeType} target) {
+        int idx = 0;
+        java.util.Set<${nodeType}> seen = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+        while (head != null && !seen.contains(head) && idx < 10000) {
+            if (head == target) return idx;
+            seen.add(head);
+            head = head.next;
+            idx++;
+        }
+        return -1;
+    }`;
+}
+
+function getTreeNodeBuilder(nodeType: string): string {
+  return `
+    private static ${nodeType} buildTree(Integer[] values) {
+        if (values == null || values.length == 0 || values[0] == null) return null;
+        ${nodeType} root = new ${nodeType}(values[0]);
+        java.util.Queue<${nodeType}> q = new java.util.LinkedList<>();
+        q.offer(root);
+        int i = 1;
+        while (!q.isEmpty() && i < values.length) {
+            ${nodeType} node = q.poll();
+            if (i < values.length && values[i] != null) { node.left = new ${nodeType}(values[i]); q.offer(node.left); }
+            i++;
+            if (i < values.length && values[i] != null) { node.right = new ${nodeType}(values[i]); q.offer(node.right); }
+            i++;
+        }
+        return root;
+    }`;
+}
+
+function toIntegerArrayLiteral(value: string): string {
+  try {
+    const items = JSON.parse(value.trim());
+    if (Array.isArray(items)) {
+      return `new Integer[]{${items.map((item) => item === null ? 'null' : String(item)).join(', ')}}`;
+    }
+  } catch {}
+  return 'new Integer[]{}';
+}
+
+function getSupportTypes(userCode: string, needsListNode: boolean, needsTreeNode: boolean): string {
+  const blocks: string[] = [];
+  if (needsListNode && !/class\s+ListNode\b/.test(userCode)) {
+    blocks.push(`class ListNode {
+    int val;
+    ListNode next;
+    ListNode() {}
+    ListNode(int val) { this.val = val; }
+    ListNode(int val, ListNode next) { this.val = val; this.next = next; }
+}`);
+  }
+  if (needsTreeNode && !/class\s+TreeNode\b/.test(userCode)) {
+    blocks.push(`class TreeNode {
+    int val;
+    TreeNode left;
+    TreeNode right;
+    TreeNode() {}
+    TreeNode(int val) { this.val = val; }
+    TreeNode(int val, TreeNode left, TreeNode right) { this.val = val; this.left = left; this.right = right; }
+}`);
+  }
+  return blocks.join('\n\n');
+}
+
 // ─── Build stdin string from test case inputs ────────────────────
 // Converts test case variables to stdin lines that Scanner can read
 
@@ -416,6 +530,9 @@ export function buildTestWrapper(
   
   const varDecls: string[] = [];
   const varNames: string[] = [];
+  const helperBlocks: string[] = [];
+  let usesListNode = false;
+  let usesTreeNode = false;
   
   const paramTypeMap: Record<string, string> = {};
   if (methodSig) {
@@ -428,6 +545,7 @@ export function buildTestWrapper(
   
   for (let i = 0; i < inputEntries.length; i++) {
     const [name, value] = inputEntries[i];
+    if (methodSig && name === 'pos' && !paramTypeMap[name]) continue;
     let jType = paramTypeMap[name];
     if (!jType && methodSig && i < methodSig.params.length) {
       jType = methodSig.params[i].type;
@@ -435,12 +553,34 @@ export function buildTestWrapper(
     if (!jType) {
       jType = inferJavaType(value);
     }
-    const literal = toJavaLiteral(value, jType);
+    jType = normalizeNodeType(jType, userCode, className);
     const varName = (methodSig && i < methodSig.params.length && !paramTypeMap[name]) 
       ? methodSig.params[i].name 
       : name;
-    varDecls.push(`            ${jType} ${varName} = ${literal};`);
+
+    if (isLinkedListType(jType)) {
+      usesListNode = true;
+      const valuesName = `${varName}Values`;
+      const cyclePos = Number.isFinite(Number(safeInputs.pos)) ? Number(safeInputs.pos) : -1;
+      varDecls.push(`            int[] ${valuesName} = ${toJavaLiteral(value, 'int[]')};`);
+      varDecls.push(`            ${jType} ${varName} = buildList(${valuesName}, ${cyclePos});`);
+    } else if (isTreeType(jType)) {
+      usesTreeNode = true;
+      varDecls.push(`            ${jType} ${varName} = buildTree(${toIntegerArrayLiteral(value)});`);
+    } else {
+      const literal = toJavaLiteral(value, jType);
+      varDecls.push(`            ${jType} ${varName} = ${literal};`);
+    }
     varNames.push(varName);
+  }
+
+  if (usesListNode || (methodSig && (methodSig.params.some(p => isLinkedListType(p.type)) || isLinkedListType(methodSig.returnType)))) {
+    const nodeType = normalizeNodeType('ListNode', userCode, className);
+    helperBlocks.push(getListNodeBuilder(nodeType));
+  }
+  if (usesTreeNode || (methodSig && methodSig.params.some(p => isTreeType(p.type)))) {
+    const nodeType = normalizeNodeType('TreeNode', userCode, className);
+    helperBlocks.push(getTreeNodeBuilder(nodeType));
   }
 
   let callCode: string;
@@ -451,22 +591,28 @@ export function buildTestWrapper(
       return getDefaultForType(param.type);
     }).join(', ');
 
-    const resultType = methodSig.returnType;
-    const printStmt = buildOutputPrint(resultType);
+    const resultType = normalizeNodeType(methodSig.returnType, userCode, className);
+    const printStmt = isLinkedListType(resultType)
+      ? (methodSig.name.toLowerCase().includes('cycle') && methodSig.params[0]?.name
+        ? `System.out.println(nodeIndex(${methodSig.params[0].name}, result));`
+        : 'System.out.println(listToString(result));')
+      : buildOutputPrint(resultType);
     
     const caller = methodSig.isStatic 
       ? `${className}.${methodSig.name}` 
       : `new ${className}().${methodSig.name}`;
 
     if (resultType === 'void') {
-      callCode = `            ${caller}(${args});\n            System.out.println("void");`;
+      const firstParam = methodSig.params[0];
+      const mutatedPrint = firstParam ? buildValuePrint(normalizeNodeType(firstParam.type, userCode, className), firstParam.name) : 'System.out.println("void");';
+      callCode = `            ${caller}(${args});\n            ${mutatedPrint}`;
     } else {
       callCode = `            ${resultType} result = ${caller}(${args});\n            ${printStmt}`;
     }
   } else if (methodSig && varNames.length === 0) {
     if (methodSig.params.length === 0) {
-      const resultType = methodSig.returnType;
-      const printStmt = buildOutputPrint(resultType);
+      const resultType = normalizeNodeType(methodSig.returnType, userCode, className);
+      const printStmt = isLinkedListType(resultType) ? 'System.out.println(listToString(result));' : buildOutputPrint(resultType);
       const caller = methodSig.isStatic 
         ? `${className}.${methodSig.name}` 
         : `new ${className}().${methodSig.name}`;
@@ -484,11 +630,15 @@ export function buildTestWrapper(
 
   let userClass = userCode.trim();
   userClass = userClass.replace(/^public\s+class\s+/, 'class ');
+  const supportTypes = getSupportTypes(userClass, !!methodSig && (methodSig.params.some(p => isLinkedListType(p.type)) || isLinkedListType(methodSig.returnType)), !!methodSig && methodSig.params.some(p => isTreeType(p.type)));
 
   return `${imports}
+${supportTypes}
+
 ${userClass}
 
 public class Main {
+${helperBlocks.join('\n')}
     public static void main(String[] args) {
         try {
 ${varDecls.join('\n')}
