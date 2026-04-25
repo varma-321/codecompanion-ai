@@ -272,6 +272,13 @@ function buildOutputPrint(returnType: string): string {
   }
 }
 
+function buildValuePrint(javaType: string, varName: string): string {
+  if (isLinkedListType(javaType)) return `System.out.println(listToString(${varName}));`;
+  if (/\[\]$/.test(javaType) && !/\[\]\[\]$/.test(javaType)) return `System.out.println(java.util.Arrays.toString(${varName}));`;
+  if (/\[\]\[\]$/.test(javaType)) return `System.out.println(java.util.Arrays.deepToString(${varName}));`;
+  return `System.out.println(${varName});`;
+}
+
 // ─── Parse method signature from user code ───────────────────────
 
 interface MethodSignature {
