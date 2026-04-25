@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Play, Timer, MessageSquare, Loader2, CheckCircle2, Shuffle, Building2, BookOpen } from 'lucide-react';
+import { Play, Timer, Loader2, CheckCircle2, Shuffle, Building2, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -209,23 +209,22 @@ const InterviewSimulator = () => {
   if (!authUser) return <div className="flex h-screen items-center justify-center bg-background"><p className="text-foreground">Please log in</p></div>;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <div className="border-b border-panel-border bg-ide-toolbar px-4 py-2 flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/modules')} className="h-7 gap-1 text-xs">
-          <ArrowLeft className="h-3 w-3" /> Back
-        </Button>
-        <MessageSquare className="h-4 w-4 text-primary" />
-        <span className="font-bold text-foreground">Mock Interview</span>
+    <div className="min-h-full bg-background flex flex-col">
+      <div className="max-w-6xl w-full mx-auto px-6 pt-10 pb-4 flex items-end justify-between gap-4">
+        <div className="space-y-2">
+          <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight text-balance">Mock Interview</h1>
+          <p className="text-[15px] text-muted-foreground max-w-md leading-relaxed">Configure a focused Java interview from roadmaps, companies, or solved problems.</p>
+        </div>
         {phase === 'coding' && (
-          <Badge variant={timeLeft < 60 ? 'destructive' : 'outline'} className="ml-auto font-mono text-sm">
+          <Badge variant={timeLeft < 60 ? 'destructive' : 'outline'} className="font-mono text-sm shrink-0">
             <Timer className="h-3 w-3 mr-1" /> {fmt(timeLeft)}
           </Badge>
         )}
       </div>
 
       {phase === 'setup' && (
-        <div className="max-w-2xl mx-auto p-6 space-y-6 flex-1">
-          <Card>
+        <div className="max-w-6xl w-full mx-auto px-6 pb-10 space-y-6 flex-1 animate-in-up">
+          <Card className="surface-elevated rounded-2xl">
             <CardHeader><CardTitle>Configure Interview</CardTitle></CardHeader>
             <CardContent className="space-y-4">
 
@@ -242,9 +241,9 @@ const InterviewSimulator = () => {
                     <button
                       key={s.key}
                       onClick={() => setSource(s.key)}
-                      className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 text-xs font-medium transition-colors ${
+                      className={`card-interactive flex items-center gap-2 rounded-xl border px-3 py-2.5 text-xs font-medium transition-colors ${
                         source === s.key
-                          ? 'border-primary bg-primary/10 text-primary'
+                          ? 'border-foreground bg-foreground text-background'
                           : 'border-border bg-card text-muted-foreground hover:text-foreground hover:border-foreground/20'
                       }`}
                     >
@@ -328,7 +327,7 @@ const InterviewSimulator = () => {
           </Card>
 
           {history.length > 0 && (
-            <Card>
+            <Card className="surface-elevated rounded-2xl">
               <CardHeader><CardTitle className="text-sm">Recent Interviews</CardTitle></CardHeader>
               <CardContent>
                 <div className="space-y-2">
@@ -350,8 +349,8 @@ const InterviewSimulator = () => {
       )}
 
       {phase === 'coding' && problem && (
-        <div className="flex flex-1 overflow-hidden">
-          <div className="w-[380px] border-r border-panel-border overflow-auto p-4 space-y-3">
+        <div className="max-w-6xl w-full mx-auto px-6 pb-10 grid grid-cols-1 lg:grid-cols-[380px,1fr] gap-4 flex-1 overflow-hidden">
+          <div className="surface-elevated rounded-2xl overflow-auto p-4 space-y-3">
             <h2 className="font-bold text-foreground">{problem.title}</h2>
             <div className="flex items-center gap-2">
               <Badge className="text-[10px]">{problem.difficulty}</Badge>
@@ -372,9 +371,9 @@ const InterviewSimulator = () => {
               </div>
             )}
           </div>
-          <div className="flex-1 flex flex-col">
+          <div className="surface-elevated rounded-2xl overflow-hidden flex flex-col min-h-[520px]">
             <div className="flex-1"><CodeEditor code={code} onChange={setCode} /></div>
-            <div className="border-t border-panel-border p-2 flex justify-end">
+            <div className="border-t border-border p-2 flex justify-end bg-card">
               <Button onClick={handleSubmit} size="sm" className="gap-1">
                 <CheckCircle2 className="h-3 w-3" /> Submit Solution
               </Button>
@@ -384,8 +383,8 @@ const InterviewSimulator = () => {
       )}
 
       {phase === 'review' && (
-        <div className="max-w-2xl mx-auto p-6 space-y-4 flex-1">
-          <Card>
+        <div className="max-w-4xl w-full mx-auto px-6 pb-10 space-y-4 flex-1 animate-in-up">
+          <Card className="surface-elevated rounded-2xl">
             <CardHeader><CardTitle>Interview Feedback</CardTitle></CardHeader>
             <CardContent>
               {loading ? (
