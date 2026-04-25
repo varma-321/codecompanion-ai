@@ -13,8 +13,7 @@ export const useTheme = () => useContext(ThemeContext);
 
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [theme, setTheme] = useState<Theme>(() => {
-    const saved = localStorage.getItem('dsa-theme');
-    return (saved === 'light' ? 'light' : 'light') as Theme;
+    return 'light';
   });
 
   useEffect(() => {
