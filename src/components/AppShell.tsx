@@ -225,11 +225,13 @@ function Topbar({ title, subtitle, actions }: { title?: string; subtitle?: strin
 export default function AppShell({ children, title, subtitle, actions, bare = false }: AppShellProps) {
   return (
     <SidebarProvider defaultOpen>
-      <div className="min-h-screen flex w-full bg-background">
+      <div className="min-h-screen flex w-full bg-background relative overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,hsl(var(--foreground)/0.045),transparent_28%),radial-gradient(circle_at_80%_0%,hsl(var(--foreground)/0.035),transparent_24%)]" />
+        <div className="pointer-events-none absolute inset-0 opacity-[0.025] [background-image:linear-gradient(hsl(var(--foreground))_1px,transparent_1px),linear-gradient(90deg,hsl(var(--foreground))_1px,transparent_1px)] [background-size:44px_44px]" />
         <AppSidebar />
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="relative flex-1 flex flex-col min-w-0">
           {!bare && <Topbar title={title} subtitle={subtitle} actions={actions} />}
-          <main className="flex-1 min-w-0 overflow-auto">{children}</main>
+          <main className="flex-1 min-w-0 overflow-auto animate-fade-in">{children}</main>
         </div>
       </div>
     </SidebarProvider>
