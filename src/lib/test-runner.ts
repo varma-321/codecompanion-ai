@@ -617,8 +617,11 @@ export function buildTestWrapper(
 
   let userClass = userCode.trim();
   userClass = userClass.replace(/^public\s+class\s+/, 'class ');
+  const supportTypes = getSupportTypes(userClass, !!methodSig && (methodSig.params.some(p => isLinkedListType(p.type)) || isLinkedListType(methodSig.returnType)), !!methodSig && methodSig.params.some(p => isTreeType(p.type)));
 
   return `${imports}
+${supportTypes}
+
 ${userClass}
 
 public class Main {
