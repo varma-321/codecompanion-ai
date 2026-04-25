@@ -585,7 +585,11 @@ export function buildTestWrapper(
     }).join(', ');
 
     const resultType = normalizeNodeType(methodSig.returnType, userCode, className);
-    const printStmt = isLinkedListType(resultType) ? 'System.out.println(listToString(result));' : buildOutputPrint(resultType);
+    const printStmt = isLinkedListType(resultType)
+      ? (methodSig.name.toLowerCase().includes('cycle') && methodSig.params[0]?.name
+        ? `System.out.println(nodeIndex(${methodSig.params[0].name}, result));`
+        : 'System.out.println(listToString(result));')
+      : buildOutputPrint(resultType);
     
     const caller = methodSig.isStatic 
       ? `${className}.${methodSig.name}` 
