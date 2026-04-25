@@ -499,6 +499,9 @@ export function buildTestWrapper(
   
   const varDecls: string[] = [];
   const varNames: string[] = [];
+  const helperBlocks: string[] = [];
+  let usesListNode = false;
+  let usesTreeNode = false;
   
   const paramTypeMap: Record<string, string> = {};
   if (methodSig) {
@@ -511,6 +514,7 @@ export function buildTestWrapper(
   
   for (let i = 0; i < inputEntries.length; i++) {
     const [name, value] = inputEntries[i];
+    if (methodSig && name === 'pos' && !paramTypeMap[name]) continue;
     let jType = paramTypeMap[name];
     if (!jType && methodSig && i < methodSig.params.length) {
       jType = methodSig.params[i].type;
@@ -518,12 +522,34 @@ export function buildTestWrapper(
     if (!jType) {
       jType = inferJavaType(value);
     }
-    const literal = toJavaLiteral(value, jType);
+    jType = normalizeNodeType(jType, userCode, className);
     const varName = (methodSig && i < methodSig.params.length && !paramTypeMap[name]) 
       ? methodSig.params[i].name 
       : name;
-    varDecls.push(`            ${jType} ${varName} = ${literal};`);
+
+    if (isLinkedListType(jType)) {
+      usesListNode = true;
+      const valuesName = `${varName}Values`;
+      const cyclePos = Number.isFinite(Number(safeInputs.pos)) ? Number(safeInputs.pos) : -1;
+      varDecls.push(`            int[] ${valuesName} = ${toJavaLiteral(value, 'int[]')};`);
+      varDecls.push(`            ${jType} ${varName} = buildList(${valuesName}, ${cyclePos});`);
+    } else if (isTreeType(jType)) {
+      usesTreeNode = true;
+      varDecls.push(`            ${jType} ${varName} = buildTree(${toIntegerArrayLiteral(value)});`);
+    } else {
+      const literal = toJavaLiteral(value, jType);
+      varDecls.push(`            ${jType} ${varName} = ${literal};`);
+    }
     varNames.push(varName);
+  }
+
+  if (usesListNode || (methodSig && (methodSig.params.some(p => isLinkedListType(p.type)) || isLinkedListType(methodSig.returnType)))) {
+    const nodeType = normalizeNodeType('ListNode', userCode, className);
+    helperBlocks.push(getListNodeBuilder(nodeType));
+  }
+  if (usesTreeNode || (methodSig && methodSig.params.some(p => isTreeType(p.type)))) {
+    const nodeType = normalizeNodeType('TreeNode', userCode, className);
+    helperBlocks.push(getTreeNodeBuilder(nodeType));
   }
 
   let callCode: string;
