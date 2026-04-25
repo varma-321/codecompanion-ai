@@ -434,6 +434,16 @@ function getTreeNodeBuilder(nodeType: string): string {
     }`;
 }
 
+function toIntegerArrayLiteral(value: string): string {
+  try {
+    const items = JSON.parse(value.trim());
+    if (Array.isArray(items)) {
+      return `new Integer[]{${items.map((item) => item === null ? 'null' : String(item)).join(', ')}}`;
+    }
+  } catch {}
+  return 'new Integer[]{}';
+}
+
 // ─── Build stdin string from test case inputs ────────────────────
 // Converts test case variables to stdin lines that Scanner can read
 
