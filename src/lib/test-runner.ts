@@ -668,7 +668,7 @@ export function buildTestWrapper(
   const allImports = `${imports}${userImports ? `${userImports}\n` : ''}`;
 
   return `${allImports}
-class Main {
+public class Main {
 ${helperBlocks.join('\n')}
     public static void main(String[] args) {
         try {
