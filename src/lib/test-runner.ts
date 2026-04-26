@@ -325,7 +325,10 @@ function parseMethodSignature(code: string): MethodSignature | null {
 // ─── Detect user's class name ───────────────────────────────────
 
 function detectClassName(code: string): string | null {
-  const match = code.match(/(?:public\s+)?class\s+(\w+)\s*\{/);
+  const cleaned = code.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
+  const solutionMatch = cleaned.match(/(?:public\s+)?class\s+Solution\s*\{/);
+  if (solutionMatch) return 'Solution';
+  const match = cleaned.match(/(?:public\s+)?class\s+(\w+)\s*\{/);
   return match ? match[1] : null;
 }
 
@@ -629,7 +632,15 @@ export function buildTestWrapper(
   }
 
   let userClass = userCode.trim();
-  userClass = userClass.replace(/^public\s+class\s+/, 'class ');
+  userClass = userClass.replace(/(^|\n)(\s*)public\s+class\s+/g, '$1$2class ');
+  if (className) {
+    const classStart = new RegExp(`class\\s+${className}\\s*\\{`);
+    if (classStart.test(userClass)) {
+      userClass = userClass
+        .replace(/(^|\n)(\s*)(class\s+ListNode\s*\{)/g, '$1$2static $3')
+        .replace(/(^|\n)(\s*)(class\s+TreeNode\s*\{)/g, '$1$2static $3');
+    }
+  }
   const supportTypes = getSupportTypes(userClass, !!methodSig && (methodSig.params.some(p => isLinkedListType(p.type)) || isLinkedListType(methodSig.returnType)), !!methodSig && methodSig.params.some(p => isTreeType(p.type)));
 
   return `${imports}
