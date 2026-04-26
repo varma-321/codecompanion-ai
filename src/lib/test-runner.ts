@@ -384,11 +384,26 @@ function isTreeType(javaType: string): boolean {
 }
 
 function normalizeNodeType(javaType: string, userCode: string, className: string): string {
-  const nestedList = new RegExp(`class\\s+${className}[\\s\\S]*?(?:static\\s+)?class\\s+ListNode`).test(userCode);
-  const nestedTree = new RegExp(`class\\s+${className}[\\s\\S]*?(?:static\\s+)?class\\s+TreeNode`).test(userCode);
+  const cleaned = stripJavaComments(userCode);
+  const nestedList = new RegExp(`class\\s+${className}[\\s\\S]*?(?:static\\s+)?class\\s+ListNode`).test(cleaned);
+  const nestedTree = new RegExp(`class\\s+${className}[\\s\\S]*?(?:static\\s+)?class\\s+TreeNode`).test(cleaned);
   if (javaType === 'ListNode' && nestedList) return `${className}.ListNode`;
   if (javaType === 'TreeNode' && nestedTree) return `${className}.TreeNode`;
   return javaType;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function ensureEmptyMethodHasDefaultReturn(userClass: string, methodSig: MethodSignature | null): string {
+  if (!methodSig || methodSig.returnType === 'void') return userClass;
+  const returnType = methodSig.returnType.replace(/\s+/g, '\\s+');
+  const methodPattern = new RegExp(`((?:public|private|protected)?\\s*(?:static\\s+)?${returnType}\\s+${escapeRegExp(methodSig.name)}\\s*\\([^)]*\\)\\s*\\{)([\\s\\S]*?)(\\n?\\s*\\})`);
+  return userClass.replace(methodPattern, (full, start, body, end) => {
+    if (stripJavaComments(body).trim() !== '') return full;
+    return `${start}\n        return ${getDefaultForType(methodSig.returnType)};${end}`;
+  });
 }
 
 function getListNodeBuilder(nodeType: string): string {
