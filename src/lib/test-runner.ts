@@ -21,6 +21,10 @@ export function stopTestExecution() {
 
 // ─── Type inference from string values ───────────────────────────
 
+function stripJavaComments(code: string): string {
+  return code.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
+}
+
 function inferJavaType(value: string): string {
   const v = value.trim();
   if (/^\[\s*\[/.test(v)) return 'int[][]';
@@ -288,8 +292,8 @@ interface MethodSignature {
   isStatic: boolean;
 }
 
-function parseMethodSignature(code: string): MethodSignature | null {
-  const cleaned = code.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
+export function parseMethodSignature(code: string): MethodSignature | null {
+  const cleaned = stripJavaComments(code);
   
   const patterns = [
     { regex: /public\s+static\s+([\w\[\]<>,\s]+?)\s+(\w+)\s*\(([^)]*)\)/g, isStatic: true },
@@ -325,7 +329,7 @@ function parseMethodSignature(code: string): MethodSignature | null {
 // ─── Detect user's class name ───────────────────────────────────
 
 function detectClassName(code: string): string | null {
-  const cleaned = code.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
+  const cleaned = stripJavaComments(code);
   const solutionMatch = cleaned.match(/(?:public\s+)?class\s+Solution\s*\{/);
   if (solutionMatch) return 'Solution';
   const match = cleaned.match(/(?:public\s+)?class\s+(\w+)\s*\{/);
@@ -335,7 +339,7 @@ function detectClassName(code: string): string | null {
 // ─── Detect if code is Main-class style (has Main class + main method) ──
 
 export function isMainClassStyle(code: string): boolean {
-  const cleaned = code.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
+  const cleaned = stripJavaComments(code);
   return /class\s+Main\s*\{/.test(cleaned) && 
          /public\s+static\s+void\s+main\s*\(\s*String\s*\[\s*\]\s+\w+\s*\)/.test(cleaned);
 }
