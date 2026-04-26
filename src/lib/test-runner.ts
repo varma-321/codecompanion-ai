@@ -632,7 +632,7 @@ export function buildTestWrapper(
   }
 
   let userClass = userCode.trim();
-  userClass = userClass.replace(/^public\s+class\s+/, 'class ');
+  userClass = userClass.replace(/(^|\n)(\s*)public\s+class\s+/g, '$1$2class ');
   if (className) {
     const classStart = new RegExp(`class\\s+${className}\\s*\\{`);
     if (classStart.test(userClass)) {
