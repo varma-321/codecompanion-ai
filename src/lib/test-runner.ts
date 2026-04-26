@@ -21,6 +21,10 @@ export function stopTestExecution() {
 
 // ─── Type inference from string values ───────────────────────────
 
+function stripJavaComments(code: string): string {
+  return code.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
+}
+
 function inferJavaType(value: string): string {
   const v = value.trim();
   if (/^\[\s*\[/.test(v)) return 'int[][]';
@@ -288,8 +292,8 @@ interface MethodSignature {
   isStatic: boolean;
 }
 
-function parseMethodSignature(code: string): MethodSignature | null {
-  const cleaned = code.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
+export function parseMethodSignature(code: string): MethodSignature | null {
+  const cleaned = stripJavaComments(code);
   
   const patterns = [
     { regex: /public\s+static\s+([\w\[\]<>,\s]+?)\s+(\w+)\s*\(([^)]*)\)/g, isStatic: true },
@@ -325,7 +329,7 @@ function parseMethodSignature(code: string): MethodSignature | null {
 // ─── Detect user's class name ───────────────────────────────────
 
 function detectClassName(code: string): string | null {
-  const cleaned = code.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
+  const cleaned = stripJavaComments(code);
   const solutionMatch = cleaned.match(/(?:public\s+)?class\s+Solution\s*\{/);
   if (solutionMatch) return 'Solution';
   const match = cleaned.match(/(?:public\s+)?class\s+(\w+)\s*\{/);
@@ -335,7 +339,7 @@ function detectClassName(code: string): string | null {
 // ─── Detect if code is Main-class style (has Main class + main method) ──
 
 export function isMainClassStyle(code: string): boolean {
-  const cleaned = code.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
+  const cleaned = stripJavaComments(code);
   return /class\s+Main\s*\{/.test(cleaned) && 
          /public\s+static\s+void\s+main\s*\(\s*String\s*\[\s*\]\s+\w+\s*\)/.test(cleaned);
 }
@@ -380,11 +384,26 @@ function isTreeType(javaType: string): boolean {
 }
 
 function normalizeNodeType(javaType: string, userCode: string, className: string): string {
-  const nestedList = new RegExp(`class\\s+${className}[\\s\\S]*?(?:static\\s+)?class\\s+ListNode`).test(userCode);
-  const nestedTree = new RegExp(`class\\s+${className}[\\s\\S]*?(?:static\\s+)?class\\s+TreeNode`).test(userCode);
+  const cleaned = stripJavaComments(userCode);
+  const nestedList = new RegExp(`class\\s+${className}[\\s\\S]*?(?:static\\s+)?class\\s+ListNode`).test(cleaned);
+  const nestedTree = new RegExp(`class\\s+${className}[\\s\\S]*?(?:static\\s+)?class\\s+TreeNode`).test(cleaned);
   if (javaType === 'ListNode' && nestedList) return `${className}.ListNode`;
   if (javaType === 'TreeNode' && nestedTree) return `${className}.TreeNode`;
   return javaType;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function ensureEmptyMethodHasDefaultReturn(userClass: string, methodSig: MethodSignature | null): string {
+  if (!methodSig || methodSig.returnType === 'void') return userClass;
+  const returnType = methodSig.returnType.replace(/\s+/g, '\\s+');
+  const methodPattern = new RegExp(`((?:public|private|protected)?\\s*(?:static\\s+)?${returnType}\\s+${escapeRegExp(methodSig.name)}\\s*\\([^)]*\\)\\s*\\{)([\\s\\S]*?)(\\n?\\s*\\})`);
+  return userClass.replace(methodPattern, (full, start, body, end) => {
+    if (stripJavaComments(body).trim() !== '') return full;
+    return `${start}\n        return ${getDefaultForType(methodSig.returnType)};${end}`;
+  });
 }
 
 function getListNodeBuilder(nodeType: string): string {
@@ -632,7 +651,10 @@ export function buildTestWrapper(
   }
 
   let userClass = userCode.trim();
+  const userImports = (userClass.match(/^\s*import\s+[^;]+;\s*$/gm) || []).join('\n');
+  userClass = userClass.replace(/^\s*import\s+[^;]+;\s*$/gm, '').trim();
   userClass = userClass.replace(/(^|\n)(\s*)public\s+class\s+/g, '$1$2class ');
+  userClass = ensureEmptyMethodHasDefaultReturn(userClass, methodSig);
   if (className) {
     const classStart = new RegExp(`class\\s+${className}\\s*\\{`);
     if (classStart.test(userClass)) {
@@ -641,14 +663,12 @@ export function buildTestWrapper(
         .replace(/(^|\n)(\s*)(class\s+TreeNode\s*\{)/g, '$1$2static $3');
     }
   }
-  const supportTypes = getSupportTypes(userClass, !!methodSig && (methodSig.params.some(p => isLinkedListType(p.type)) || isLinkedListType(methodSig.returnType)), !!methodSig && methodSig.params.some(p => isTreeType(p.type)));
+  const supportTypes = getSupportTypes(stripJavaComments(userClass), !!methodSig && (methodSig.params.some(p => isLinkedListType(p.type)) || isLinkedListType(methodSig.returnType)), !!methodSig && methodSig.params.some(p => isTreeType(p.type)));
 
-  return `${imports}
-${supportTypes}
+  const allImports = `${imports}${userImports ? `${userImports}\n` : ''}`;
 
-${userClass}
-
-public class Main {
+  return `${allImports}
+class Main {
 ${helperBlocks.join('\n')}
     public static void main(String[] args) {
         try {
@@ -659,7 +679,11 @@ ${callCode}
             e.printStackTrace();
         }
     }
-}`;
+}
+
+${supportTypes}
+
+${userClass}`;
 }
 
 // ─── Run all test cases ──────────────────────────────────────────
