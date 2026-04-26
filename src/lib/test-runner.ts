@@ -632,6 +632,8 @@ export function buildTestWrapper(
   }
 
   let userClass = userCode.trim();
+  const userImports = (userClass.match(/^\s*import\s+[^;]+;\s*$/gm) || []).join('\n');
+  userClass = userClass.replace(/^\s*import\s+[^;]+;\s*$/gm, '').trim();
   userClass = userClass.replace(/(^|\n)(\s*)public\s+class\s+/g, '$1$2class ');
   if (className) {
     const classStart = new RegExp(`class\\s+${className}\\s*\\{`);
@@ -643,11 +645,9 @@ export function buildTestWrapper(
   }
   const supportTypes = getSupportTypes(userClass, !!methodSig && (methodSig.params.some(p => isLinkedListType(p.type)) || isLinkedListType(methodSig.returnType)), !!methodSig && methodSig.params.some(p => isTreeType(p.type)));
 
-  return `${imports}
-${supportTypes}
+  const allImports = `${imports}${userImports ? `${userImports}\n` : ''}`;
 
-${userClass}
-
+  return `${allImports}
 class Main {
 ${helperBlocks.join('\n')}
     public static void main(String[] args) {
@@ -659,7 +659,11 @@ ${callCode}
             e.printStackTrace();
         }
     }
-}`;
+}
+
+${supportTypes}
+
+${userClass}`;
 }
 
 // ─── Run all test cases ──────────────────────────────────────────
