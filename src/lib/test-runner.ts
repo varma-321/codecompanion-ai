@@ -654,6 +654,7 @@ export function buildTestWrapper(
   const userImports = (userClass.match(/^\s*import\s+[^;]+;\s*$/gm) || []).join('\n');
   userClass = userClass.replace(/^\s*import\s+[^;]+;\s*$/gm, '').trim();
   userClass = userClass.replace(/(^|\n)(\s*)public\s+class\s+/g, '$1$2class ');
+  userClass = ensureEmptyMethodHasDefaultReturn(userClass, methodSig);
   if (className) {
     const classStart = new RegExp(`class\\s+${className}\\s*\\{`);
     if (classStart.test(userClass)) {
@@ -662,7 +663,7 @@ export function buildTestWrapper(
         .replace(/(^|\n)(\s*)(class\s+TreeNode\s*\{)/g, '$1$2static $3');
     }
   }
-  const supportTypes = getSupportTypes(userClass, !!methodSig && (methodSig.params.some(p => isLinkedListType(p.type)) || isLinkedListType(methodSig.returnType)), !!methodSig && methodSig.params.some(p => isTreeType(p.type)));
+  const supportTypes = getSupportTypes(stripJavaComments(userClass), !!methodSig && (methodSig.params.some(p => isLinkedListType(p.type)) || isLinkedListType(methodSig.returnType)), !!methodSig && methodSig.params.some(p => isTreeType(p.type)));
 
   const allImports = `${imports}${userImports ? `${userImports}\n` : ''}`;
 
