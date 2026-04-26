@@ -648,7 +648,7 @@ ${supportTypes}
 
 ${userClass}
 
-public class Main {
+class Main {
 ${helperBlocks.join('\n')}
     public static void main(String[] args) {
         try {
