@@ -49,6 +49,7 @@ import SubmissionHistory from "./pages/SubmissionHistory";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminSignup from "./pages/AdminSignup";
+import AdminAgentDashboard from "./pages/AdminAgentDashboard";
 import AppShell from "./components/AppShell";
 
 const queryClient = new QueryClient();
@@ -110,6 +111,7 @@ const App = () => (
               <Route path="/admin-login" element={shell(<AdminLogin />, "Admin Login")} />
               <Route path="/admin/signup" element={shell(<AdminSignup />, "Admin Signup")} />
               <Route path="/admin" element={shell(<AdminDashboard />, "Admin", "Moderation and user approvals")} />
+              <Route path="/admin/agent" element={<AdminAgentDashboard />} />
               <Route path="*" element={shell(<NotFound />, "Not Found")} />
             </Routes>
           </BrowserRouter>
