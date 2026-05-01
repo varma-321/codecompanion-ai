@@ -67,7 +67,7 @@ async function fetchOrGenerateTests(q: AgentQuestion, log: (e: AgentLogEntry) =>
   if (cached && Array.isArray(cached.test_cases) && cached.test_cases.length > 0) {
     log(newLog('info', `Loaded ${cached.test_cases.length} cached test cases.`));
     return {
-      testCases: cached.test_cases as TestCaseInput[],
+      testCases: cached.test_cases as unknown as TestCaseInput[],
       starterCode: cached.starter_code || q.starterCode || '',
     };
   }
