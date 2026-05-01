@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Shield, Users, UserCheck, UserX, Ban, Trash2, ArrowLeft, Loader2, Clock, CheckCircle, XCircle, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Shield, Users, UserCheck, UserX, Ban, Trash2, ArrowLeft, Loader2, Clock, CheckCircle, XCircle, AlertTriangle, RefreshCw, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -164,12 +164,14 @@ const AdminDashboard = () => {
               <h1 className="text-lg font-semibold text-foreground">Admin Dashboard</h1>
             </div>
           </div>
-          <Button onClick={() => navigate('/admin/agent')} variant="default" size="sm" className="gap-1.5">
-            <Shield className="h-3.5 w-3.5" /> AI Agent
-          </Button>
-          <Button onClick={fetchUsers} variant="outline" size="sm" className="gap-1.5">
-            <RefreshCw className="h-3.5 w-3.5" /> Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => navigate('/admin/agent')} variant="default" size="sm" className="gap-1.5">
+              <Bot className="h-3.5 w-3.5" /> AI Agent
+            </Button>
+            <Button onClick={fetchUsers} variant="outline" size="sm" className="gap-1.5">
+              <RefreshCw className="h-3.5 w-3.5" /> Refresh
+            </Button>
+          </div>
         </div>
       </div>
 
