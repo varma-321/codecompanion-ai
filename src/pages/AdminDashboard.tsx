@@ -164,6 +164,9 @@ const AdminDashboard = () => {
               <h1 className="text-lg font-semibold text-foreground">Admin Dashboard</h1>
             </div>
           </div>
+          <Button onClick={() => navigate('/admin/agent')} variant="default" size="sm" className="gap-1.5">
+            <Shield className="h-3.5 w-3.5" /> AI Agent
+          </Button>
           <Button onClick={fetchUsers} variant="outline" size="sm" className="gap-1.5">
             <RefreshCw className="h-3.5 w-3.5" /> Refresh
           </Button>
