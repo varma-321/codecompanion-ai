@@ -1,9 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap');
+/* Apple-clean design system: SF-style typography, airy spacing, soft shadows, refined monochrome palette. */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Apple-clean design system: SF-style typography, airy spacing, soft shadows, refined monochrome palette. */
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap');
 
 @layer base {
   :root {

@@ -4,7 +4,7 @@ import {
   Map, Code2, BookOpen, Brain, Timer, MessageSquare, Zap, Dices, Plus, Sparkles,
   Layers, GraduationCap, Clock, Building2, Award, Trophy, Share2, Target,
   AlertTriangle, Activity, Calendar, Bookmark, FileSpreadsheet, BarChart3,
-  TrendingUp, RotateCcw, Search, Flame, ArrowRight,
+  TrendingUp, RotateCcw, Search, Flame, ArrowRight, Smartphone, ShoppingBag
 } from 'lucide-react';
 import { useUser } from '@/lib/user-context';
 import { supabase } from '@/integrations/supabase/client';
@@ -28,6 +28,7 @@ const MODULES: ModuleCard[] = [
   { id: 'interview', title: 'Mock Interview', subtitle: 'Simulate real interviews', icon: <MessageSquare className="h-4 w-4" />, route: '/interview', category: 'practice' },
   { id: 'playground', title: 'Code Playground', subtitle: 'Free-form Java sandbox', icon: <Zap className="h-4 w-4" />, route: '/playground', category: 'practice' },
   { id: 'generator', title: 'Problem Generator', subtitle: 'AI-generated challenges', icon: <Dices className="h-4 w-4" />, route: '/generator', category: 'practice' },
+  { id: 'quick-practice', title: 'Quick Practice', subtitle: 'Mental coding & MCQs', icon: <Smartphone className="h-4 w-4" />, route: '/quick-practice', category: 'practice' },
   { id: 'custom', title: 'Custom Problems', subtitle: 'Create your own problems', icon: <Plus className="h-4 w-4" />, route: '/custom-problems', category: 'practice' },
   { id: 'code-review', title: 'AI Code Review', subtitle: 'Quality & best practices', icon: <Sparkles className="h-4 w-4" />, route: '/code-review', category: 'practice' },
 
@@ -42,6 +43,7 @@ const MODULES: ModuleCard[] = [
 
   { id: 'achievements', title: 'Achievements', subtitle: 'XP, levels & badges', icon: <Award className="h-4 w-4" />, route: '/achievements', category: 'social' },
   { id: 'leaderboard', title: 'Leaderboard', subtitle: 'Compete with others', icon: <Trophy className="h-4 w-4" />, route: '/leaderboard', category: 'social' },
+  { id: 'store', title: 'Rewards Store', subtitle: 'Spend XP on boosters', icon: <ShoppingBag className="h-4 w-4" />, route: '/store', category: 'social' },
   { id: 'community', title: 'Community Solutions', subtitle: 'Share & learn from others', icon: <Share2 className="h-4 w-4" />, route: '/community', category: 'social' },
   { id: 'discuss', title: 'Discussion Forum', subtitle: 'Per-problem discussions', icon: <MessageSquare className="h-4 w-4" />, route: '/discuss', category: 'social' },
   { id: 'streak-calendar', title: 'Activity Calendar', subtitle: 'GitHub-style heatmap', icon: <Calendar className="h-4 w-4" />, route: '/streak-calendar', category: 'social' },

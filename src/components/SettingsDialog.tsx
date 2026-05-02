@@ -7,7 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { User, Mail, Lock, Shield, Bell, Palette, LogOut, Loader2, CheckCircle, Save } from 'lucide-react';
+import { User, Mail, Lock, Shield, Bell, Palette, LogOut, Loader2, CheckCircle, Save, Github, Globe, GitBranch } from 'lucide-react';
 import { checkBackendStatus } from '@/lib/ai-backend';
 import { useUser } from '@/lib/user-context';
 import { useTheme } from '@/lib/theme-context';
@@ -23,7 +23,7 @@ const SettingsDialog = ({ open, onClose }: SettingsDialogProps) => {
   const { authUser, profile, setProfile } = useUser();
   const { theme, toggleTheme } = useTheme();
   const [backendOnline, setBackendOnline] = useState(false);
-  const [activeTab, setActiveTab] = useState<'profile' | 'account' | 'appearance' | 'security'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'account' | 'appearance' | 'security' | 'integrations'>('profile');
 
   // Profile edit state
   const [editUsername, setEditUsername] = useState('');
@@ -87,6 +87,7 @@ const SettingsDialog = ({ open, onClose }: SettingsDialogProps) => {
     { key: 'account' as const, label: 'Account', icon: <Mail className="h-3.5 w-3.5" /> },
     { key: 'appearance' as const, label: 'Appearance', icon: <Palette className="h-3.5 w-3.5" /> },
     { key: 'security' as const, label: 'Security', icon: <Shield className="h-3.5 w-3.5" /> },
+    { key: 'integrations' as const, label: 'Integrations', icon: <Github className="h-3.5 w-3.5" /> },
   ];
 
   return (
@@ -269,6 +270,50 @@ const SettingsDialog = ({ open, onClose }: SettingsDialogProps) => {
                   <LogOut className="h-3.5 w-3.5" /> Sign Out
                 </Button>
               </div>
+            </div>
+          )}
+
+          {activeTab === 'integrations' && (
+            <div className="space-y-6">
+               <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-2xl bg-secondary border border-border">
+                     <Github className="h-6 w-6" />
+                  </div>
+                  <div>
+                     <h3 className="text-sm font-bold">GitHub Sync</h3>
+                     <p className="text-[11px] text-muted-foreground">Push your solutions to your portfolio automatically.</p>
+                  </div>
+               </div>
+
+               <div className="space-y-4 pt-2">
+                  <div className="space-y-2">
+                     <Label className="text-xs">Personal Access Token</Label>
+                     <Input type="password" placeholder="ghp_xxxxxxxxxxxx" className="h-9 text-xs" />
+                     <p className="text-[10px] text-muted-foreground italic">Required for pushing code. Generate one in GitHub Settings.</p>
+                  </div>
+
+                  <div className="space-y-2">
+                     <Label className="text-xs">Target Repository</Label>
+                     <div className="flex gap-2">
+                        <Input placeholder="my-dsa-solutions" className="h-9 text-xs" />
+                        <Button size="sm" variant="outline" className="h-9 gap-1.5 text-xs">
+                           <GitBranch className="h-3.5 w-3.5" /> Create
+                        </Button>
+                     </div>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-primary/5 border border-primary/10">
+                     <div className="flex items-center gap-2">
+                        <Globe className="h-4 w-4 text-primary" />
+                        <span className="text-[11px] font-medium">Automatic Push on Submit</span>
+                     </div>
+                     <Switch />
+                  </div>
+
+                  <Button className="w-full h-10 gap-2 font-bold shadow-lg shadow-primary/10">
+                     <Github className="h-4 w-4" /> Connect GitHub Account
+                  </Button>
+               </div>
             </div>
           )}
         </div>

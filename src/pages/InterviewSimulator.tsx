@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Play, Timer, Loader2, CheckCircle2, Shuffle, Building2, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -222,9 +223,10 @@ const InterviewSimulator = () => {
 
       {phase === 'setup' && (
         <div className="max-w-6xl w-full mx-auto px-6 pb-10 space-y-6 flex-1 animate-in-up">
-          <Card className="surface-elevated rounded-2xl">
-            <CardHeader><CardTitle>Configure Interview</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-[1fr,320px] gap-6">
+            <Card className="surface-elevated rounded-2xl">
+              <CardHeader><CardTitle>Configure Solo Interview</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
 
               {/* Source selection */}
               <div>
@@ -318,33 +320,61 @@ const InterviewSimulator = () => {
                 {difficulty !== 'all' && <span> ({difficulty})</span>}
               </div>
 
-              <Button onClick={startInterview} disabled={problemPool.length === 0} className="w-full gap-2">
-                <Play className="h-4 w-4" /> Start Interview
+              <Button onClick={startInterview} disabled={problemPool.length === 0} className="w-full gap-2 shadow-lg shadow-primary/20">
+                <Play className="h-4 w-4" /> Start Solo Session
               </Button>
             </CardContent>
           </Card>
 
-          {history.length > 0 && (
-            <Card className="surface-elevated rounded-2xl">
-              <CardHeader><CardTitle className="text-sm">Recent Interviews</CardTitle></CardHeader>
-              <CardContent>
+          <div className="space-y-6">
+            <Card className="surface-elevated rounded-2xl border-primary/20 bg-primary/5">
+              <CardHeader>
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Play className="h-4 w-4 text-primary" /> Live Lobby
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  Join a shared room to practice with a peer. One codes, one interviews!
+                </p>
                 <div className="space-y-2">
-                  {history.map((h: any) => (
-                    <div key={h.id} className="flex items-center justify-between text-xs border-b border-panel-border pb-2">
-                      <span className="text-foreground font-medium truncate max-w-[180px]">{h.problem_title}</span>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-[10px]">{h.difficulty}</Badge>
-                        <span className="text-muted-foreground">{fmt(h.time_taken_seconds)}</span>
-                        <Badge className="text-[10px]">Score: {h.score}</Badge>
-                      </div>
-                    </div>
-                  ))}
+                  <Input placeholder="Enter Room Code (e.g. JAVA-2024)" className="h-9 text-xs" />
+                  <Button variant="secondary" className="w-full h-9 text-xs font-bold gap-2">
+                     Join Live Session
+                  </Button>
                 </div>
+                <div className="h-px bg-primary/10 my-2" />
+                <Button variant="outline" className="w-full h-9 text-xs font-bold border-primary/20 text-primary">
+                   Create New Lobby
+                </Button>
               </CardContent>
             </Card>
-          )}
+
+            {history.length > 0 && (
+              <Card className="surface-elevated rounded-2xl">
+                <CardHeader><CardTitle className="text-sm">Recent Interviews</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {history.map((h: any) => (
+                      <div key={h.id} className="flex items-center justify-between text-xs border-b border-panel-border pb-2 last:border-0">
+                        <div className="flex flex-col truncate max-w-[150px]">
+                          <span className="text-foreground font-medium truncate">{h.problem_title}</span>
+                          <span className="text-[9px] text-muted-foreground">{new Date(h.created_at).toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Badge variant="outline" className="text-[9px] h-4">{h.difficulty}</Badge>
+                          <Badge className="text-[9px] h-4 bg-primary/10 text-primary border-0">{h.score}</Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </div>
-      )}
+      </div>
+    )}
 
       {phase === 'coding' && problem && (
         <div className="max-w-6xl w-full mx-auto px-6 pb-10 grid grid-cols-1 lg:grid-cols-[380px,1fr] gap-4 flex-1 overflow-hidden">

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Save, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Save, Eye, EyeOff, Loader2, Users, User, Play, Globe } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -40,16 +41,33 @@ const CustomProblemCreator = () => {
   const navigate = useNavigate();
   const { authUser } = useUser();
   const [problems, setProblems] = useState<any[]>([]);
+  const [communityProblems, setCommunityProblems] = useState<any[]>([]);
   const [current, setCurrent] = useState<CustomProblem>({ ...EMPTY_PROBLEM });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingCommunity, setLoadingCommunity] = useState(false);
+  const [activeTab, setActiveTab] = useState<'mine' | 'community'>('mine');
 
   useEffect(() => {
     if (!authUser) return;
-    supabase.from('custom_problems').select('*').eq('user_id', authUser.id).order('created_at', { ascending: false })
-      .then(({ data }) => { setProblems(data || []); setLoading(false); });
+    fetchMyProblems();
+    fetchCommunityProblems();
   }, [authUser]);
+
+  const fetchMyProblems = async () => {
+    if (!authUser) return;
+    const { data } = await supabase.from('custom_problems').select('*').eq('user_id', authUser.id).order('created_at', { ascending: false });
+    setProblems(data || []);
+    setLoading(false);
+  };
+
+  const fetchCommunityProblems = async () => {
+    setLoadingCommunity(true);
+    const { data } = await supabase.from('custom_problems').select('*').eq('is_public', true).order('created_at', { ascending: false });
+    setCommunityProblems(data || []);
+    setLoadingCommunity(false);
+  };
 
   const handleSave = async () => {
     if (!authUser || !current.title.trim()) { toast.error('Title is required'); return; }
@@ -61,17 +79,17 @@ const CustomProblemCreator = () => {
           starter_code: current.starter_code, test_cases: current.test_cases as any,
           is_public: current.is_public, updated_at: new Date().toISOString(),
         } as any).eq('id', editingId);
-        setProblems(prev => prev.map(p => p.id === editingId ? { ...p, ...current } : p));
         toast.success('Problem updated');
       } else {
-        const { data } = await supabase.from('custom_problems').insert({
+        await supabase.from('custom_problems').insert({
           user_id: authUser.id, title: current.title, description: current.description,
           difficulty: current.difficulty, starter_code: current.starter_code,
           test_cases: current.test_cases as any, is_public: current.is_public,
-        } as any).select().single();
-        if (data) setProblems(prev => [data, ...prev]);
+        } as any);
         toast.success('Problem created');
       }
+      fetchMyProblems();
+      fetchCommunityProblems();
       setCurrent({ ...EMPTY_PROBLEM });
       setEditingId(null);
     } catch { toast.error('Save failed'); }
@@ -92,6 +110,17 @@ const CustomProblemCreator = () => {
     setProblems(prev => prev.filter(p => p.id !== id));
     if (editingId === id) { setCurrent({ ...EMPTY_PROBLEM }); setEditingId(null); }
     toast.success('Deleted');
+  };
+
+  const handlePractice = (p: any) => {
+    // Navigate to workspace with customMode=true
+    const params = new URLSearchParams({
+      title: p.title,
+      difficulty: p.difficulty,
+      customMode: 'true',
+      customId: p.id
+    });
+    navigate(`/problem/${p.id}?${params.toString()}`);
   };
 
   const addTestCase = () => setCurrent(prev => ({ ...prev, test_cases: [...prev.test_cases, { input: '', expected: '' }] }));
@@ -172,33 +201,79 @@ const CustomProblemCreator = () => {
 
         {/* Sidebar: list */}
         <div className="space-y-4">
-          <Card>
-            <CardHeader><CardTitle className="text-sm">My Problems ({problems.length})</CardTitle></CardHeader>
-            <CardContent>
-              <ScrollArea className="h-[500px]">
-                {loading ? (
-                  <p className="text-xs text-muted-foreground text-center py-6">Loading...</p>
-                ) : problems.length === 0 ? (
-                  <p className="text-xs text-muted-foreground text-center py-6">No custom problems yet</p>
-                ) : (
-                  <div className="space-y-2">
-                    {problems.map((p: any) => (
-                      <div key={p.id} className={`p-2 rounded border border-panel-border cursor-pointer hover:bg-secondary/30 transition ${editingId === p.id ? 'border-primary bg-primary/5' : ''}`}>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-medium text-foreground cursor-pointer" onClick={() => handleEdit(p)}>{p.title}</span>
-                          <Button size="icon" variant="ghost" className="h-5 w-5" onClick={() => handleDelete(p.id)}>
-                            <Trash2 className="h-3 w-3 text-destructive" />
-                          </Button>
-                        </div>
-                        <div className="flex items-center gap-1 mt-1">
-                          <Badge variant="outline" className="text-[9px]">{p.difficulty}</Badge>
-                          {p.is_public && <Badge variant="outline" className="text-[9px] text-primary">Public</Badge>}
-                          <span className="text-[9px] text-muted-foreground">{(p.test_cases || []).length} tests</span>
-                        </div>
+          <Card className="h-[640px] flex flex-col">
+            <CardHeader className="pb-0">
+              <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="mine" className="text-[10px] gap-1.5"><User className="h-3 w-3" /> My List</TabsTrigger>
+                  <TabsTrigger value="community" className="text-[10px] gap-1.5"><Globe className="h-3 w-3" /> Public</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-hidden pt-4">
+              <ScrollArea className="h-full pr-4">
+                <Tabs value={activeTab}>
+                  <TabsContent value="mine" className="mt-0 space-y-2">
+                    {loading ? (
+                      <div className="flex flex-col items-center justify-center py-10 gap-2">
+                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                        <p className="text-[10px] text-muted-foreground">Loading your problems...</p>
                       </div>
-                    ))}
-                  </div>
-                )}
+                    ) : problems.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-10">No custom problems yet</p>
+                    ) : (
+                      problems.map((p: any) => (
+                        <div key={p.id} className={`group relative p-3 rounded-xl border border-panel-border hover:border-primary/40 bg-card/50 transition-all ${editingId === p.id ? 'border-primary bg-primary/5 shadow-sm' : ''}`}>
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0" onClick={() => handleEdit(p)}>
+                              <h4 className="text-[13px] font-bold text-foreground truncate group-hover:text-primary transition-colors cursor-pointer">{p.title}</h4>
+                              <div className="flex items-center gap-1.5 mt-1">
+                                <Badge variant="outline" className="text-[9px] h-4">{p.difficulty}</Badge>
+                                {p.is_public && <Badge variant="secondary" className="text-[9px] h-4 text-primary">Public</Badge>}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Button size="icon" variant="ghost" className="h-7 w-7 text-primary hover:bg-primary/10" onClick={() => handlePractice(p)} title="Practice">
+                                <Play className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(p.id)} title="Delete">
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </TabsContent>
+                  
+                  <TabsContent value="community" className="mt-0 space-y-2">
+                    {loadingCommunity ? (
+                      <div className="flex flex-col items-center justify-center py-10 gap-2">
+                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                        <p className="text-[10px] text-muted-foreground">Loading community...</p>
+                      </div>
+                    ) : communityProblems.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-10">No public problems found</p>
+                    ) : (
+                      communityProblems.map((p: any) => (
+                        <div key={p.id} className="group relative p-3 rounded-xl border border-panel-border hover:border-primary/40 bg-card/50 transition-all shadow-sm">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-[13px] font-bold text-foreground truncate">{p.title}</h4>
+                              <div className="flex items-center gap-1.5 mt-1">
+                                <Badge variant="outline" className="text-[9px] h-4">{p.difficulty}</Badge>
+                                <span className="text-[9px] text-muted-foreground">By User {p.user_id.slice(0, 4)}</span>
+                              </div>
+                            </div>
+                            <Button size="icon" variant="outline" className="h-8 w-8 text-primary border-primary/20 hover:bg-primary/10 shrink-0" onClick={() => handlePractice(p)} title="Practice">
+                              <Play className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </TabsContent>
+                </Tabs>
               </ScrollArea>
             </CardContent>
           </Card>

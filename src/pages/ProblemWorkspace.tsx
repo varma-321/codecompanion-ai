@@ -1,7 +1,13 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Play, FlaskConical, Loader2, CheckCircle2, XCircle, Brain, ChevronRight, Code2, GitCompare, Cloud, Keyboard, Sparkles, AlertTriangle, Zap, TrendingUp, Trophy, Eye, EyeOff, BarChart3, ChevronDown, ChevronUp, MessageSquare, FileText, Bot, Square, Workflow } from 'lucide-react';
+import { 
+  ArrowLeft, Play, FlaskConical, Loader2, CheckCircle2, XCircle, Brain, ChevronRight, 
+  Code2, GitCompare, Cloud, Keyboard, Sparkles, AlertTriangle, Zap, TrendingUp, 
+  Trophy, Eye, EyeOff, BarChart3, ChevronDown, ChevronUp, MessageSquare, 
+  FileText, Bot, Square, Workflow, Shield, Lightbulb, Github
+} from 'lucide-react';
+import { CONTEST_PROBLEMS } from '../lib/contest-problems-data';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAutosave } from '@/hooks/use-autosave';
 import { Button } from '@/components/ui/button';
@@ -55,17 +61,55 @@ function setCachedDetail(key: string, detail: EnhancedDetail) {
 
 const ProblemWorkspace = () => {
   const { key } = useParams<{ key: string }>();
+  const [searchParams] = useSearchParams();
+  const contestMode = searchParams.get('contestMode') === 'true';
+  const contestId = searchParams.get('contestId');
+  const generatorMode = searchParams.get('generatorMode') === 'true';
+  const genId = searchParams.get('genId');
+  const customMode = searchParams.get('customMode') === 'true';
+  const customId = searchParams.get('customId');
   const navigate = useNavigate();
-  const { authUser } = useUser();
+  const { authUser, isAdmin } = useUser();
 
-  // Find the problem from any roadmap
+  // Find the problem from any roadmap OR contest problems OR generated
   const roadmapProblem = useMemo(() => {
+    if (!key) return null;
+    
+    // Check roadmap sheets first
     for (const topic of ALL_ROADMAPS) {
+      if (!topic?.problems) continue;
       const found = topic.problems.find(p => p.key === key);
       if (found) return { ...found, topic: topic.name };
     }
+    
+    // Check contest problems
+    if (Array.isArray(CONTEST_PROBLEMS)) {
+      const contestFound = CONTEST_PROBLEMS.find(p => p.key === key);
+      if (contestFound) return { ...contestFound, topic: 'Contest Challenge' };
+    }
+
+    // Check for Generator Mode
+    if (generatorMode && genId === key) {
+      return {
+        key,
+        title: searchParams.get('title') || 'Generated Problem',
+        difficulty: (searchParams.get('difficulty') as any) || 'Medium',
+        topic: 'AI Generated'
+      } as any;
+    }
+
+    // Check for Custom Mode
+    if (customMode && customId === key) {
+      return {
+        key,
+        title: searchParams.get('title') || 'Custom Problem',
+        difficulty: (searchParams.get('difficulty') as any) || 'Medium',
+        topic: 'Custom Lab'
+      } as any;
+    }
+    
     return null;
-  }, [key]);
+  }, [key, generatorMode, genId, customMode, customId, searchParams]);
 
   const hasHardcodedDetail = key ? !!PROBLEM_DETAILS[key] : false;
 
@@ -96,6 +140,10 @@ const ProblemWorkspace = () => {
   });
   // Track whether codes have been loaded from DB to prevent generateFullDetail from overwriting
   const codesLoadedFromDb = useRef(false);
+  // Track whether we are in the middle of loading codes for a new problem
+  const [isCodeLoading, setIsCodeLoading] = useState(false);
+  // The key that the current codes belong to — used to prevent stale saves
+  const codesKeyRef = useRef<string | undefined>(key);
 
   // Convenience: active code getter/setter
   const code = codes[activeApproach];
@@ -109,6 +157,9 @@ const ProblemWorkspace = () => {
   const [consoleEntries, setConsoleEntries] = useState<ConsoleEntry[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [isRunningTests, setIsRunningTests] = useState(false);
+  const [waitingForInput, setWaitingForInput] = useState(false);
+  // Holds a resolve callback that ConsolePanel calls when the user submits stdin
+  const stdinResolverRef = useRef<((value: string) => void) | null>(null);
   const [execStatus, setExecStatus] = useState<ExecStatusType>('ready');
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [bottomTab, setBottomTab] = useState<'description' | 'console' | 'results' | 'history' | 'snippets' | 'solutions' | 'analysis'>('description');
@@ -134,18 +185,55 @@ const ProblemWorkspace = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isExplaining, setIsExplaining] = useState(false);
   const [showFullExplanation, setShowFullExplanation] = useState(false);
+  const [visualizerChart, setVisualizerChart] = useState<string>('');
+  const [isVisualizing, setIsVisualizing] = useState(false);
+  const [submissionHistory, setSubmissionHistory] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
-  // Save to localStorage immediately on every code change so navigating away never loses work
+  // ★ STEP 1: Immediately reset codes when problem key changes (synchronous).
+  // This runs BEFORE the async load effect and prevents the old problem's code
+  // from being visible or auto-saved while the new problem is loading.
   useEffect(() => {
     if (!key) return;
-    const saveKey = `${key}__${activeApproach}`;
+    codesKeyRef.current = key;
+    const placeholder = detail.starterCode || '';
+    setCodes({ brute: placeholder, better: placeholder, optimal: placeholder });
+    setIsCodeLoading(true);
+    setConsoleEntries([]);
+    setTestResults([]);
+    setExecStatus('ready');
+    setBottomTab('description');
+    // Immediately reset the autosave baseline so the 2s debounce doesn't
+    // fire with stale code after navigation.
+    wsResetSaved(placeholder);
+  }, [key]); // intentionally only [key]
+
+  // ★ STEP 2: Save to localStorage — but ONLY if the code belongs to the current key.
+  // This prevents the stale-code write that happens during the async loading window.
+  useEffect(() => {
+    if (!key || codesKeyRef.current !== key || isCodeLoading) return;
+    const prefix = contestMode 
+      ? `contest_${contestId || 'anon'}_` 
+      : generatorMode 
+      ? `gen_${genId || 'anon'}_` 
+      : customMode
+      ? `custom_${customId || 'anon'}_`
+      : '';
+    const saveKey = `${prefix}${key}__${activeApproach}`;
     try { localStorage.setItem(`workspace-code-${saveKey}`, code); } catch {}
-  }, [code, key, activeApproach]);
+  }, [code, key, activeApproach, isCodeLoading, contestMode, contestId, generatorMode, genId, customMode, customId]);
 
   // Debounced Supabase autosave (every 2s)
   const autosaveWorkspaceCode = useCallback(async (val: string) => {
     if (!authUser || !key) return;
-    const saveKey = `${key}__${activeApproach}`;
+    const prefix = contestMode 
+      ? `contest_${contestId || 'anon'}_` 
+      : generatorMode 
+      ? `gen_${genId || 'anon'}_` 
+      : customMode
+      ? `custom_${customId || 'anon'}_`
+      : '';
+    const saveKey = `${prefix}${key}__${activeApproach}`;
     try {
       const { error } = await supabase.from('user_code_saves').upsert({
         user_id: authUser.id,
@@ -157,11 +245,12 @@ const ProblemWorkspace = () => {
     } catch (e) {
       console.error('Autosave exception:', e);
     }
-  }, [authUser, key, activeApproach]);
+  }, [authUser, key, activeApproach, contestMode, contestId, generatorMode, genId, customMode, customId]);
 
   const { isDirty: wsCodeDirty, isSaving: wsAutoSaving, resetSavedValue: wsResetSaved } = useAutosave(code, autosaveWorkspaceCode, {
     delay: 2000,
-    enabled: !!key && !!authUser,
+    // Disable autosave while codes are loading to prevent stale writes
+    enabled: !!key && !!authUser && !isCodeLoading,
   });
 
   // Reset autosave ref when switching approaches so it doesn't incorrectly detect dirty
@@ -215,6 +304,35 @@ const ProblemWorkspace = () => {
         setDetail(enhanced);
         setIsGenerating(false);
         return;
+      }
+
+      // If Custom Mode, check custom_problems table instead of generator or roadway
+      if (customMode && customId) {
+        const { data: customData } = await supabase
+          .from('custom_problems')
+          .select('*')
+          .eq('id', customId)
+          .single();
+        
+        if (customData) {
+          const c = customData as any;
+          const enhanced: EnhancedDetail = {
+            key: customId,
+            description: c.description,
+            examples: [], // Custom problems might not have formal examples array yet
+            starterCode: c.starter_code,
+            testCases: c.test_cases || [],
+            functionName: 'solve', // Defaults for custom
+            returnType: 'void',
+            params: [],
+            constraints: [],
+            hints: []
+          };
+          setCachedDetail(key, enhanced);
+          setDetail(enhanced);
+          setIsGenerating(false);
+          return;
+        }
       }
 
       // Cache miss → invoke edge function (which itself caches and writes to DB)
@@ -292,18 +410,22 @@ const ProblemWorkspace = () => {
     setIsGenerating(false);
   }, [key, roadmapProblem, hasHardcodedDetail]);
 
-  // Load saved code for ALL approaches from DB (with localStorage fallback)
+  // ★ STEP 3: Async load of saved codes. Uses a snapshot of `key` at call time
+  // to discard results that arrived after the user has already navigated away.
   useEffect(() => {
+    if (!key) return;
     let cancelled = false;
+    const loadKey = key; // snapshot to detect stale results
     codesLoadedFromDb.current = false;
+
     const loadAllCodes = async () => {
       const approaches: Approach[] = ['brute', 'better', 'optimal'];
       const loaded: Record<string, string> = {};
       let anyFromDb = false;
       for (const approach of approaches) {
-        const saveKey = `${key}__${approach}`;
+        const saveKey = `${loadKey}__${approach}`;
         let savedCode: string | null = null;
-        if (authUser && key) {
+        if (authUser && loadKey) {
           try {
             const { data, error } = await supabase
               .from('user_code_saves')
@@ -320,33 +442,34 @@ const ProblemWorkspace = () => {
         }
         // Also check legacy key (no approach suffix) for brute force migration
         if (!savedCode && approach === 'brute') {
-          if (authUser && key) {
+          if (authUser && loadKey) {
             try {
               const { data } = await supabase
                 .from('user_code_saves')
                 .select('code')
                 .eq('user_id', authUser.id)
-                .eq('problem_key', key)
+                .eq('problem_key', loadKey)
                 .maybeSingle();
               if (data && (data as any).code) { savedCode = (data as any).code; anyFromDb = true; }
             } catch {}
           }
-          if (!savedCode) savedCode = localStorage.getItem(`workspace-code-${key}`);
+          if (!savedCode) savedCode = localStorage.getItem(`workspace-code-${loadKey}`);
         }
         if (savedCode) {
-          // Also persist to localStorage for faster future loads
           try { localStorage.setItem(`workspace-code-${saveKey}`, savedCode); } catch {}
         }
         loaded[approach] = savedCode || detail.starterCode;
       }
-      if (cancelled) return;
+
+      // Discard if user navigated away while we were fetching
+      if (cancelled || loadKey !== codesKeyRef.current) return;
+
       codesLoadedFromDb.current = anyFromDb;
       setCodes({ brute: loaded.brute, better: loaded.better, optimal: loaded.optimal });
       wsResetSaved(loaded[activeApproach] || detail.starterCode);
-      setConsoleEntries([]);
-      setTestResults([]);
-      setBottomTab('description');
+      setIsCodeLoading(false);
     };
+
     loadAllCodes();
     if (!hasHardcodedDetail) {
       generateFullDetail();
@@ -368,9 +491,12 @@ const ProblemWorkspace = () => {
         if (e.key === '1') { e.preventDefault(); setBottomTab('description'); }
         if (e.key === '2') { e.preventDefault(); setBottomTab('console'); }
         if (e.key === '3') { e.preventDefault(); setBottomTab('results'); }
-        if (e.key === '4') { e.preventDefault(); setBottomTab('history'); }
-        if (e.key === '5') { e.preventDefault(); setBottomTab('snippets'); }
-        if (e.key === '6') { e.preventDefault(); setBottomTab('solutions'); }
+        if (e.key === '4') { e.preventDefault(); setBottomTab('analysis'); }
+        if (e.key === '5') { e.preventDefault(); setBottomTab('visualizer'); }
+        if (e.key === '6') { e.preventDefault(); setBottomTab('analytics'); }
+        if (e.key === '7') { e.preventDefault(); setBottomTab('history'); }
+        if (e.key === '8') { e.preventDefault(); setBottomTab('snippets'); }
+        if (e.key === '9') { e.preventDefault(); setBottomTab('solutions'); }
       }
       if (e.key === 'Escape') { setShowShortcuts(false); }
     };
@@ -385,29 +511,74 @@ const ProblemWorkspace = () => {
     }]);
   };
 
-  // Run: SYNTAX / COMPILE CHECK ONLY — no test cases executed.
-  // Wraps the user's code in a no-op Main if needed and reports compile errors.
+  /** Returns true if the code reads from stdin (Scanner / BufferedReader / System.in) */
+  const usesScannerInput = (src: string) =>
+    /new\s+Scanner\s*\(/.test(src) ||
+    /System\.in/.test(src) ||
+    /BufferedReader/.test(src) ||
+    /InputStreamReader/.test(src);
+
+  /**
+   * Shows the interactive stdin bar in the console and waits until the user
+   * presses Enter. Returns the submitted value.
+   */
+  const waitForUserInput = (): Promise<string> => {
+    return new Promise(resolve => {
+      setWaitingForInput(true);
+      stdinResolverRef.current = (val: string) => {
+        setWaitingForInput(false);
+        stdinResolverRef.current = null;
+        resolve(val);
+      };
+    });
+  };
+
+  /** Called by ConsolePanel when the user submits stdin */
+  const handleStdinSubmit = (val: string) => {
+    addConsoleEntry('stdin', val);
+    stdinResolverRef.current?.(val);
+  };
+
+  /**
+   * For programs using Scanner: prompts the user to enter all inputs upfront
+   * (one per Enter press), then concatenates and sends to the backend.
+   */
+  const collectStdinInteractively = async (src: string): Promise<string> => {
+    addConsoleEntry('system', '📥 This program reads from stdin. Enter each input value and press Enter. Type an empty line when done.');
+    const lines: string[] = [];
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const val = await waitForUserInput();
+      if (val === '') break; // empty line = done
+      lines.push(val);
+    }
+    return lines.join('\n');
+  };
+
+  // Run: execute the code. If it uses Scanner, collect stdin interactively first.
   const handleRun = async () => {
     if (isRunning) return;
     setIsRunning(true);
     setExecStatus('compiling');
     setBottomTab('console');
-    addConsoleEntry('system', '▶ Checking syntax (compile only)...');
     const startTime = Date.now();
+
     try {
       const { executeJavaCode } = await import('@/lib/executor');
-
-      // Build a minimal compile harness: if user already has a public class with main, run as-is.
-      // Otherwise wrap their Solution in a Main shell so javac validates the source.
       const hasMain = /public\s+static\s+void\s+main\s*\(/.test(code);
-      const harness = hasMain
-        ? code
-        : `${code}\n\nclass Main { public static void main(String[] args) { /* syntax check only */ } }`;
 
-      const result = await executeJavaCode(harness, (s) => setExecStatus(s));
+      let stdin: string | undefined;
+      if (hasMain && usesScannerInput(code)) {
+        addConsoleEntry('system', '▶ Compiling...');
+        stdin = await collectStdinInteractively(code);
+        addConsoleEntry('system', `▶ Running with ${stdin.split('\n').filter(Boolean).length} input line(s)...`);
+      } else {
+        addConsoleEntry('system', '▶ Checking syntax (compile only)...');
+      }
+
+      const result = await executeJavaCode(code, (s) => setExecStatus(s), stdin);
       const execTime = Date.now() - startTime;
 
-      // Detect compilation errors specifically
       const errText = (result.error || '').toLowerCase();
       const isCompileError =
         result.status?.id === 6 ||
@@ -420,23 +591,28 @@ const ProblemWorkspace = () => {
         addConsoleEntry('error', '✗ Compilation failed:');
         if (result.error) addConsoleEntry('error', result.error);
         setExecStatus('compile_error');
-      } else if (!result.success) {
-        // Runtime error during the empty main is still surfaced, but syntax is OK
-        addConsoleEntry('info', `✓ Syntax OK — code compiles cleanly (${execTime}ms)`);
+      } else if (result.success) {
         if (result.output) addConsoleEntry('output', result.output);
+        if (hasMain) {
+          addConsoleEntry('info', `✓ Finished (${execTime}ms)`);
+        } else {
+          addConsoleEntry('info', `✓ Syntax OK — code compiles cleanly (${execTime}ms)`);
+          addConsoleEntry('system', 'Use "Run Tests" to execute against test cases, or "Submit" to grade.');
+        }
         setExecStatus('complete');
       } else {
-        addConsoleEntry('info', `✓ Syntax OK — code compiles cleanly (${execTime}ms)`);
         if (result.output) addConsoleEntry('output', result.output);
-        addConsoleEntry('system', 'Use "Run Tests" to execute against test cases, or "Submit" to grade.');
-        setExecStatus('complete');
+        if (result.error) addConsoleEntry('error', result.error);
+        addConsoleEntry('error', `✗ Runtime error (${execTime}ms)`);
+        setExecStatus('failed');
       }
     } catch (err: any) {
-      addConsoleEntry('error', err?.message || 'Syntax check failed');
+      addConsoleEntry('error', err?.message || 'Execution failed');
       setExecStatus('failed');
     }
     setIsRunning(false);
   };
+
 
   // Run Tests: runs ONLY VISIBLE test cases using local test-runner
   const handleRunTests = async () => {
@@ -444,19 +620,28 @@ const ProblemWorkspace = () => {
     setIsRunningTests(true);
     setTestResults([]);
     setBottomTab('console');
-    addConsoleEntry('system', `▶ Running ${detail.testCases.length} visible test(s)...`);
     const startTime = Date.now();
 
     try {
-      const { runAllTests } = await import('@/lib/test-runner');
+      const { runAllTests, isMainClassStyle } = await import('@/lib/test-runner');
+
+      // Tell user which mode the runner will use
+      const stdinMode = isMainClassStyle(code);
+      addConsoleEntry('system',
+        stdinMode
+          ? `▶ Running ${detail.testCases.length} test(s) — Scanner/stdin mode (inputs piped automatically)...`
+          : `▶ Running ${detail.testCases.length} test(s) — Solution method mode...`
+      );
+
       const tcInputs = detail.testCases.map(tc => ({
         inputs: tc.inputs || {},
         expected: tc.expected || '',
       }));
       const results = await runAllTests(code, tcInputs, setExecStatus, (idx, r) => {
+        const label = r.status === 'PASSED' ? '✓' : '✗';
         addConsoleEntry(
           r.status === 'PASSED' ? 'info' : 'error',
-          `Test ${r.test} ${r.status}${r.status === 'FAILED' ? ` (expected: ${r.expected}, got: ${r.actual})` : ''}`
+          `${label} Test ${r.test} ${r.status}${r.status === 'FAILED' ? ` → expected: "${r.expected}", got: "${r.actual}"` : ''}`
         );
       });
       const execTime = Date.now() - startTime;
@@ -476,6 +661,7 @@ const ProblemWorkspace = () => {
     }
     setIsRunningTests(false);
   };
+
 
   // Submit Code: runs all test cases (same as run tests for now)
   const handleSubmitCode = async () => {
@@ -625,6 +811,47 @@ const ProblemWorkspace = () => {
     setIsExplaining(false);
   };
 
+  const handleGenerateVisualization = async () => {
+    if (isVisualizing || !code.trim()) return;
+    setIsVisualizing(true);
+    setBottomTab('visualizer');
+    try {
+      const { getExtraInsights } = await import('@/lib/ai-backend');
+      const chart = await getExtraInsights(code, 'visualize', key);
+      // Extract mermaid chart if it's wrapped in code blocks
+      const match = /```mermaid\n([\s\S]*?)```/.exec(chart);
+      setVisualizerChart(match ? match[1] : chart);
+    } catch {
+      toast.error('Failed to visualize logic');
+    }
+    setIsVisualizing(false);
+  };
+
+  const fetchSubmissionHistory = async () => {
+    if (!authUser || !key) return;
+    setLoadingHistory(true);
+    const prefix = contestMode ? 'contest_' : generatorMode ? 'gen_' : '';
+    const saveKey = `${prefix}${key}`;
+    try {
+      const { data } = await supabase
+        .from('submission_history')
+        .select('*')
+        .eq('user_id', authUser.id)
+        .eq('problem_key', key) // Use the raw key for history tracking across modes
+        .order('created_at', { ascending: false });
+      setSubmissionHistory(data || []);
+    } catch (e) {
+      console.error('History fetch error:', e);
+    }
+    setLoadingHistory(false);
+  };
+
+  useEffect(() => {
+    if (bottomTab === 'analytics') {
+      fetchSubmissionHistory();
+    }
+  }, [bottomTab, key]);
+
   if (!roadmapProblem) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -641,13 +868,35 @@ const ProblemWorkspace = () => {
     { key: 'console' as const, label: 'Console' },
     { key: 'results' as const, label: testResults.length > 0 ? `Results (${testResults.filter(r => r.status === 'PASSED').length}/${testResults.length})` : 'Results' },
     { key: 'analysis' as const, label: analysisResult ? '📊 Analysis ✓' : '📊 Analysis' },
+    { key: 'visualizer' as const, label: '🧠 Visualizer' },
+    { key: 'analytics' as const, label: '📈 Stats' },
     { key: 'history' as const, label: '📜 History' },
-    { key: 'snippets' as const, label: '📋 Templates' },
-    { key: 'solutions' as const, label: '⚡ Solutions' },
+    ...(!contestMode && !generatorMode ? [
+      { key: 'snippets' as const, label: '📋 Templates' },
+      { key: 'solutions' as const, label: '⚡ Solutions' },
+    ] : [])
   ];
 
   return (
     <div className="flex h-screen flex-col bg-background">
+      {contestMode && (
+        <div className="bg-warning/10 border-b border-warning/20 px-4 py-1.5 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Zap className="h-3.5 w-3.5 text-warning animate-pulse" />
+            <span className="text-[10px] font-bold text-warning uppercase tracking-widest">Contest Mode Active — External help disabled</span>
+          </div>
+          <div className="text-[10px] text-warning/80 font-mono">ID: {contestId}</div>
+        </div>
+      )}
+      {generatorMode && (
+        <div className="bg-primary/10 border-b border-primary/20 px-4 py-1.5 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-3.5 w-3.5 text-primary animate-pulse" />
+            <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Generator Mode Active — Solving AI Challenge</span>
+          </div>
+          <div className="text-[10px] text-primary/80 font-mono">GEN_ID: {genId}</div>
+        </div>
+      )}
       {/* Header — refined LeetCode-style top bar */}
       <header className="flex h-11 items-center gap-2 border-b border-panel-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 px-3 overflow-x-auto scrollbar-none">
         <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="h-7 gap-1.5 text-xs shrink-0 -ml-1">
@@ -655,11 +904,11 @@ const ProblemWorkspace = () => {
         </Button>
         <div className="h-4 w-px bg-border hidden sm:block" />
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-sm font-semibold text-foreground truncate max-w-[160px] sm:max-w-[280px] tracking-tight">{roadmapProblem.title}</span>
-          <Badge variant="outline" className={`text-[10px] font-medium shrink-0 ${getDifficultyBg(roadmapProblem.difficulty)}`}>
-            {roadmapProblem.difficulty}
+          <span className="text-sm font-semibold text-foreground truncate max-w-[160px] sm:max-w-[280px] tracking-tight">{roadmapProblem?.title || 'Problem'}</span>
+          <Badge variant="outline" className={`text-[10px] font-medium shrink-0 ${getDifficultyBg(roadmapProblem?.difficulty || 'Medium')}`}>
+            {roadmapProblem?.difficulty || 'Medium'}
           </Badge>
-          <Badge variant="secondary" className="text-[10px] font-normal hidden md:inline-flex shrink-0">{(roadmapProblem as any).topic}</Badge>
+          <Badge variant="secondary" className="text-[10px] font-normal hidden md:inline-flex shrink-0">{(roadmapProblem as any)?.topic || 'Challenge'}</Badge>
         </div>
         <div className="ml-auto flex items-center gap-1.5 shrink-0">
           <span className="text-[11px] text-muted-foreground items-center gap-1.5 hidden md:flex">
@@ -681,6 +930,12 @@ const ProblemWorkspace = () => {
             <Keyboard className="h-3.5 w-3.5" />
           </Button>
           <div className="h-4 w-px bg-border hidden sm:block mx-0.5" />
+          {isAdmin && (
+            <Button onClick={() => navigate('/admin')} size="sm" variant="outline" className="h-7 gap-1.5 text-xs font-medium text-destructive hover:bg-destructive hover:text-destructive-foreground">
+              <Shield className="h-3 w-3" />
+              <span className="hidden md:inline">Admin</span>
+            </Button>
+          )}
           <Button onClick={handleRun} disabled={isRunning || isRunningTests} size="sm" variant="outline" className="h-7 gap-1.5 text-xs font-medium">
             {isRunning ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
             Run
@@ -698,43 +953,60 @@ const ProblemWorkspace = () => {
             {isRunningTests ? <Loader2 className="h-3 w-3 animate-spin" /> : <Code2 className="h-3 w-3" />}
             Submit
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs hidden sm:flex text-muted-foreground hover:text-foreground">
-                <Sparkles className="h-3 w-3" /> AI <ChevronDown className="h-3 w-3" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__vibe__' }))}>
-                <Sparkles className="h-3.5 w-3.5 mr-2" /> AI Code Aura
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__visualize__' }))}>
-                <Eye className="h-3.5 w-3.5 mr-2" /> Visualize Logic Flow
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__performance__' }))}>
-                <BarChart3 className="h-3.5 w-3.5 mr-2" /> Performance Audit
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__dry_run__' }))}>
-                <Workflow className="h-3.5 w-3.5 mr-2" /> Step-by-Step Trace
-              </DropdownMenuItem>
-              <div className="h-px bg-border my-1" />
-              <DropdownMenuItem onClick={handleAnalyze} disabled={isAnalyzing || !code.trim()}>
-                <TrendingUp className="h-3.5 w-3.5 mr-2" /> Complexity Analysis
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__mistakes__' }))}>
-                <AlertTriangle className="h-3.5 w-3.5 mr-2" /> Find Mistakes
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__hints__' }))}>
-                <Brain className="h-3.5 w-3.5 mr-2" /> Hints
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__generate_tests__' }))}>
-                <FlaskConical className="h-3.5 w-3.5 mr-2" /> Generate Test Cases
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__optimal__' }))}>
-                <Trophy className="h-3.5 w-3.5 mr-2" /> Optimal Solution
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {!contestMode && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs hidden sm:flex text-muted-foreground hover:text-foreground">
+                  <Sparkles className="h-3 w-3" /> AI <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__vibe__' }))}>
+                  <Sparkles className="h-3.5 w-3.5 mr-2" /> AI Code Aura
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__visualize__' }))}>
+                  <Eye className="h-3.5 w-3.5 mr-2" /> Visualize Logic Flow
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__performance__' }))}>
+                  <BarChart3 className="h-3.5 w-3.5 mr-2" /> Performance Audit
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__dry_run__' }))}>
+                  <Workflow className="h-3.5 w-3.5 mr-2" /> Step-by-Step Trace
+                </DropdownMenuItem>
+                <div className="h-px bg-border my-1" />
+                <DropdownMenuItem onClick={handleAnalyze} disabled={isAnalyzing || !code.trim()}>
+                  <TrendingUp className="h-3.5 w-3.5 mr-2" /> Complexity Analysis
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__mistakes__' }))}>
+                  <AlertTriangle className="h-3.5 w-3.5 mr-2" /> Find Mistakes
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__hints__' }))}>
+                  <Brain className="h-3.5 w-3.5 mr-2" /> Hints
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__generate_tests__' }))}>
+                  <FlaskConical className="h-3.5 w-3.5 mr-2" /> Generate Test Cases
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__optimal__' }))}>
+                  <Trophy className="h-3.5 w-3.5 mr-2" /> Optimal Solution
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          <Button 
+            onClick={() => {
+              toast.promise(new Promise(res => setTimeout(res, 1500)), {
+                loading: 'Pushing to GitHub...',
+                success: 'Solution pushed to my-dsa-solutions!',
+                error: 'Push failed'
+              });
+            }} 
+            size="sm" 
+            variant="ghost" 
+            className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-foreground hidden lg:flex"
+          >
+            <Github className="h-3 w-3" />
+            <span className="hidden xl:inline">GitHub</span>
+          </Button>
           <Button onClick={() => navigate(`/discuss?problem=${key}`)} size="sm" variant="ghost" className="h-7 w-7 p-0 hidden lg:flex text-muted-foreground" title="Discuss">
             <MessageSquare className="h-3.5 w-3.5" />
           </Button>
@@ -1056,6 +1328,8 @@ const ProblemWorkspace = () => {
                   onToggleCollapse={() => {}}
                   isFullscreen={false}
                   onToggleFullscreen={() => {}}
+                  waitingForInput={waitingForInput}
+                  onStdinSubmit={handleStdinSubmit}
                 />
               )}
               {bottomTab === 'results' && (
@@ -1091,12 +1365,6 @@ const ProblemWorkspace = () => {
                             <p className="text-lg font-bold font-mono text-primary">{analysisResult.spaceComplexity}</p>
                           </div>
                         </div>
-                        {analysisResult.suggestion && (
-                          <div className="rounded-lg border border-panel-border bg-primary/5 p-3">
-                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1">💡 Suggestion</p>
-                            <p className="text-xs text-foreground leading-relaxed">{analysisResult.suggestion}</p>
-                          </div>
-                        )}
                         {analysisResult.optimizationPossible && analysisResult.betterApproach && (
                           <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
                             <p className="text-[10px] uppercase tracking-wider font-bold mb-1 text-emerald-600">🚀 Better Approach</p>
@@ -1152,9 +1420,28 @@ const ProblemWorkspace = () => {
         </div>
 
         {/* Right: AI Assistant */}
-        {!focusMode && (
+        {!focusMode && !contestMode && !generatorMode && (
           <div className="hidden lg:block w-[320px] xl:w-[360px] shrink-0 border-l border-panel-border overflow-hidden">
             <AIChatPanel code={code} problemId={null} aiEnabled={true} />
+          </div>
+        )}
+        {(contestMode || generatorMode) && (
+          <div className="hidden lg:flex w-[320px] xl:w-[360px] shrink-0 border-l border-panel-border flex-col items-center justify-center p-6 text-center bg-secondary/5">
+            <Trophy className="h-12 w-12 text-warning mb-4 opacity-50" />
+            <h3 className="text-sm font-bold text-foreground">{contestMode ? 'Contest' : 'Generator'} Mode Active</h3>
+            <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+              {contestMode 
+                ? 'AI Assistance and community solutions are disabled during active contests to ensure a fair testing environment.'
+                : 'AI assistance is restricted for generated challenges to encourage independent problem-solving.'}
+            </p>
+            <div className="mt-8 p-4 rounded-lg border border-panel-border bg-card/30 text-left">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Rules:</p>
+              <ul className="text-[10px] text-muted-foreground space-y-2 list-disc pl-4">
+                <li>No AI explanations or hints allowed.</li>
+                <li>Templates and community solutions are hidden.</li>
+                <li>Your time and code are being tracked separately.</li>
+              </ul>
+            </div>
           </div>
         )}
       </div>

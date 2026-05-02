@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Plus, Search, Trash2, FileCode, Pencil, Check, X, Bookmark, BookmarkCheck, Filter } from 'lucide-react';
+import { Plus, Search, Trash2, FileCode, Pencil, Check, X, Bookmark, BookmarkCheck, Filter, Wand2, Sparkles } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { DbProblem, createProblem, deleteProblem as dbDeleteProblem, updateProblem as dbUpdateProblem, DEFAULT_CODE } from '@/lib/supabase';
 import { useUser } from '@/lib/user-context';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,7 @@ interface ProblemExplorerProps {
 }
 
 const ProblemExplorer = ({ problems, activeProblemId, onSelect, onRefresh }: ProblemExplorerProps) => {
+  const navigate = useNavigate();
   const { authUser } = useUser();
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -84,10 +86,21 @@ const ProblemExplorer = ({ problems, activeProblemId, onSelect, onRefresh }: Pro
           >
             {showBookmarked ? <BookmarkCheck className="h-3.5 w-3.5" /> : <Bookmark className="h-3.5 w-3.5" />}
           </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={handleCreate}>
+          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={handleCreate} title="New problem">
             <Plus className="h-3.5 w-3.5" />
           </Button>
         </div>
+      </div>
+
+      <div className="px-2 pt-2">
+        <button
+          onClick={() => navigate('/generator')}
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg bg-primary/5 border border-primary/20 text-primary hover:bg-primary/10 transition-all group"
+        >
+          <Wand2 className="h-3.5 w-3.5" />
+          <span className="text-xs font-bold">AI Problem Generator</span>
+          <Sparkles className="h-3 w-3 ml-auto opacity-40 group-hover:opacity-100 transition-opacity" />
+        </button>
       </div>
 
       <div className="px-2.5 py-2">

@@ -4,7 +4,7 @@ import {
   Home, Map, Code2, BookOpen, Brain, Trophy, Calendar, Target, Sparkles, Search,
   User, LogOut, Settings, Moon, Sun, BarChart3, Layers, GraduationCap, Clock,
   Building2, MessageSquare, Award, Bookmark, FileSpreadsheet, Activity, Flame,
-  Plus, Dices, Zap, Timer, Share2, AlertTriangle, RotateCcw, TrendingUp,
+  Plus, Dices, Zap, Timer, Share2, AlertTriangle, RotateCcw, TrendingUp, Shield,
 } from 'lucide-react';
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
@@ -93,12 +93,25 @@ function AppSidebar() {
   const collapsed = state === 'collapsed';
   const location = useLocation();
   const navigate = useNavigate();
-  const { authUser } = useUser();
+  const { authUser, isAdmin } = useUser();
 
   const initials = useMemo(() => {
     const name = (authUser?.email || 'You').split('@')[0];
     return name.slice(0, 2).toUpperCase();
   }, [authUser]);
+
+  const navGroups = useMemo(() => {
+    if (!isAdmin) return NAV_GROUPS;
+    return [
+      ...NAV_GROUPS,
+      {
+        label: 'Admin',
+        items: [
+          { title: 'Dashboard', url: '/admin', icon: Shield },
+        ],
+      }
+    ];
+  }, [isAdmin]);
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -121,7 +134,7 @@ function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="px-1.5 py-2">
-        {NAV_GROUPS.map(group => (
+        {navGroups.map(group => (
           <SidebarGroup key={group.label} className="py-1">
             {!collapsed && (
               <SidebarGroupLabel className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground/70 px-2 mb-0.5">
@@ -227,9 +240,19 @@ export default function AppShell({ children, title, subtitle, actions, bare = fa
     <SidebarProvider defaultOpen>
       <div className="min-h-screen flex w-full bg-background overflow-hidden">
         <AppSidebar />
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 bg-background/50">
           {!bare && <Topbar title={title} subtitle={subtitle} actions={actions} />}
-          <main className="app-shell-main flex-1 min-w-0 overflow-auto animate-fade-in">{children}</main>
+          <main className="app-shell-main flex-1 min-w-0 overflow-auto relative">
+            {bare ? (
+              <div className="h-full w-full animate-in-up">
+                {children}
+              </div>
+            ) : (
+              <div className="max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 animate-in-up">
+                {children}
+              </div>
+            )}
+          </main>
         </div>
       </div>
     </SidebarProvider>

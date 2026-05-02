@@ -13,12 +13,21 @@ export const useTheme = () => useContext(ThemeContext);
 
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [theme, setTheme] = useState<Theme>(() => {
-    return 'light';
+    try {
+      const savedTheme = localStorage.getItem('dsa-theme');
+      return (savedTheme as Theme) || 'light';
+    } catch (e) {
+      return 'light';
+    }
   });
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
-    localStorage.setItem('dsa-theme', theme);
+    try {
+      localStorage.setItem('dsa-theme', theme);
+    } catch (e) {
+      // Ignore
+    }
   }, [theme]);
 
   const toggleTheme = () => setTheme(t => t === 'light' ? 'dark' : 'light');

@@ -84,6 +84,8 @@ const COMPILE_PATTERNS = [
   /error:\s*incompatible types/i,
   /\.java:\d+: error:/i,
   /compilation failed/i,
+  /error:/i,
+  /Syntax error/i,
 ];
 
 const RUNTIME_PATTERNS = [
@@ -112,19 +114,19 @@ export function classifyError(results: TestResult[], runnerError?: string): { ty
   }
   const failed = results.find((r) => r.status === 'FAILED');
   if (!failed) return { type: 'NONE', summary: 'No error' };
-  const blob = (failed.actual || '') + ' ' + (failed.expected || '');
+  const blob = failed.actual || '';
 
   for (const { re, reason } of SYSTEM_PATTERNS) {
     if (re.test(blob)) return { type: 'SYSTEM', summary: `${reason}: ${blob.slice(0, 200)}` };
-  }
-  if (TIMEOUT_PATTERNS.some((re) => re.test(blob))) {
-    return { type: 'TIMEOUT', summary: `Timeout: ${blob.slice(0, 200)}` };
   }
   if (COMPILE_PATTERNS.some((re) => re.test(blob))) {
     return { type: 'CODE_COMPILE', summary: `Compile error: ${blob.slice(0, 200)}` };
   }
   if (RUNTIME_PATTERNS.some((re) => re.test(blob))) {
     return { type: 'RUNTIME', summary: `Runtime error: ${blob.slice(0, 200)}` };
+  }
+  if (TIMEOUT_PATTERNS.some((re) => re.test(blob))) {
+    return { type: 'TIMEOUT', summary: `Timeout: ${blob.slice(0, 200)}` };
   }
   return { type: 'LOGIC', summary: `Wrong answer. Expected ${failed.expected ?? '?'}, got ${failed.actual ?? '?'}` };
 }
@@ -212,11 +214,18 @@ async function proposeSystemPatch(
   }
 }
 
-function summarizeFailure(results: TestResult[]): { errorOutput: string; failing?: { input: string; expected: string; actual: string } } {
+function summarizeFailure(results: TestResult[], errorType: ErrorType): { errorOutput: string; failing?: { input: string; expected: string; actual: string } } {
   const failed = results.find((r) => r.status === 'FAILED');
   if (!failed) return { errorOutput: 'Unknown failure' };
+  
+  // For compile/runtime errors, the full error text is in `actual` — preserve it completely
+  const isCodeError = errorType === 'CODE_COMPILE' || errorType === 'RUNTIME';
+  const errorOutput = isCodeError
+    ? `[${errorType}] ${failed.actual || ''}`
+    : `Expected: ${failed.expected || ''}, Got: ${failed.actual || '(no output)'}`;
+  
   return {
-    errorOutput: failed.actual || 'Wrong answer',
+    errorOutput,
     failing: { input: '(see test case)', expected: failed.expected || '', actual: failed.actual || '' },
   };
 }
@@ -333,7 +342,17 @@ export async function runAgentForQuestion(q: AgentQuestion, update: Updater): Pr
 
       const { type, summary } = classifyError(results, runnerError);
       state.errorType = type;
-      log(newLog('warn', `${passed}/${results.length} passed · ${type}`));
+
+      // Log clearly what kind of error was detected
+      if (type === 'CODE_COMPILE') {
+        const firstFailed = results.find(r => r.status === 'FAILED');
+        log(newLog('error', `⚠️ COMPILE ERROR detected: ${(firstFailed?.actual || '').slice(0, 200)}`));
+      } else if (type === 'RUNTIME') {
+        const firstFailed = results.find(r => r.status === 'FAILED');
+        log(newLog('error', `⚠️ RUNTIME ERROR detected: ${(firstFailed?.actual || '').slice(0, 200)}`));
+      } else {
+        log(newLog('warn', `${passed}/${results.length} passed · error type: ${type}`));
+      }
 
       // SYSTEM error → propose patch (max 2 per run), then continue retry loop
       if (type === 'SYSTEM' && systemPatchAttempts < MAX_SYSTEM_PATCH_ATTEMPTS) {
@@ -352,14 +371,14 @@ export async function runAgentForQuestion(q: AgentQuestion, update: Updater): Pr
 
       if (attempt === MAX_RETRIES) break;
 
-      // Ask AI to fix code
+      // Ask AI to fix code — pass full error context including type
       state.phase = 'fixing';
-      const { errorOutput, failing } = summarizeFailure(results);
-      log(newLog('info', `Sending error back to AI for code-level fix… (${errorOutput.slice(0, 80)}${errorOutput.length > 80 ? '…' : ''})`));
+      const { errorOutput, failing } = summarizeFailure(results, type);
+      log(newLog('info', `[${type}] Sending error to AI for fix… ${errorOutput.slice(0, 120)}${errorOutput.length > 120 ? '…' : ''}`));
       update({ ...state });
       try {
         code = await fixCode(q, starter, code, errorOutput, type, failing, state);
-        log(newLog('success', 'AI returned a fix; retrying.'));
+        log(newLog('success', `AI produced a ${type === 'CODE_COMPILE' ? 'compile' : type === 'RUNTIME' ? 'runtime' : 'logic'} fix; retrying…`));
       } catch (e) {
         log(newLog('error', `Fix call failed: ${(e as Error).message}`));
         break;

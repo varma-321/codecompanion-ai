@@ -81,13 +81,18 @@ Strict rules:
 - You may use java.util.*, java.math.*, java.io.* via fully-qualified names or imports at the top.
 - The code must compile and produce correct results for typical test cases.`;
 
-const FIX_SYSTEM = `You are a Java debugging expert. Fix the Java code based on the error. Return only corrected Java code.
+const FIX_SYSTEM = `You are a Java debugging expert. Fix the Java code based on the exact error reported. Return only corrected Java code.
 
 Strict rules:
 - Keep the same class name "Solution" and the same method signature.
 - Do NOT include a main method. Do NOT add explanations or markdown.
-- Address the specific error reported. If the output is wrong, rethink the algorithm.
+- Read the error carefully and fix ONLY that issue.
+- If the error class is CODE_COMPILE: fix syntax, type, symbol, or structural Java errors shown in the compiler output.
+- If the error class is RUNTIME: fix NullPointerException, ArrayIndexOutOfBounds, StackOverflow, or other runtime exceptions.
+- If the error class is LOGIC: rethink the algorithm to produce the correct output.
+- If the error class is TIMEOUT: optimize the algorithm time complexity.
 - Output the FULL corrected Solution class.`;
+
 
 interface GenerateBody {
   mode: 'generate';
@@ -142,8 +147,19 @@ Return only the complete Solution class.`;
       const failBlock = body.failingTest
         ? `Failing test:\nInput: ${body.failingTest.input}\nExpected: ${body.failingTest.expected}\nActual: ${body.failingTest.actual}\n\n`
         : '';
+      const errorTypeLabel = body.errorType || 'UNKNOWN';
+      const errorGuidance = {
+        CODE_COMPILE: 'Fix all Java compilation errors shown below. The code cannot compile - do not change logic, only fix syntax/type errors.',
+        RUNTIME: 'Fix the runtime exception shown below. Make the code handle edge cases and not throw exceptions.',
+        LOGIC: 'The code compiles and runs but produces wrong output. Fix the algorithm logic.',
+        TIMEOUT: 'The code is too slow. Optimize the algorithm to reduce time complexity.',
+        SYSTEM: 'There was a system/infrastructure error. Ensure the code is self-contained and correct.',
+      }[errorTypeLabel] || 'Fix the error in the code.';
+
       const userMsg = `Problem: ${body.title}
-${body.errorType ? `Error class: ${body.errorType}\n` : ''}
+Error Type: ${errorTypeLabel}
+Task: ${errorGuidance}
+
 Original starter signature:
 \`\`\`java
 ${body.starterCode}
@@ -154,7 +170,7 @@ Current (broken) code:
 ${body.currentCode}
 \`\`\`
 
-Compiler/runtime output / error:
+Full error output (DO NOT ignore any line):
 ${body.errorOutput}
 
 ${failBlock}Return only the complete corrected Solution class.`;

@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
-import { Play, Brain, Loader2, FlaskConical, Square, FolderOpen, MessageSquare, Send } from 'lucide-react';
+import { Play, Brain, Loader2, FlaskConical, Square, FolderOpen, MessageSquare } from 'lucide-react';
 import { useAutosave } from '@/hooks/use-autosave';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -48,10 +48,9 @@ const Dashboard = () => {
   const [consoleFullscreen, setConsoleFullscreen] = useState(false);
   const [consoleHeight, setConsoleHeight] = useState(288);
   
-  // Interactive stdin
-  const [pendingStdin, setPendingStdin] = useState('');
+  // Interactive stdin — promise-based so handleRun waits for user input
   const [waitingForInput, setWaitingForInput] = useState(false);
-  const stdinBufferRef = useRef('');
+  const stdinResolverRef = useRef<((val: string) => void) | null>(null);
 
   // Test case state
   const [testCases, setTestCases] = useState<DbTestCase[]>([]);
@@ -59,6 +58,10 @@ const Dashboard = () => {
   const [isGeneratingTests, setIsGeneratingTests] = useState(false);
   const [isRunningTests, setIsRunningTests] = useState(false);
   const [bottomTab, setBottomTab] = useState<'console' | 'tests' | 'results' | 'notes' | 'solutions' | 'streak' | 'daily'>('console');
+
+  // Mobile navigation state
+  const [showMobileExplorer, setShowMobileExplorer] = useState(false);
+  const [showMobileAI, setShowMobileAI] = useState(false);
 
   // Execution analytics
   const [execTimeMs, setExecTimeMs] = useState<number | null>(null);
@@ -125,12 +128,39 @@ const Dashboard = () => {
     }]);
   };
 
-  const handleStdinSubmit = () => {
-    if (!pendingStdin.trim()) return;
-    stdinBufferRef.current += pendingStdin + '\n';
-    addConsoleEntry('output', `> ${pendingStdin}`);
-    setPendingStdin('');
+  /** Called by ConsolePanel when the user presses Enter in the stdin bar */
+  const handleStdinSubmit = (val: string) => {
+    addConsoleEntry('stdin', val);
+    stdinResolverRef.current?.(val);
+    stdinResolverRef.current = null;
   };
+
+  /** Shows the yellow input bar and waits for one line of input */
+  const waitForUserInput = (): Promise<string> =>
+    new Promise(resolve => {
+      setWaitingForInput(true);
+      stdinResolverRef.current = (val: string) => {
+        setWaitingForInput(false);
+        resolve(val);
+      };
+    });
+
+  /** Collects all stdin lines interactively (empty line = done) */
+  const collectStdinInteractively = async (): Promise<string> => {
+    addConsoleEntry('system', '📥 Program is waiting for input. Type each value and press Enter. Click "Run Now" or press Enter on an empty line when finished.');
+    const lines: string[] = [];
+    while (true) {
+      const val = await waitForUserInput();
+      console.log(`Stdin line collected: [${val}]`);
+      if (val === '') break;
+      lines.push(val);
+      // Optional: show a small confirmation that it was added
+    }
+    const finalStdin = lines.join('\n');
+    console.log(`All stdin collected. Total lines: ${lines.length}. Final string: ${JSON.stringify(finalStdin)}`);
+    return finalStdin;
+  };
+
 
   const handleRun = async () => {
     if (isRunning) return;
@@ -139,29 +169,33 @@ const Dashboard = () => {
     setConsoleCollapsed(false);
     setBottomTab('console');
     setExecTimeMs(null);
-    stdinBufferRef.current = '';
-    
-    // Check if code uses Scanner - if so, show input prompt
-    const usesScanner = /Scanner|System\.in|BufferedReader.*System\.in/.test(code);
-    
-    if (usesScanner && !stdinBufferRef.current) {
-      setWaitingForInput(true);
-      addConsoleEntry('system', '▶ Program requires input. Enter values below and press Send, then click Run again.');
-      addConsoleEntry('info', '💡 Tip: Enter all input values (one per line), press Send, then Run Code.');
-      setIsRunning(false);
-      setExecStatus('ready');
-      return;
-    }
-    
-    addConsoleEntry('system', '▶ Compiling and running...');
-    const startTime = Date.now();
+
     try {
-      const stdin = stdinBufferRef.current || undefined;
+      const usesScanner =
+        /new\s+Scanner\s*\(/.test(code) ||
+        /System\.in/.test(code) ||
+        /BufferedReader/.test(code);
+      const hasMain = /public\s+static\s+void\s+main\s*\(/.test(code);
+
+      let stdin: string | undefined;
+      if (hasMain && usesScanner) {
+        stdin = await collectStdinInteractively();
+        const lineCount = stdin ? stdin.split('\n').length : 0;
+        addConsoleEntry('system', `▶ Running with ${lineCount} input line(s)...`);
+      } else {
+        addConsoleEntry('system', '▶ Compiling and running...');
+      }
+
+      const startTime = Date.now();
+      console.log('Final Stdin to send:', JSON.stringify(stdin));
       const result = await executeJavaCode(code, (status) => setExecStatus(status), stdin);
       const elapsed = Date.now() - startTime;
+      console.log('Execution result:', result);
+      if ((result as any).stdin_received !== undefined) {
+        console.log('Backend confirmed receiving stdin:', (result as any).stdin_received);
+      }
       setExecTimeMs(elapsed);
-      setWaitingForInput(false);
-      stdinBufferRef.current = '';
+
       if (result.success) {
         if (result.output) addConsoleEntry('output', result.output);
         addConsoleEntry('info', `✓ Execution completed in ${elapsed}ms`);
@@ -180,6 +214,7 @@ const Dashboard = () => {
             .finally(() => setIsAnalyzingComplexity(false));
         }
       } else {
+        if (result.output) addConsoleEntry('output', result.output);
         if (result.error) addConsoleEntry('error', result.error);
         if (result.status.description !== 'Compilation Error') {
           addConsoleEntry('system', `Status: ${result.status.description}`);
@@ -192,33 +227,6 @@ const Dashboard = () => {
     setIsRunning(false);
   };
 
-  const handleRunWithInput = async () => {
-    if (!stdinBufferRef.current.trim()) {
-      toast.error('Please enter input values first');
-      return;
-    }
-    setWaitingForInput(false);
-    setIsRunning(true);
-    setExecStatus('sending');
-    addConsoleEntry('system', '▶ Compiling and running with input...');
-    const startTime = Date.now();
-    try {
-      const result = await executeJavaCode(code, (status) => setExecStatus(status), stdinBufferRef.current);
-      const elapsed = Date.now() - startTime;
-      setExecTimeMs(elapsed);
-      stdinBufferRef.current = '';
-      if (result.success) {
-        if (result.output) addConsoleEntry('output', result.output);
-        addConsoleEntry('info', `✓ Execution completed in ${elapsed}ms`);
-      } else {
-        if (result.error) addConsoleEntry('error', result.error);
-      }
-    } catch (err: any) {
-      addConsoleEntry('error', err?.message || 'Execution failed');
-      setExecStatus('failed');
-    }
-    setIsRunning(false);
-  };
 
   const handleRunTests = async () => {
     if (isRunningTests || testCases.length === 0) return;
@@ -386,57 +394,64 @@ const Dashboard = () => {
         onSave={handleSave}
         onAnalyze={handleAnalyze}
         onSettings={() => setShowSettings(true)}
-        onLogout={handleLogout}
+        onLogout={signOut}
         username={username}
         isRunning={isRunning}
-        isSaving={isSaving}
-        runDisabled={false}
+        isSaving={isAutoSaving}
+        runDisabled={!activeProblem || execStatus === 'running'}
         aiEnabled={aiEnabled}
         onAIToggle={setAiEnabled}
         isAutoSaving={isAutoSaving}
         codeIsDirty={codeIsDirty}
+        leftMobileActions={
+          <Button variant="ghost" size="icon" className="md:hidden h-8 w-8 text-muted-foreground" onClick={() => setShowMobileExplorer(true)}>
+            <FolderOpen className="h-4 w-4" />
+          </Button>
+        }
+        rightMobileActions={
+          aiEnabled ? (
+            <Button variant="ghost" size="icon" className="lg:hidden h-8 w-8 text-muted-foreground" onClick={() => setShowMobileAI(true)}>
+              <MessageSquare className="h-4 w-4" />
+            </Button>
+          ) : null
+        }
       />
 
-      {/* Mobile action bar */}
-      <div className="flex md:hidden items-center gap-2 border-b border-border bg-card px-3 py-2">
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
-              <FolderOpen className="h-3.5 w-3.5" /> Files
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="w-72 p-0">
-            <SheetHeader className="px-4 pt-4 pb-2">
-              <SheetTitle className="text-sm">Problem Explorer</SheetTitle>
-            </SheetHeader>
-            <div className="h-[calc(100%-60px)] overflow-auto">
-              <ProblemExplorer
-                problems={problems}
-                activeProblemId={activeProblem?.id || null}
-                onSelect={handleSelectProblem}
-                onRefresh={refreshProblems}
-              />
-            </div>
-          </SheetContent>
-        </Sheet>
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
-              <MessageSquare className="h-3.5 w-3.5" /> AI Chat
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="right" className="w-[85vw] sm:max-w-md p-0">
-            <SheetHeader className="px-4 pt-4 pb-2">
-              <SheetTitle className="text-sm">AI Assistant</SheetTitle>
-            </SheetHeader>
-            <div className="h-[calc(100%-60px)] overflow-auto">
-              <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
-            </div>
-          </SheetContent>
-        </Sheet>
-        {activeProblem && <span className="text-xs text-muted-foreground truncate ml-1">{activeProblem.title}</span>}
+      {/* Mobile overlays are handled via Toolbar leftMobileActions / rightMobileActions */}
+      {showMobileExplorer && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 md:hidden" onClick={() => setShowMobileExplorer(false)} />
+      )}
+      <div className={`fixed inset-y-0 left-0 z-50 w-[280px] bg-background border-r shadow-2xl transition-transform duration-300 ease-in-out md:hidden flex flex-col ${showMobileExplorer ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="flex items-center justify-between p-4 border-b">
+          <span className="font-semibold text-sm">Explorer</span>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowMobileExplorer(false)}>
+            <Square className="h-4 w-4" />
+          </Button>
+        </div>
+        <div className="flex-1 overflow-hidden">
+          <ProblemExplorer
+            problems={problems}
+            activeProblemId={activeProblem?.id || null}
+            onSelect={(p) => { handleSelectProblem(p); setShowMobileExplorer(false); }}
+            onRefresh={refreshProblems}
+          />
+        </div>
       </div>
 
+      {showMobileAI && aiEnabled && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 lg:hidden" onClick={() => setShowMobileAI(false)} />
+      )}
+      <div className={`fixed inset-y-0 right-0 z-50 w-[85vw] sm:w-[380px] bg-background border-l shadow-2xl transition-transform duration-300 ease-in-out lg:hidden flex flex-col ${showMobileAI ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className="flex items-center justify-between p-4 border-b">
+          <span className="font-semibold text-sm flex items-center gap-2"><MessageSquare className="h-4 w-4 text-primary" /> AI Assistant</span>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowMobileAI(false)}>
+            <Square className="h-4 w-4" />
+          </Button>
+        </div>
+        <div className="flex-1 overflow-hidden">
+          <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
+        </div>
+      </div>
       <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
         {/* Left: Problem Explorer */}
         <div className="hidden md:block w-56 shrink-0 border-r border-border">
@@ -449,8 +464,8 @@ const Dashboard = () => {
         </div>
 
         {/* Center: Editor + Bottom Panels */}
-        <div className="flex flex-1 flex-col overflow-hidden">
-          <div className={`overflow-hidden ${consoleFullscreen ? 'hidden' : 'flex-1'}`}>
+        <div className="flex flex-1 flex-col overflow-hidden p-2 sm:p-4 bg-background/50 animate-in-up">
+          <div className={`overflow-hidden rounded-xl border border-border bg-card shadow-sm mb-2 sm:mb-4 ${consoleFullscreen ? 'hidden' : 'flex-1'}`}>
             <CodeEditor code={code} onChange={setCode} />
           </div>
 
@@ -463,11 +478,6 @@ const Dashboard = () => {
               {(isRunning || isRunningTests) && (
                 <Button onClick={() => { stopExecution(); import('@/lib/test-runner').then(m => m.stopTestExecution()); setIsRunning(false); setIsRunningTests(false); setExecStatus('stopped' as any); }} size="sm" variant="destructive" className="h-8 gap-1.5 px-3 text-xs font-semibold rounded-md shrink-0">
                   <Square className="h-3.5 w-3.5" /> Stop
-                </Button>
-              )}
-              {waitingForInput && (
-                <Button onClick={handleRunWithInput} size="sm" className="h-8 gap-1.5 px-3 text-xs font-semibold rounded-md bg-blue-600 hover:bg-blue-700 text-white shrink-0">
-                  <Play className="h-3.5 w-3.5" /> Run with Input
                 </Button>
               )}
               <Button onClick={handleRunTests} disabled={isRunning || isRunningTests || testCases.length === 0} size="sm" variant="outline" className="h-8 gap-1.5 px-3 sm:px-4 text-xs font-semibold rounded-md shrink-0 border-primary/30 hover:bg-primary/10">
@@ -496,9 +506,8 @@ const Dashboard = () => {
             className="resize-handle h-1 cursor-row-resize border-t border-border hover:bg-foreground/10 transition-colors"
           />
 
-          {/* Bottom tabs */}
           <div
-            className={`shrink-0 border-t border-border ${consoleFullscreen ? 'flex-1' : ''}`}
+            className={`shrink-0 border border-border rounded-xl bg-card shadow-sm overflow-hidden ${consoleFullscreen ? 'flex-1' : ''}`}
             style={consoleFullscreen ? {} : { height: consoleCollapsed ? 36 : consoleHeight }}
           >
             <div className="flex items-center border-b border-border bg-card px-1 overflow-x-auto scrollbar-none">
@@ -524,39 +533,20 @@ const Dashboard = () => {
                     <ConsolePanel
                       entries={consoleEntries}
                       isRunning={isRunning || isRunningTests}
-                      onClear={() => { setConsoleEntries([]); setWaitingForInput(false); stdinBufferRef.current = ''; }}
+                      onClear={() => { setConsoleEntries([]); setWaitingForInput(false); stdinResolverRef.current = null; }}
                       isCollapsed={consoleCollapsed}
                       onToggleCollapse={() => setConsoleCollapsed(c => !c)}
                       isFullscreen={consoleFullscreen}
                       onToggleFullscreen={() => setConsoleFullscreen(f => !f)}
+                      waitingForInput={waitingForInput}
+                      onStdinSubmit={handleStdinSubmit}
                     />
-                  </div>
-                  {/* Interactive stdin input bar */}
-                  <div className="flex items-center gap-2 border-t border-border bg-secondary/30 px-3 py-1.5">
-                    <span className="text-[10px] text-muted-foreground font-mono shrink-0">{'>'}</span>
-                    <input
-                      type="text"
-                      value={pendingStdin}
-                      onChange={e => setPendingStdin(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') handleStdinSubmit(); }}
-                      placeholder="Enter input value..."
-                      className="flex-1 bg-transparent border-none outline-none text-xs font-mono text-foreground placeholder:text-muted-foreground/50"
-                    />
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={handleStdinSubmit}
-                      className="h-6 w-6 p-0"
-                      disabled={!pendingStdin.trim()}
-                    >
-                      <Send className="h-3 w-3" />
-                    </Button>
                   </div>
                 </div>
               )}
 
               {bottomTab === 'tests' && (
-                <div className="flex flex-1 flex-col lg:flex-row">
+                <div className="flex flex-1 flex-col">
                   <div className="flex-1 overflow-hidden">
                     <TestCasePanel
                       testCases={testCases}
@@ -568,14 +558,11 @@ const Dashboard = () => {
                       isGenerating={isGeneratingTests}
                     />
                   </div>
-                  <div className="hidden lg:block w-[380px] xl:w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
-                    <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
-                  </div>
                 </div>
               )}
 
               {bottomTab === 'results' && (
-                <div className="flex flex-1 flex-col lg:flex-row">
+                <div className="flex flex-1 flex-col">
                   <div className="flex-1 overflow-auto p-3">
                     {testResults.length > 0 ? (
                       <TestResultsTable results={testResults} />
@@ -585,41 +572,29 @@ const Dashboard = () => {
                       </div>
                     )}
                   </div>
-                  <div className="hidden lg:block w-[380px] xl:w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
-                    <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
-                  </div>
                 </div>
               )}
 
               {bottomTab === 'daily' && (
-                <div className="flex flex-1 flex-col lg:flex-row">
+                <div className="flex flex-1 flex-col">
                   <div className="flex-1 overflow-auto p-3">
                     <DailyChallenge />
-                  </div>
-                  <div className="hidden lg:block w-[380px] xl:w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
-                    <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
                   </div>
                 </div>
               )}
 
               {bottomTab === 'notes' && (
-                <div className="flex flex-1 flex-col lg:flex-row">
+                <div className="flex flex-1 flex-col">
                   <div className="flex-1 overflow-hidden">
                     <NotesPanel notes={(activeProblem as any)?.notes || ''} onSave={handleSaveNotes} />
-                  </div>
-                  <div className="hidden lg:block w-[380px] xl:w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
-                    <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
                   </div>
                 </div>
               )}
 
               {bottomTab === 'streak' && (
-                <div className="flex flex-1 flex-col lg:flex-row">
+                <div className="flex flex-1 flex-col">
                   <div className="flex-1 overflow-auto">
                     <StreakPanel />
-                  </div>
-                  <div className="hidden lg:block w-[380px] xl:w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
-                    <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
                   </div>
                 </div>
               )}
@@ -629,14 +604,18 @@ const Dashboard = () => {
                   <div className="flex-1 overflow-hidden">
                     <SolutionComparison code={code} problemTitle={activeProblem?.title} />
                   </div>
-                  <div className="hidden lg:block w-[380px] xl:w-[420px] shrink-0 overflow-hidden border-l border-panel-border">
-                    <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
-                  </div>
                 </div>
               )}
             </div>
           </div>
         </div>
+
+        {/* Right: AI Panel (Globally visible) */}
+        {aiEnabled && (
+          <div className="hidden lg:block w-[320px] xl:w-[380px] shrink-0 border-l border-border bg-card overflow-hidden surface-elevated rounded-l-2xl my-4 mr-4 animate-in-up">
+            <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
+          </div>
+        )}
       </div>
 
       <SettingsDialog open={showSettings} onClose={() => setShowSettings(false)} />

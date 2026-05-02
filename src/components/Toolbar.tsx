@@ -19,15 +19,20 @@ interface ToolbarProps {
   onAIToggle: (enabled: boolean) => void;
   isAutoSaving?: boolean;
   codeIsDirty?: boolean;
+  leftMobileActions?: React.ReactNode;
+  rightMobileActions?: React.ReactNode;
 }
 
-const Toolbar = ({ onRun, onSave, onAnalyze, onSettings, onLogout, username, isRunning, isSaving, runDisabled, aiEnabled, onAIToggle, isAutoSaving, codeIsDirty }: ToolbarProps) => {
+const Toolbar = ({ onRun, onSave, onAnalyze, onSettings, onLogout, username, isRunning, isSaving, runDisabled, aiEnabled, onAIToggle, isAutoSaving, codeIsDirty, leftMobileActions, rightMobileActions }: ToolbarProps) => {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
 
   return (
     <div className="flex items-center justify-between border-b border-border bg-card px-2 sm:px-4 py-2 gap-1 overflow-x-auto scrollbar-none">
       <div className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0">
+        <div className="md:hidden flex items-center shrink-0">
+          {leftMobileActions}
+        </div>
         <span className="text-sm font-semibold tracking-tight text-foreground mr-1 hidden sm:inline">DSA Lab</span>
         <div className="h-4 w-px bg-border hidden sm:block" />
 
@@ -96,6 +101,9 @@ const Toolbar = ({ onRun, onSave, onAnalyze, onSettings, onLogout, username, isR
         <Button onClick={onLogout} size="icon" variant="ghost" className="h-8 w-8 rounded-lg">
           <LogOut className="h-4 w-4" />
         </Button>
+        <div className="lg:hidden flex items-center shrink-0 ml-1">
+          {rightMobileActions}
+        </div>
       </div>
     </div>
   );

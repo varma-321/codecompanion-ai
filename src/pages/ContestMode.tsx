@@ -14,34 +14,22 @@ import { STRIVER_ROADMAP, type RoadmapProblem } from '@/lib/striver-roadmap-data
 import { NEETCODE_ROADMAP } from '@/lib/neetcode-roadmap-data';
 import { LEETCODE_TOP150_ROADMAP } from '@/lib/leetcode-top150-data';
 
+import { CONTEST_PROBLEMS, type ContestProblem } from '@/lib/contest-problems-data';
+
 type ContestState = 'setup' | 'running' | 'finished';
 type Difficulty = 'Easy' | 'Medium' | 'Hard' | 'Mixed';
 type QuestionSource = 'all' | 'solved';
 
-const ALL_PROBLEMS = [
-  ...STRIVER_ROADMAP.flatMap(t => t.problems),
-  ...NEETCODE_ROADMAP.flatMap(t => t.problems),
-  ...LEETCODE_TOP150_ROADMAP.flatMap(t => t.problems),
-];
+const UNIQUE_PROBLEMS = CONTEST_PROBLEMS;
 
-// Deduplicate by key
-const UNIQUE_PROBLEMS = (() => {
-  const seen = new Set<string>();
-  return ALL_PROBLEMS.filter(p => {
-    if (seen.has(p.key)) return false;
-    seen.add(p.key);
-    return true;
-  });
-})();
-
-function pickRandom(arr: RoadmapProblem[], count: number, difficulty: Difficulty): RoadmapProblem[] {
+function pickRandom(arr: ContestProblem[], count: number, difficulty: Difficulty): ContestProblem[] {
   let pool = difficulty === 'Mixed' ? arr : arr.filter(p => p.difficulty === difficulty);
   const shuffled = [...pool].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, count);
+  return shuffled.slice(0, Math.min(count, shuffled.length));
 }
 
 interface ContestResult {
-  problem: RoadmapProblem;
+  problem: ContestProblem;
   solved: boolean;
   timeSpent: number;
 }
@@ -54,11 +42,12 @@ const ContestMode = () => {
   const [problemCount, setProblemCount] = useState(5);
   const [timeLimit, setTimeLimit] = useState(30);
   const [questionSource, setQuestionSource] = useState<QuestionSource>('all');
-  const [problems, setProblems] = useState<RoadmapProblem[]>([]);
+  const [problems, setProblems] = useState<ContestProblem[]>([]);
   const [results, setResults] = useState<ContestResult[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [elapsed, setElapsed] = useState(0);
   const [problemStart, setProblemStart] = useState(0);
+  const [contestId] = useState(() => Math.random().toString(36).substring(2, 9));
   const timerRef = useRef<ReturnType<typeof setInterval>>();
 
   const [pastResults, setPastResults] = useState<any[]>([]);
@@ -302,7 +291,7 @@ const ContestMode = () => {
                   </p>
 
                   <div className="flex gap-2 mt-6">
-                    <Button className="flex-1 gap-2" onClick={() => navigate(`/problem/${problems[currentIdx].key}?title=${encodeURIComponent(problems[currentIdx].title)}`)}>
+                    <Button className="flex-1 gap-2" onClick={() => navigate(`/problem/${problems[currentIdx].key}?title=${encodeURIComponent(problems[currentIdx].title)}&contestMode=true&contestId=${contestId}`)}>
                       <Zap className="h-4 w-4" /> Open in Workspace
                     </Button>
                   </div>

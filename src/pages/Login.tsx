@@ -62,21 +62,21 @@ const Login = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-sm animate-fade-in">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12">
+      <div className="w-full max-w-[400px] animate-in-up">
         {/* Logo */}
         <div className="mb-10 text-center">
-          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-foreground">
-            <Code2 className="h-7 w-7 text-background" />
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-foreground shadow-md transition-transform hover:scale-105 duration-300">
+            <Code2 className="h-8 w-8 text-background" />
           </div>
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">AI Java DSA Lab</h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">Your AI-powered DSA practice environment</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-balance text-foreground">AI Java DSA Lab</h1>
+          <p className="mt-2 text-[15px] text-muted-foreground leading-relaxed">Your AI-powered DSA practice environment</p>
         </div>
 
         {/* Card */}
-        <div className="rounded-2xl border border-border bg-card p-7" style={{ boxShadow: 'var(--shadow-lg)' }}>
+        <div className="surface-elevated p-8 rounded-2xl">
           {/* Feature badges */}
-          <div className="mb-6 flex items-center justify-center gap-3 text-[11px] text-muted-foreground">
+          <div className="mb-8 flex items-center justify-center gap-3 text-[11px] font-medium tracking-wide text-muted-foreground">
             <span className="flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1">
               <Terminal className="h-3 w-3" /> Java
             </span>
@@ -88,7 +88,7 @@ const Login = () => {
             </span>
           </div>
 
-          <h2 className="mb-5 text-center text-base font-semibold text-foreground">
+          <h2 className="mb-6 text-center text-[17px] font-semibold tracking-tight text-foreground">
             {mode === 'forgot' ? 'Reset Password' : mode === 'signup' ? 'Create Account' : 'Welcome Back'}
           </h2>
 
@@ -119,29 +119,29 @@ const Login = () => {
           ) : (
             <>
               {mode === 'signup' && (
-                <div className="mb-3.5">
-                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Username</label>
+                <div className="mb-4">
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Username</label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
-                    <Input value={username} onChange={e => { setUsername(e.target.value); setError(''); }} placeholder="e.g. dev_coder" className="h-10 rounded-xl pl-9 font-mono text-sm" disabled={loading} />
+                    <User className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
+                    <Input value={username} onChange={e => { setUsername(e.target.value); setError(''); }} placeholder="e.g. dev_coder" className="h-11 rounded-xl pl-10 font-mono text-sm bg-secondary/30 focus:bg-background border-border/60 transition-colors" disabled={loading} />
                   </div>
                 </div>
               )}
 
-              <div className="mb-3.5">
-                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Email</label>
+              <div className="mb-4">
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Email</label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
-                  <Input type="email" value={email} onChange={e => { setEmail(e.target.value); setError(''); }} placeholder="you@example.com" className="h-10 rounded-xl pl-9 text-sm" disabled={loading} />
+                  <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
+                  <Input type="email" value={email} onChange={e => { setEmail(e.target.value); setError(''); }} placeholder="you@example.com" className="h-11 rounded-xl pl-10 text-sm bg-secondary/30 focus:bg-background border-border/60 transition-colors" disabled={loading} />
                 </div>
               </div>
 
               {mode !== 'forgot' && (
-                <div className="mb-5">
-                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Password</label>
+                <div className="mb-6">
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Password</label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
-                    <Input type="password" value={password} onChange={e => { setPassword(e.target.value); setError(''); }} onKeyDown={e => e.key === 'Enter' && !loading && handleSubmit()} placeholder="••••••••" className="h-10 rounded-xl pl-9 text-sm" disabled={loading} />
+                    <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
+                    <Input type="password" value={password} onChange={e => { setPassword(e.target.value); setError(''); }} onKeyDown={e => e.key === 'Enter' && !loading && handleSubmit()} placeholder="••••••••" className="h-11 rounded-xl pl-10 text-sm bg-secondary/30 focus:bg-background border-border/60 transition-colors" disabled={loading} />
                   </div>
                 </div>
               )}
@@ -152,13 +152,13 @@ const Login = () => {
                 </div>
               )}
 
-              <Button onClick={handleSubmit} className="w-full h-10 rounded-xl text-sm font-medium" disabled={loading}>
+              <Button onClick={handleSubmit} className="w-full h-11 rounded-xl text-[14px] font-semibold tracking-wide transition-all duration-200" disabled={loading}>
                 {loading ? (
                   <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {mode === 'forgot' ? 'Sending...' : mode === 'signup' ? 'Creating...' : 'Signing In...'}</>
                 ) : (
                   <span className="flex items-center gap-2">
                     {mode === 'forgot' ? 'Send Reset Link' : mode === 'signup' ? 'Create Account' : 'Sign In'}
-                    <ArrowRight className="h-4 w-4" />
+                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </span>
                 )}
               </Button>
@@ -168,7 +168,7 @@ const Login = () => {
                 <Button
                   onClick={enterGuestMode}
                   variant="outline"
-                  className="w-full h-10 rounded-xl text-sm font-medium mt-3 gap-2"
+                  className="w-full h-11 rounded-xl text-[14px] font-medium mt-3 gap-2 border-border/80 hover:bg-secondary/50 transition-colors"
                   disabled={loading}
                 >
                   <Users className="h-4 w-4" />

@@ -105,6 +105,7 @@ const AdminAgentDashboard = () => {
   const [search, setSearch] = useState('');
   const [moduleFilter, setModuleFilter] = useState<string>('all');
   const [diffFilter, setDiffFilter] = useState<string>('all');
+  const [topicFilter, setTopicFilter] = useState<string>('all');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [results, setResults] = useState<Record<string, AgentResult>>({});
   const [running, setRunning] = useState(false);
@@ -115,6 +116,7 @@ const AdminAgentDashboard = () => {
   const [tab, setTab] = useState('agent');
   const [runHistory, setRunHistory] = useState<AgentRunRow[]>([]);
   const [proposals, setProposals] = useState<PatchProposalRow[]>([]);
+  const [collapsedTopics, setCollapsedTopics] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (authLoading) return;
@@ -145,15 +147,25 @@ const AdminAgentDashboard = () => {
     if (tab === 'patches') loadProposals();
   }, [tab, authUser, isAdmin, loadHistory, loadProposals]);
 
+  const availableTopics = useMemo(() => {
+    const seen = new Set<string>();
+    for (const p of allProblems) {
+      if (moduleFilter !== 'all' && p.module !== moduleFilter) continue;
+      seen.add(p.topic);
+    }
+    return Array.from(seen).sort();
+  }, [allProblems, moduleFilter]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return allProblems.filter((p) => {
       if (moduleFilter !== 'all' && p.module !== moduleFilter) return false;
       if (diffFilter !== 'all' && p.difficulty !== diffFilter) return false;
+      if (topicFilter !== 'all' && p.topic !== topicFilter) return false;
       if (q && !p.title.toLowerCase().includes(q) && !p.problem_key.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [allProblems, search, moduleFilter, diffFilter]);
+  }, [allProblems, search, moduleFilter, diffFilter, topicFilter]);
 
   const toggle = (key: string) => {
     setSelected((s) => { const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n; });
@@ -162,6 +174,19 @@ const AdminAgentDashboard = () => {
     setSelected((s) => { const n = new Set(s); filtered.forEach((p) => n.add(p.problem_key)); return n; });
   };
   const clearAll = () => setSelected(new Set());
+  const selectTopic = (module: string, topic: string) => {
+    setSelected((s) => {
+      const n = new Set(s);
+      const inTopic = filtered.filter(p => p.module === module && p.topic === topic);
+      const allSelected = inTopic.every(p => n.has(p.problem_key));
+      if (allSelected) inTopic.forEach(p => n.delete(p.problem_key));
+      else inTopic.forEach(p => n.add(p.problem_key));
+      return n;
+    });
+  };
+  const toggleTopicCollapse = (key: string) => {
+    setCollapsedTopics(s => { const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n; });
+  };
   const randomSelect = () => {
     const n = Math.min(10, filtered.length);
     if (n === 0) return;
@@ -329,11 +354,21 @@ const AdminAgentDashboard = () => {
             <div className="rounded-xl border border-border bg-card p-4 space-y-3">
               <div className="flex items-center gap-2 flex-wrap">
                 <Input placeholder="Search problems by title or key…" value={search} onChange={(e) => setSearch(e.target.value)} className="h-9 max-w-sm" />
-                <select value={moduleFilter} onChange={(e) => setModuleFilter(e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm">
+                <select
+                  value={moduleFilter}
+                  onChange={(e) => { setModuleFilter(e.target.value); setTopicFilter('all'); }}
+                  className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                >
                   <option value="all">All modules</option>
                   <option value="Striver">Striver</option>
                   <option value="NeetCode">NeetCode</option>
                   <option value="LeetCode 150">LeetCode 150</option>
+                </select>
+                <select value={topicFilter} onChange={(e) => setTopicFilter(e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm max-w-[180px]">
+                  <option value="all">All topics</option>
+                  {availableTopics.map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
                 </select>
                 <select value={diffFilter} onChange={(e) => setDiffFilter(e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm">
                   <option value="all">All difficulties</option>
@@ -366,29 +401,121 @@ const AdminAgentDashboard = () => {
 
             {/* Two column: problem list + results */}
             <div className="grid lg:grid-cols-2 gap-6">
-              {/* Problem list */}
+              {/* Problem list — grouped by Module → Topic */}
               <div className="rounded-xl border border-border bg-card overflow-hidden">
                 <div className="px-4 py-3 border-b border-border flex items-center justify-between">
                   <div className="text-sm font-medium">Problems</div>
                   <Filter className="h-3.5 w-3.5 text-muted-foreground" />
                 </div>
-                <div className="max-h-[600px] overflow-y-auto divide-y divide-border">
+                <div className="max-h-[600px] overflow-y-auto">
                   {filtered.length === 0 ? (
                     <div className="p-8 text-center text-sm text-muted-foreground">No problems match your filters.</div>
-                  ) : filtered.slice(0, 500).map((p) => (
-                    <label key={p.problem_key} className="flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/50 cursor-pointer transition-colors">
-                      <Checkbox checked={selected.has(p.problem_key)} onCheckedChange={() => toggle(p.problem_key)} disabled={running} />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[13px] font-medium truncate">{p.title}</div>
-                        <div className="text-[11px] text-muted-foreground truncate">
-                          {p.module} · {p.topic} · {p.problem_key}
+                  ) : (() => {
+                    // Group: module → topic → problems
+                    const grouped: Record<string, Record<string, FlatProblem[]>> = {};
+                    for (const p of filtered.slice(0, 500)) {
+                      if (!grouped[p.module]) grouped[p.module] = {};
+                      if (!grouped[p.module][p.topic]) grouped[p.module][p.topic] = [];
+                      grouped[p.module][p.topic].push(p);
+                    }
+                    const MODULE_COLORS: Record<string, string> = {
+                      'Striver': 'bg-orange-500/15 text-orange-400 border-orange-500/30',
+                      'NeetCode': 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+                      'LeetCode 150': 'bg-purple-500/15 text-purple-400 border-purple-500/30',
+                    };
+                    return Object.entries(grouped).map(([moduleName, topics]) => (
+                      <div key={moduleName}>
+                        {/* Module header */}
+                        <div className={`px-4 py-2 flex items-center gap-2 sticky top-0 z-10 border-b border-border bg-card/95 backdrop-blur`}>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider ${MODULE_COLORS[moduleName] ?? 'bg-secondary text-foreground border-border'}`}>
+                            {moduleName}
+                          </span>
+                          <span className="text-[11px] text-muted-foreground tabular-nums">
+                            {Object.values(topics).flat().length} problems
+                          </span>
+                          <button
+                            onClick={() => {
+                              setSelected(s => {
+                                const n = new Set(s);
+                                const all = Object.values(topics).flat();
+                                const anyUnselected = all.some(p => !n.has(p.problem_key));
+                                if (anyUnselected) all.forEach(p => n.add(p.problem_key));
+                                else all.forEach(p => n.delete(p.problem_key));
+                                return n;
+                              });
+                            }}
+                            disabled={running}
+                            className="ml-auto text-[10px] text-muted-foreground hover:text-foreground transition-colors px-2 py-0.5 rounded border border-transparent hover:border-border"
+                          >
+                            {Object.values(topics).flat().every(p => selected.has(p.problem_key)) ? 'Deselect all' : 'Select all'}
+                          </button>
                         </div>
+                        {/* Topics */}
+                        {Object.entries(topics).map(([topicName, problems]) => {
+                          const topicKey = `${moduleName}::${topicName}`;
+                          const isCollapsed = collapsedTopics.has(topicKey);
+                          const allTopicSelected = problems.every(p => selected.has(p.problem_key));
+                          return (
+                            <div key={topicKey} className="border-b border-border last:border-0">
+                              {/* Topic header */}
+                              <div className="flex items-center gap-2 px-4 py-2 bg-secondary/20 hover:bg-secondary/40 transition-colors">
+                                <button
+                                  onClick={() => toggleTopicCollapse(topicKey)}
+                                  className="flex items-center gap-2 flex-1 text-left"
+                                  disabled={running}
+                                >
+                                  {isCollapsed
+                                    ? <ChevronRight className="h-3 w-3 text-muted-foreground shrink-0" />
+                                    : <ChevronDown className="h-3 w-3 text-muted-foreground shrink-0" />}
+                                  <span className="text-[12px] font-semibold text-foreground truncate">{topicName}</span>
+                                  <span className="text-[10px] text-muted-foreground tabular-nums ml-1 shrink-0">{problems.length}</span>
+                                </button>
+                                <button
+                                  onClick={() => selectTopic(moduleName, topicName)}
+                                  disabled={running}
+                                  className={`text-[10px] px-2 py-0.5 rounded border transition-colors shrink-0 ${
+                                    allTopicSelected
+                                      ? 'bg-foreground text-background border-foreground'
+                                      : 'text-muted-foreground hover:text-foreground border-border hover:border-foreground/50'
+                                  }`}
+                                >
+                                  {allTopicSelected ? '✓ All' : 'Select'}
+                                </button>
+                              </div>
+                              {/* Problems in topic */}
+                              {!isCollapsed && (
+                                <div className="divide-y divide-border/50">
+                                  {problems.map(p => (
+                                    <label key={p.problem_key} className="flex items-center gap-3 px-4 py-2 hover:bg-secondary/30 cursor-pointer transition-colors pl-8">
+                                      <Checkbox checked={selected.has(p.problem_key)} onCheckedChange={() => toggle(p.problem_key)} disabled={running} />
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-1.5 min-w-0">
+                                          {search.trim() && (
+                                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border uppercase tracking-wider shrink-0 ${
+                                              p.module === 'Striver' ? 'bg-orange-500/15 text-orange-400 border-orange-500/30'
+                                              : p.module === 'NeetCode' ? 'bg-blue-500/15 text-blue-400 border-blue-500/30'
+                                              : 'bg-purple-500/15 text-purple-400 border-purple-500/30'
+                                            }`}>{p.module}</span>
+                                          )}
+                                          <div className="text-[12px] font-medium truncate">{p.title}</div>
+                                        </div>
+                                        <div className="text-[10px] text-muted-foreground truncate">
+                                          {p.module} · {p.topic} · {p.problem_key}
+                                        </div>
+                                      </div>
+                                      <Badge variant="outline" className="text-[10px] shrink-0">{p.difficulty}</Badge>
+                                    </label>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
-                      <Badge variant="outline" className="text-[10px] shrink-0">{p.difficulty}</Badge>
-                    </label>
-                  ))}
+                    ));
+                  })()}
                   {filtered.length > 500 && (
-                    <div className="p-3 text-center text-[11px] text-muted-foreground">
+                    <div className="p-3 text-center text-[11px] text-muted-foreground border-t border-border">
                       Showing 500 of {filtered.length} — refine filters to narrow.
                     </div>
                   )}

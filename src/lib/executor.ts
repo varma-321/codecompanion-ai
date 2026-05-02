@@ -52,12 +52,15 @@ export async function executeJavaCode(
 
     onStatus?.('compiling');
 
+    const body = JSON.stringify({ code, ...(stdin !== undefined ? { stdin } : {}) });
+    console.log('Fetch request body:', body);
+
     const response = await fetch(BACKEND_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ code, ...(stdin ? { stdin } : {}) }),
+      body,
       signal: controller.signal,
     });
 

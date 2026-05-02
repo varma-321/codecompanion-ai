@@ -336,12 +336,20 @@ function detectClassName(code: string): string | null {
   return match ? match[1] : null;
 }
 
-// ─── Detect if code is Main-class style (has Main class + main method) ──
+// ─── Detect if code is Main-class style (has main method + reads stdin) ──
 
 export function isMainClassStyle(code: string): boolean {
   const cleaned = stripJavaComments(code);
-  return /class\s+Main\s*\{/.test(cleaned) && 
-         /public\s+static\s+void\s+main\s*\(\s*String\s*\[\s*\]\s+\w+\s*\)/.test(cleaned);
+  // Has a main() method
+  const hasMain = /public\s+static\s+void\s+main\s*\(\s*String\s*\[\s*\]/.test(cleaned);
+  if (!hasMain) return false;
+  // AND reads from stdin in any form
+  const readsStdin =
+    /new\s+Scanner\s*\(/.test(cleaned) ||
+    /System\.in/.test(cleaned) ||
+    /BufferedReader/.test(cleaned) ||
+    /InputStreamReader/.test(cleaned);
+  return readsStdin;
 }
 
 // ─── Default value for a Java type ──────────────────────────────
@@ -498,34 +506,37 @@ function getSupportTypes(userCode: string, needsListNode: boolean, needsTreeNode
 }
 
 // ─── Build stdin string from test case inputs ────────────────────
-// Converts test case variables to stdin lines that Scanner can read
+// Converts test case input values to newline-separated stdin lines.
+// Each input value becomes one line, which matches Scanner.nextLine(),
+// nextInt(), nextLong(), next() etc.
+//
+// Strategy: emit the raw value stripped of surrounding quotes.
+// Arrays like [1,2,3] are emitted as space-separated on one line
+// so Scanner can read them with multiple next() calls.
+// 2-D arrays emit size then each row as space-separated.
 
 function buildStdinFromInputs(inputs: Record<string, string>): string {
   const lines: string[] = [];
   for (const [, value] of Object.entries(inputs)) {
     const v = value.trim();
-    // If it's an array like [1,2,3], put each element on separate line or as space-separated
     if (v.startsWith('[') && v.endsWith(']')) {
       try {
         const arr = JSON.parse(v);
         if (Array.isArray(arr)) {
-          // If it's a 2D array, flatten with newlines
-          if (Array.isArray(arr[0])) {
-            lines.push(String(arr.length)); // number of rows
-            for (const row of arr) {
-              lines.push(row.join(' '));
-            }
+          if (arr.length > 0 && Array.isArray(arr[0])) {
+            // 2-D array: emit row count then each row space-separated
+            lines.push(String(arr.length));
+            for (const row of arr) lines.push((row as any[]).join(' '));
           } else {
-            lines.push(String(arr.length)); // array length first
-            lines.push(arr.join(' ')); // elements space-separated
+            // 1-D array: emit as space-separated on one line
+            lines.push(arr.join(' '));
           }
           continue;
         }
       } catch {}
     }
-    // For simple values, just add as a line
-    const cleaned = v.replace(/^["']|["']$/g, '');
-    lines.push(cleaned);
+    // Scalars: strip surrounding quotes
+    lines.push(v.replace(/^["']|["']$/g, ''));
   }
   return lines.join('\n');
 }
@@ -812,7 +823,12 @@ export async function runAllTests(
       const aJson = tryParse(actual);
       const eJson = tryParse(expected);
       let passed: boolean;
-      if (aJson !== undefined && eJson !== undefined) {
+      let isCompileError = false;
+
+      if (!data.success && (actual.includes('error:') || actual.includes('compilation') || actual.includes('Exception in thread'))) {
+        passed = false;
+        isCompileError = true;
+      } else if (aJson !== undefined && eJson !== undefined) {
         passed = deepEq(aJson, eJson);
       } else {
         const norm = (s: string) => s.trim().replace(/\s+/g, '').toLowerCase();
@@ -827,6 +843,11 @@ export async function runAllTests(
       };
       results.push(result);
       onTestResult?.(i, result);
+      
+      if (isCompileError) {
+        // Abort remaining tests if the code couldn't even compile
+        break;
+      }
     } catch (err: any) {
       const result: TestResult = {
         test: i + 1,
