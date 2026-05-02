@@ -143,7 +143,7 @@ Return only the complete Solution class.`;
         ? `Failing test:\nInput: ${body.failingTest.input}\nExpected: ${body.failingTest.expected}\nActual: ${body.failingTest.actual}\n\n`
         : '';
       const userMsg = `Problem: ${body.title}
-
+${body.errorType ? `Error class: ${body.errorType}\n` : ''}
 Original starter signature:
 \`\`\`java
 ${body.starterCode}
