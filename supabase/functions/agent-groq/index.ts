@@ -104,6 +104,7 @@ interface FixBody {
   starterCode: string;
   currentCode: string;
   errorOutput: string;
+  errorType?: string;
   failingTest?: { input: string; expected: string; actual: string };
 }
 
