@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_runs: {
+        Row: {
+          attempts: number
+          created_at: string
+          error_type: string | null
+          final_code: string
+          finished_at: string | null
+          id: string
+          key_usage: Json
+          logs: Json
+          passed_count: number
+          phase: string
+          problem_key: string
+          started_at: string
+          title: string
+          total_count: number
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          error_type?: string | null
+          final_code?: string
+          finished_at?: string | null
+          id?: string
+          key_usage?: Json
+          logs?: Json
+          passed_count?: number
+          phase: string
+          problem_key: string
+          started_at?: string
+          title: string
+          total_count?: number
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          error_type?: string | null
+          final_code?: string
+          finished_at?: string | null
+          id?: string
+          key_usage?: Json
+          logs?: Json
+          passed_count?: number
+          phase?: string
+          problem_key?: string
+          started_at?: string
+          title?: string
+          total_count?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       analyses: {
         Row: {
           algorithm: string | null
@@ -519,6 +573,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      system_patch_proposals: {
+        Row: {
+          context_snippet: string | null
+          created_at: string
+          diff: string
+          error_summary: string
+          error_type: string
+          explanation: string
+          id: string
+          problem_key: string | null
+          proposed_by: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          target_files: string[]
+        }
+        Insert: {
+          context_snippet?: string | null
+          created_at?: string
+          diff: string
+          error_summary: string
+          error_type: string
+          explanation: string
+          id?: string
+          problem_key?: string | null
+          proposed_by: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          target_files?: string[]
+        }
+        Update: {
+          context_snippet?: string | null
+          created_at?: string
+          diff?: string
+          error_summary?: string
+          error_type?: string
+          explanation?: string
+          id?: string
+          problem_key?: string | null
+          proposed_by?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          target_files?: string[]
+        }
+        Relationships: []
       }
       test_cases: {
         Row: {
