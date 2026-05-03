@@ -532,6 +532,23 @@ export const PROBLEM_DETAILS: Record<string, ProblemDetail> = {
     returnType: 'Node',
     params: [{ name: 'arr', type: 'int[]' }],
   },
+  'basics-5': {
+    key: 'basics-5',
+    description: `An Armstrong number is a number that is equal to the sum of its own digits each raised to the power of the number of digits.\n\nFor a 3-digit number, the sum of cubes of each digit should be equal to the number itself. For example, 153 is an Armstrong number because 1³ + 5³ + 3³ = 1 + 125 + 27 = 153.`,
+    examples: [
+      { input: 'n = 153', output: 'true', explanation: '1^3 + 5^3 + 3^3 = 153' },
+      { input: 'n = 123', output: 'false', explanation: '1^3 + 2^3 + 3^3 = 1 + 8 + 27 = 36 != 123' },
+    ],
+    starterCode: `class Solution {\n    public boolean isArmstrong(int n) {\n        // Write your solution here\n        return false;\n    }\n}`,
+    testCases: [
+      { inputs: { n: '153' }, expected: 'true' },
+      { inputs: { n: '123' }, expected: 'false' },
+      { inputs: { n: '1' }, expected: 'true' },
+    ],
+    functionName: 'isArmstrong',
+    returnType: 'boolean',
+    params: [{ name: 'n', type: 'int' }],
+  },
 };
 
 /**

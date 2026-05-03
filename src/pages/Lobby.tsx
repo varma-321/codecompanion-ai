@@ -529,29 +529,60 @@ export default function Lobby() {
               </div>
             </Card>
           ) : lobby?.status === 'coding' ? (
-            <div className="flex-1 grid grid-cols-1 lg:grid-cols-[320px,1fr] gap-4 overflow-hidden">
-              <Card className="surface-elevated rounded-2xl overflow-auto border-sidebar-border">
-                <CardContent className="p-4 space-y-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <Badge className="text-[10px] mb-2">{problem?.difficulty}</Badge>
-                      <h2 className="text-lg font-black leading-tight mb-2">{problem?.title}</h2>
-                      <Badge variant="outline" className="text-[9px] font-mono">{problem?.topic}</Badge>
+            <div className="flex-1 grid grid-cols-1 lg:grid-cols-[380px,1fr] gap-4 overflow-hidden">
+              <Card className="surface-elevated rounded-2xl overflow-auto border-sidebar-border shadow-xl">
+                <CardContent className="p-5 space-y-6">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 space-y-1">
+                      <Badge className={`text-[10px] ${
+                        problem?.difficulty === 'Easy' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                        problem?.difficulty === 'Medium' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                        'bg-rose-500/10 text-rose-500 border-rose-500/20'
+                      }`}>{problem?.difficulty}</Badge>
+                      <h2 className="text-xl font-black leading-tight tracking-tight text-foreground">{problem?.title}</h2>
+                      <Badge variant="outline" className="text-[9px] font-mono opacity-50">{problem?.topic}</Badge>
                     </div>
                     {isHost && (
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={changeQuestion}
-                        className="shrink-0 h-8 gap-1.5 text-[10px] border-primary/30 text-primary hover:bg-primary/10"
+                        className="shrink-0 h-8 px-2 gap-1.5 text-[10px] border-primary/30 text-primary hover:bg-primary/10 shadow-lg shadow-primary/5"
                       >
                         <Shuffle className="h-3 w-3" /> Change
                       </Button>
                     )}
                   </div>
-                  <div className="prose prose-sm dark:prose-invert text-xs leading-relaxed opacity-80">
+
+                  <div className="prose prose-sm dark:prose-invert text-[12px] leading-relaxed text-foreground/90 border-t border-sidebar-border pt-4">
                     <ReactMarkdown>{problem?.detail?.description || ''}</ReactMarkdown>
                   </div>
+
+                  {problem?.detail?.examples?.length > 0 && (
+                    <div className="space-y-4">
+                      <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/80">Examples</h3>
+                      <div className="space-y-3">
+                        {problem.detail.examples.map((ex: any, i: number) => (
+                          <div key={i} className="rounded-xl border border-sidebar-border bg-sidebar-accent/30 p-3 font-mono text-[10px] space-y-1.5 relative overflow-hidden group">
+                            <div className="absolute top-0 left-0 w-1 h-full bg-primary/20 group-hover:bg-primary/40 transition-colors" />
+                            <p><span className="text-muted-foreground font-bold">Input:</span> <span className="text-foreground/80">{ex.input}</span></p>
+                            <p><span className="text-muted-foreground font-bold">Output:</span> <span className="text-primary font-bold">{ex.output}</span></p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {problem?.detail?.constraints?.length > 0 && (
+                    <div className="space-y-3">
+                      <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/80">Constraints</h3>
+                      <ul className="list-disc list-inside space-y-1">
+                        {problem.detail.constraints.map((c: string, i: number) => (
+                          <li key={i} className="text-[10px] text-muted-foreground font-mono leading-normal">{c}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
               <Card className="surface-elevated rounded-2xl overflow-hidden flex flex-col border-sidebar-border">

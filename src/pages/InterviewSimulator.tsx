@@ -506,25 +506,48 @@ const InterviewSimulator = () => {
     )}
 
       {phase === 'coding' && problem && (
-        <div className="max-w-6xl w-full mx-auto px-6 pb-10 grid grid-cols-1 lg:grid-cols-[380px,1fr] gap-4 flex-1 overflow-hidden">
-          <div className="surface-elevated rounded-2xl overflow-auto p-4 space-y-3">
-            <h2 className="font-bold text-foreground">{problem.title}</h2>
-            <div className="flex items-center gap-2">
-              <Badge className="text-[10px]">{problem.difficulty}</Badge>
-              {problem.topic && <Badge variant="outline" className="text-[10px]">{problem.topic}</Badge>}
+        <div className="max-w-6xl w-full mx-auto px-6 pb-10 grid grid-cols-1 lg:grid-cols-[400px,1fr] gap-6 flex-1 overflow-hidden">
+          <div className="surface-elevated rounded-2xl overflow-auto p-6 space-y-6 border border-sidebar-border shadow-2xl">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Badge className={`text-[10px] ${
+                  problem.difficulty === 'Easy' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                  problem.difficulty === 'Medium' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                  'bg-rose-500/10 text-rose-500 border-rose-500/20'
+                }`}>{problem.difficulty}</Badge>
+                {problem.topic && <Badge variant="outline" className="text-[10px] opacity-60 font-mono tracking-tighter">{problem.topic}</Badge>}
+              </div>
+              <h2 className="text-2xl font-black text-foreground tracking-tight">{problem.title}</h2>
             </div>
-            <div className="prose prose-sm dark:prose-invert text-foreground">
+
+            <div className="prose prose-sm dark:prose-invert text-foreground/90 leading-relaxed text-[13px]">
               <ReactMarkdown>{problem.detail?.description || ''}</ReactMarkdown>
             </div>
+
             {problem.detail?.examples?.length > 0 && (
-              <div className="space-y-2">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Examples</h3>
-                {problem.detail.examples.map((ex: any, i: number) => (
-                  <div key={i} className="rounded border border-panel-border bg-secondary/30 p-2 font-mono text-[11px] space-y-0.5">
-                    <p><span className="text-muted-foreground">Input:</span> {ex.input}</p>
-                    <p><span className="text-muted-foreground">Output:</span> <span className="font-semibold">{ex.output}</span></p>
-                  </div>
-                ))}
+              <div className="space-y-4">
+                <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/80">Examples</h3>
+                <div className="space-y-3">
+                  {problem.detail.examples.map((ex: any, i: number) => (
+                    <div key={i} className="rounded-xl border border-sidebar-border bg-sidebar-accent/30 p-4 font-mono text-[11px] space-y-2 relative overflow-hidden group">
+                      <div className="absolute top-0 left-0 w-1 h-full bg-primary/20 group-hover:bg-primary/40 transition-colors" />
+                      <p><span className="text-muted-foreground font-bold">Input:</span> <span className="text-foreground/80">{ex.input}</span></p>
+                      <p><span className="text-muted-foreground font-bold">Output:</span> <span className="text-primary font-bold">{ex.output}</span></p>
+                      {ex.explanation && <p className="text-[10px] text-muted-foreground italic leading-normal border-t border-sidebar-border pt-2 mt-2">{ex.explanation}</p>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {problem.detail?.constraints?.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/80">Constraints</h3>
+                <ul className="list-disc list-inside space-y-1.5">
+                  {problem.detail.constraints.map((c: string, i: number) => (
+                    <li key={i} className="text-[11px] text-muted-foreground font-mono leading-normal">{c}</li>
+                  ))}
+                </ul>
               </div>
             )}
           </div>
