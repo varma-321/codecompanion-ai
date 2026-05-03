@@ -91,10 +91,14 @@ export default function Lobby() {
               if (resp.ok) {
                 const generated = await resp.json();
                 if (generated?.description) {
-                  setProblem((prev: any) => prev?.key === p.key ? ({
-                    ...prev,
-                    detail: { ...prev.detail, description: generated.description }
-                  }) : prev);
+                  setProblem((prev: any) => {
+                    if (prev?.key !== p.key) return prev;
+                    if (generated.starterCode) setCode(generated.starterCode);
+                    return {
+                      ...prev,
+                      detail: { ...prev.detail, description: generated.description }
+                    };
+                  });
                 }
               }
             } catch (e) {

@@ -170,15 +170,24 @@ const InterviewSimulator = () => {
       if (resp.ok) {
         const generated = await resp.json();
         if (generated?.description) {
-          setProblem((prev: any) => prev?.key === picked.key ? ({
-            ...prev,
-            detail: {
-              ...prev.detail,
-              description: generated.description || prev.detail.description,
-              starterCode: generated.starterCode || prev.detail.starterCode,
-              testCases: generated.testCases || prev.detail.testCases,
+          setProblem((prev: any) => {
+            if (prev?.key !== picked.key) return prev;
+            
+            // Update the code editor if it's still the placeholder
+            if (generated.starterCode) {
+              setCode(generated.starterCode);
             }
-          }) : prev);
+
+            return {
+              ...prev,
+              detail: {
+                ...prev.detail,
+                description: generated.description || prev.detail.description,
+                starterCode: generated.starterCode || prev.detail.starterCode,
+                testCases: generated.testCases || prev.detail.testCases,
+              }
+            };
+          });
         }
       }
     } catch (e) {
