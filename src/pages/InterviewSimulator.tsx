@@ -170,11 +170,13 @@ const InterviewSimulator = () => {
       if (resp.ok) {
         const generated = await resp.json();
         if (generated?.description) {
+          const isPlaceholder = (c: string) => !c || c.trim().length < 50 || c.includes('// 🤖 AI is generating') || c.includes('public void solve()');
+
           setProblem((prev: any) => {
             if (prev?.key !== picked.key) return prev;
             
             // Update the code editor if it's still the placeholder
-            if (generated.starterCode) {
+            if (generated.starterCode && isPlaceholder(code)) {
               setCode(generated.starterCode);
             }
 

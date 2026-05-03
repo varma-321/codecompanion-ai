@@ -500,6 +500,38 @@ export const PROBLEM_DETAILS: Record<string, ProblemDetail> = {
     returnType: 'int',
     params: [{ name: 'nums', type: 'int[]' }],
   },
+  'arr-13': {
+    key: 'arr-13',
+    description: `Write an efficient algorithm that searches for a value target in an m x n integer matrix matrix. This matrix has the following properties:\n\n1. Integers in each row are sorted from left to right.\n2. The first integer of each row is greater than the last integer of the previous row.`,
+    examples: [
+      { input: 'matrix = [[1,3,5,7],[10,11,16,20],[23,30,34,60]], target = 3', output: 'true' },
+      { input: 'matrix = [[1,3,5,7],[10,11,16,20],[23,30,34,60]], target = 13', output: 'false' },
+    ],
+    starterCode: `class Solution {\n    public boolean searchMatrix(int[][] matrix, int target) {\n        // Write your solution here\n        return false;\n    }\n}`,
+    testCases: [
+      { inputs: { matrix: '[[1,3,5,7],[10,11,16,20],[23,30,34,60]]', target: '3' }, expected: 'true' },
+      { inputs: { matrix: '[[1,3,5,7],[10,11,16,20],[23,30,34,60]]', target: '13' }, expected: 'false' },
+    ],
+    functionName: 'searchMatrix',
+    returnType: 'boolean',
+    params: [{ name: 'matrix', type: 'int[][]' }, { name: 'target', type: 'int' }],
+  },
+  'll-21': {
+    key: 'll-21',
+    description: `You are given an array arr of size n. Your task is to construct a linked list from the given array and return the head of the linked list.`,
+    examples: [
+      { input: 'arr = [1, 2, 3, 4, 5]', output: '1 -> 2 -> 3 -> 4 -> 5' },
+      { input: 'arr = [4, 8, 15, 16]', output: '4 -> 8 -> 15 -> 16' },
+    ],
+    starterCode: `class Solution {\n    public Node constructLL(int[] arr) {\n        // Write your solution here\n        return null;\n    }\n}`,
+    testCases: [
+      { inputs: { arr: '[1,2,3,4,5]' }, expected: '[1, 2, 3, 4, 5]' },
+      { inputs: { arr: '[4,8,15,16]' }, expected: '[4, 8, 15, 16]' },
+    ],
+    functionName: 'constructLL',
+    returnType: 'Node',
+    params: [{ name: 'arr', type: 'int[]' }],
+  },
 };
 
 /**

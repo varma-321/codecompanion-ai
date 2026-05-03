@@ -136,6 +136,7 @@ export default function Lobby() {
     })
       // ── Broadcast (instant, no DB round-trip needed) ─────────────
       .on('broadcast', { event: 'lobby-state-change' }, ({ payload }) => {
+        const isPlaceholder = (c: string) => !c || c.trim().length < 50 || c.includes('// 🤖 AI is generating') || c.includes('public void solve()');
         setLobby((prev: any) => ({ ...prev, ...payload }));
         if (payload.problem_key) {
           const p = ALL_PROBLEMS.find(p => p.key === payload.problem_key);
@@ -147,7 +148,9 @@ export default function Lobby() {
             setProblem({ ...p, detail });
           }
         }
-        if (payload.current_code !== undefined) setCode(payload.current_code);
+        if (payload.current_code !== undefined && isPlaceholder(code)) {
+          setCode(payload.current_code);
+        }
       })
       .on('broadcast', { event: 'lobby-closed' }, () => {
         toast.info('The host has closed this lobby');
@@ -327,7 +330,8 @@ export default function Lobby() {
             }
           }));
           
-          if (generated.starterCode) setCode(generated.starterCode);
+          const isPlaceholder = (c: string) => !c || c.trim().length < 50 || c.includes('// 🤖 AI is generating') || c.includes('public void solve()');
+          if (generated.starterCode && isPlaceholder(code)) setCode(generated.starterCode);
 
           // Broadcast enhanced version to everyone
           channelRef.current?.send({
