@@ -81,6 +81,27 @@ export default function Lobby() {
       if (p) {
         const detail = getProblemDetail(p.key, p.title, p.difficulty);
         setProblem({ ...p, detail });
+
+        // If in coding/review phase, enhance description in background
+        if (data.status !== 'waiting') {
+          (async () => {
+            try {
+              const { API_BASE_URL } = await import('@/lib/api');
+              const resp = await fetch(`${API_BASE_URL}/api/problems/${p.key}?title=${encodeURIComponent(p.title)}`);
+              if (resp.ok) {
+                const generated = await resp.json();
+                if (generated?.description) {
+                  setProblem((prev: any) => prev?.key === p.key ? ({
+                    ...prev,
+                    detail: { ...prev.detail, description: generated.description }
+                  }) : prev);
+                }
+              }
+            } catch (e) {
+              console.error("Lobby join enhancement failed:", e);
+            }
+          })();
+        }
       }
     }
 
