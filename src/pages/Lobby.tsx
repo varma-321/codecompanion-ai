@@ -114,7 +114,13 @@ export default function Lobby() {
         setLobby((prev: any) => ({ ...prev, ...payload }));
         if (payload.problem_key) {
           const p = ALL_PROBLEMS.find(p => p.key === payload.problem_key);
-          if (p) setProblem({ ...p, detail: getProblemDetail(p.key, p.title, p.difficulty) });
+          if (p) {
+            const detail = getProblemDetail(p.key, p.title, p.difficulty);
+            if (payload.enhanced_description) {
+              detail.description = payload.enhanced_description;
+            }
+            setProblem({ ...p, detail });
+          }
         }
         if (payload.current_code !== undefined) setCode(payload.current_code);
       })
@@ -262,15 +268,61 @@ export default function Lobby() {
     setCode(starterCode);
     setLobby((prev: any) => ({ ...prev, ...update }));
 
-    // Broadcast instantly to all participants (they see it before DB write completes)
+    // Broadcast instantly to all participants
     channelRef.current?.send({
       type: 'broadcast', event: 'lobby-state-change',
       payload: update
     });
 
-    // Persist to DB (background)
+    // Persist to DB
     await supabase.from('interview_lobbies').update(update).eq('id', lobby.id);
     toast.success(`Problem set: ${picked.title}`);
+
+    // Background enhancement (non-blocking)
+    try {
+      const { API_BASE_URL } = await import('@/lib/api');
+      const resp = await fetch(`${API_BASE_URL}/api/problems/${picked.key}?title=${encodeURIComponent(picked.title)}`);
+      if (resp.ok) {
+        const generated = await resp.json();
+        if (generated?.description) {
+          const enhancedUpdate = {
+            problem_key: picked.key,
+            current_code: generated.starterCode || starterCode,
+            // We can't easily save the whole description in the DB column right now,
+            // but we can broadcast it to everyone in the room.
+          };
+
+          // Update local state
+          setProblem((prev: any) => ({
+            ...prev,
+            detail: {
+              ...prev.detail,
+              description: generated.description,
+              starterCode: generated.starterCode || prev.detail.starterCode,
+            }
+          }));
+          
+          if (generated.starterCode) setCode(generated.starterCode);
+
+          // Broadcast enhanced version to everyone
+          channelRef.current?.send({
+            type: 'broadcast',
+            event: 'lobby-state-change',
+            payload: {
+              ...enhancedUpdate,
+              enhanced_description: generated.description // Custom field for broadcast
+            }
+          });
+
+          // Also update DB with the new starter code if it changed
+          if (generated.starterCode) {
+            await supabase.from('interview_lobbies').update({ current_code: generated.starterCode }).eq('id', lobby.id);
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Lobby enhancement failed:", e);
+    }
   };
 
   // Alias for change during coding
