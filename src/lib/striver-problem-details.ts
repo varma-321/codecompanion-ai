@@ -553,9 +553,17 @@ export const PROBLEM_DETAILS: Record<string, ProblemDetail> = {
 
 /**
  * Get problem detail by key; returns a generic template if no detail is defined.
+ * Now also tries to match by title if the key doesn't have a direct hit.
  */
 export function getProblemDetail(key: string, title: string, difficulty: string): ProblemDetail {
-  if (PROBLEM_DETAILS[key]) return PROBLEM_DETAILS[key];
+  if (key && PROBLEM_DETAILS[key]) return PROBLEM_DETAILS[key];
+
+  // Fallback: Try to find by title match (useful for cross-roadmap consistency)
+  const titleMatch = Object.values(PROBLEM_DETAILS).find(p => 
+    p.description.toLowerCase().includes(title.toLowerCase()) || 
+    key.split('-').pop() === p.key.split('-').pop()
+  );
+  if (titleMatch) return { ...titleMatch, key };
 
   // Generate a generic template for problems without specific details
   return {
@@ -564,7 +572,7 @@ export function getProblemDetail(key: string, title: string, difficulty: string)
     examples: [],
     starterCode: `// 🤖 AI is generating the optimal starter code for: ${title}...\n// Please wait a few seconds...`,
     testCases: [],
-    functionName: 'generating',
+    functionName: 'solve',
     returnType: 'void',
     params: [],
   };
