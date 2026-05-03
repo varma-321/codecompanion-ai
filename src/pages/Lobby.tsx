@@ -105,49 +105,52 @@ export default function Lobby() {
       .order('created_at', { ascending: true });
     setMessages(msgs || []);
 
-    // Subscribe to real-time
-    const channel = supabase.channel(`lobby:${data.id}`)
+    // Subscribe to real-time — broadcast is instant, postgres_changes is fallback
+    const channel = supabase.channel(`lobby:${data.id}`, {
+      config: { broadcast: { self: false } }
+    })
+      // ── Broadcast (instant, no DB round-trip needed) ─────────────
+      .on('broadcast', { event: 'lobby-state-change' }, ({ payload }) => {
+        setLobby((prev: any) => ({ ...prev, ...payload }));
+        if (payload.problem_key) {
+          const p = ALL_PROBLEMS.find(p => p.key === payload.problem_key);
+          if (p) setProblem({ ...p, detail: getProblemDetail(p.key, p.title, p.difficulty) });
+        }
+        if (payload.current_code !== undefined) setCode(payload.current_code);
+      })
+      .on('broadcast', { event: 'lobby-closed' }, () => {
+        toast.info('The host has closed this lobby');
+        navigate('/interview');
+      })
+      .on('broadcast', { event: 'participant-update' }, () => {
+        fetchParticipants(data.id);
+      })
+      .on('broadcast', { event: 'code-sync' }, ({ payload }) => {
+        if (payload.senderId !== authUser?.id) setCode(payload.code);
+      })
+      .on('broadcast', { event: 'chat-message' }, ({ payload }) => {
+        setMessages(prev => prev.some(m => m.id === payload.id) ? prev : [...prev, payload]);
+      })
+      // ── Postgres Changes (fallback for page refresh / late joiners) ─
       .on('postgres_changes', {
         event: 'UPDATE', schema: 'public', table: 'interview_lobbies',
         filter: `id=eq.${data.id}`
-      }, (payload) => {
-        if (payload.new.closed_at) {
-          toast.info('The host has closed this lobby');
-          navigate('/interview');
-          return;
+      }, ({ new: row }) => {
+        if (row.closed_at) { toast.info('This lobby was closed'); navigate('/interview'); return; }
+        setLobby((prev: any) => ({ ...prev, ...row }));
+        if (row.problem_key) {
+          const p = ALL_PROBLEMS.find(p => p.key === row.problem_key);
+          if (p) setProblem({ ...p, detail: getProblemDetail(p.key, p.title, p.difficulty) });
         }
-        setLobby((prev: any) => ({ ...prev, ...payload.new }));
-        if (payload.new.problem_key) {
-          const p = ALL_PROBLEMS.find(p => p.key === payload.new.problem_key);
-          if (p) {
-            const detail = getProblemDetail(p.key, p.title, p.difficulty);
-            setProblem({ ...p, detail });
-          }
-        }
+        if (row.current_code !== undefined) setCode(row.current_code);
       })
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'lobby_participants',
         filter: `lobby_id=eq.${data.id}`
       }, () => fetchParticipants(data.id))
-      .on('postgres_changes', {
-        event: 'INSERT', schema: 'public', table: 'lobby_messages',
-        filter: `lobby_id=eq.${data.id}`
-      }, (payload) => {
-        setMessages(prev => {
-          if (prev.some(m => m.id === payload.new.id)) return prev;
-          return [...prev, payload.new];
-        });
-      })
-      .on('broadcast', { event: 'code-sync' }, (payload) => {
-        if (payload.payload.senderId !== authUser?.id) setCode(payload.payload.code);
-      })
-      .on('broadcast', { event: 'chat-message' }, (payload) => {
-        setMessages(prev => {
-          if (prev.some(m => m.id === payload.payload.id)) return prev;
-          return [...prev, payload.payload];
-        });
-      })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') console.log('[Lobby] Realtime connected:', data.id);
+      });
 
     channelRef.current = channel;
     setLoading(false);
@@ -184,6 +187,8 @@ export default function Lobby() {
     if (!lobby || !authUser) return;
     await joinAsParticipant(lobby);
     setMyStatus('active');
+    // Broadcast so others see participant list update instantly
+    channelRef.current?.send({ type: 'broadcast', event: 'participant-update', payload: {} });
     toast.success('Joined the lobby!');
   };
 
@@ -193,6 +198,8 @@ export default function Lobby() {
       .update({ status: 'left', left_at: new Date().toISOString() })
       .eq('lobby_id', lobby.id)
       .eq('user_id', authUser.id);
+    // Broadcast so others see participant list update instantly
+    channelRef.current?.send({ type: 'broadcast', event: 'participant-update', payload: {} });
     setMyStatus('left');
     toast.info('You left the lobby. Use Rejoin to come back.');
   };
@@ -202,6 +209,8 @@ export default function Lobby() {
     await supabase.from('interview_lobbies')
       .update({ status: 'closed', closed_at: new Date().toISOString() })
       .eq('id', lobby.id);
+    // Broadcast so all participants are redirected instantly
+    channelRef.current?.send({ type: 'broadcast', event: 'lobby-closed', payload: {} });
     toast.success('Lobby closed');
     navigate('/interview');
   };
@@ -246,22 +255,26 @@ export default function Lobby() {
     const picked = ALL_PROBLEMS[Math.floor(Math.random() * ALL_PROBLEMS.length)];
     const detail = getProblemDetail(picked.key, picked.title, picked.difficulty);
     const starterCode = detail.starterCode || '// Write your solution here';
-    await supabase.from('interview_lobbies')
-      .update({ problem_key: picked.key, status: 'coding', current_code: starterCode })
-      .eq('id', lobby.id);
+    const update = { problem_key: picked.key, status: 'coding', current_code: starterCode };
+    
+    // Update local state immediately for host
     setProblem({ ...picked, detail });
     setCode(starterCode);
-    // Broadcast code reset to all participants
+    setLobby((prev: any) => ({ ...prev, ...update }));
+
+    // Broadcast instantly to all participants (they see it before DB write completes)
     channelRef.current?.send({
-      type: 'broadcast', event: 'code-sync',
-      payload: { code: starterCode, senderId: authUser?.id }
+      type: 'broadcast', event: 'lobby-state-change',
+      payload: update
     });
-    toast.success(`Changed to: ${picked.title}`);
+
+    // Persist to DB (background)
+    await supabase.from('interview_lobbies').update(update).eq('id', lobby.id);
+    toast.success(`Problem set: ${picked.title}`);
   };
 
   // Alias for change during coding
   const changeQuestion = pickRandomProblem;
-
   const handleSubmit = async () => {
     if (analyzing || !lobby) return;
     setAnalyzing(true);
