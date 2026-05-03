@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Play, Timer, Loader2, CheckCircle2, Shuffle, Building2, BookOpen } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Play, Timer, Loader2, CheckCircle2, Shuffle, Building2, BookOpen, History, Users, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useUser } from '@/lib/user-context';
 import { supabase } from '@/integrations/supabase/client';
+import { formatDistanceToNow } from 'date-fns';
+import { toast } from 'sonner';
 import { STRIVER_ROADMAP } from '@/lib/striver-roadmap-data';
 import { NEETCODE_ROADMAP } from '@/lib/neetcode-roadmap-data';
 import { LEETCODE_TOP150_ROADMAP } from '@/lib/leetcode-top150-data';
@@ -65,6 +68,7 @@ const COMPANY_NAMES = Object.keys(COMPANY_TAGS);
 
 const InterviewSimulator = () => {
   const { authUser } = useUser();
+  const navigate = useNavigate();
   const [difficulty, setDifficulty] = useState('all');
   const [timeLimit, setTimeLimit] = useState(30);
   const [source, setSource] = useState<'random' | 'module' | 'company' | 'solved'>('random');
@@ -78,6 +82,8 @@ const InterviewSimulator = () => {
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
   const [solvedKeys, setSolvedKeys] = useState<Set<string>>(new Set());
+  const [roomCode, setRoomCode] = useState('');
+  const [lobbyHistory, setLobbyHistory] = useState<any[]>([]);
   const timerRef = useRef<any>(null);
 
   useEffect(() => {
@@ -87,6 +93,13 @@ const InterviewSimulator = () => {
     // Load solved keys
     supabase.from('user_problem_progress').select('problem_key').eq('user_id', authUser.id).eq('solved', true)
       .then(({ data }) => setSolvedKeys(new Set((data || []).map(d => d.problem_key))));
+    // Load lobby history: all lobbies user has participated in
+    supabase.from('lobby_participants')
+      .select('*, lobby:lobby_id(*)')
+      .eq('user_id', authUser.id)
+      .order('joined_at', { ascending: false })
+      .limit(20)
+      .then(({ data }) => setLobbyHistory((data || []).filter(d => d.lobby)));
   }, [authUser, phase]);
 
   useEffect(() => {
@@ -141,33 +154,36 @@ const InterviewSimulator = () => {
     const picked = problemPool[Math.floor(Math.random() * problemPool.length)];
     setLoading(true);
     
-    let detail = getProblemDetail(picked.key, picked.title, picked.difficulty);
-    
-    // Try to fetch better detail from backend
-    try {
-      const { API_BASE_URL } = await import('@/lib/api');
-      const resp = await fetch(`${API_BASE_URL}/api/problems/${picked.key}?title=${encodeURIComponent(picked.title)}`);
-      if (resp.ok) {
-        const generated = await resp.json();
-        if (generated) {
-          detail = {
-            ...detail,
-            description: generated.description || detail.description,
-            starterCode: generated.starterCode || detail.starterCode,
-            testCases: generated.testCases || [],
-          };
-        }
-      }
-    } catch (e) {
-      console.error("Backend fetch failed for interview:", e);
-    }
-
+    // Use local data IMMEDIATELY — no waiting
+    const detail = getProblemDetail(picked.key, picked.title, picked.difficulty);
     setProblem({ ...picked, detail });
     setCode(detail.starterCode);
     setTimeLeft(timeLimit * 60);
     setAiFeedback('');
     setPhase('coding');
     setLoading(false);
+
+    // Silently enhance with backend data in background (non-blocking)
+    try {
+      const { API_BASE_URL } = await import('@/lib/api');
+      const resp = await fetch(`${API_BASE_URL}/api/problems/${picked.key}?title=${encodeURIComponent(picked.title)}`);
+      if (resp.ok) {
+        const generated = await resp.json();
+        if (generated?.description) {
+          setProblem((prev: any) => prev?.key === picked.key ? ({
+            ...prev,
+            detail: {
+              ...prev.detail,
+              description: generated.description || prev.detail.description,
+              starterCode: generated.starterCode || prev.detail.starterCode,
+              testCases: generated.testCases || prev.detail.testCases,
+            }
+          }) : prev);
+        }
+      }
+    } catch (e) {
+      // Silently ignore — local data is already shown
+    }
   };
 
   const handleSubmit = async () => {
@@ -201,6 +217,39 @@ const InterviewSimulator = () => {
       setAiFeedback('Could not get AI feedback. Review your solution manually.');
     }
     setLoading(false);
+  };
+
+  const createLobby = async () => {
+    if (!authUser) return;
+    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+    try {
+      const { data, error } = await supabase.from('interview_lobbies').insert({
+        code,
+        host_id: authUser.id,
+        status: 'waiting'
+      } as any).select().single();
+      
+      if (error) throw error;
+      navigate(`/lobby/${code}`);
+    } catch (error) {
+      toast.error("Failed to create lobby");
+    }
+  };
+
+  const joinLobby = async () => {
+    if (!authUser || !roomCode) return;
+    try {
+      const { data, error } = await supabase.from('interview_lobbies')
+        .update({ guest_id: authUser.id } as any)
+        .eq('code', roomCode.toUpperCase())
+        .select()
+        .single();
+      
+      if (error) throw error;
+      navigate(`/lobby/${roomCode.toUpperCase()}`);
+    } catch (error) {
+      toast.error("Lobby not found or full");
+    }
   };
 
   const fmt = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
@@ -338,13 +387,26 @@ const InterviewSimulator = () => {
                   Join a shared room to practice with a peer. One codes, one interviews!
                 </p>
                 <div className="space-y-2">
-                  <Input placeholder="Enter Room Code (e.g. JAVA-2024)" className="h-9 text-xs" />
-                  <Button variant="secondary" className="w-full h-9 text-xs font-bold gap-2">
+                  <Input 
+                    placeholder="Enter Room Code (e.g. JAVA-2024)" 
+                    className="h-9 text-xs" 
+                    value={roomCode}
+                    onChange={e => setRoomCode(e.target.value)}
+                  />
+                  <Button 
+                    variant="secondary" 
+                    className="w-full h-9 text-xs font-bold gap-2"
+                    onClick={joinLobby}
+                  >
                      Join Live Session
                   </Button>
                 </div>
                 <div className="h-px bg-primary/10 my-2" />
-                <Button variant="outline" className="w-full h-9 text-xs font-bold border-primary/20 text-primary">
+                <Button 
+                  variant="outline" 
+                  className="w-full h-9 text-xs font-bold border-primary/20 text-primary"
+                  onClick={createLobby}
+                >
                    Create New Lobby
                 </Button>
               </CardContent>
@@ -371,6 +433,62 @@ const InterviewSimulator = () => {
                 </CardContent>
               </Card>
             )}
+
+            {/* Lobby History */}
+            <Card className="surface-elevated rounded-2xl">
+              <CardHeader className="py-3 px-4 border-b border-sidebar-border">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <History className="h-4 w-4 text-primary" /> Lobby History
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-3">
+                {lobbyHistory.length === 0 ? (
+                  <div className="text-center py-4">
+                    <Users className="h-6 w-6 mx-auto text-muted-foreground/30 mb-2" />
+                    <p className="text-[10px] text-muted-foreground">No lobby history yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {lobbyHistory.map((entry: any) => {
+                      const lobby = entry.lobby;
+                      const isOpen = !lobby.closed_at && lobby.status !== 'closed';
+                      const isHost = lobby.host_id === authUser?.id;
+                      return (
+                        <div key={entry.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/20 border border-border hover:border-primary/20 transition-colors gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5 mb-0.5">
+                              <span className="text-[11px] font-bold font-mono text-primary">{lobby.code}</span>
+                              {isHost && <span className="text-[8px] text-amber-400 font-bold uppercase">Host</span>}
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <Badge 
+                                variant={isOpen ? 'default' : 'secondary'} 
+                                className={`text-[8px] h-3.5 px-1 ${isOpen ? 'bg-emerald-500/20 text-emerald-400 border-0' : 'opacity-50'}`}
+                              >
+                                {isOpen ? 'Open' : 'Closed'}
+                              </Badge>
+                              <span className="text-[9px] text-muted-foreground">
+                                {new Date(entry.joined_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </div>
+                          {isOpen && (
+                            <Button 
+                              size="sm" 
+                              variant="ghost"
+                              className="h-7 text-[10px] px-2 gap-1 text-primary hover:bg-primary/10 shrink-0"
+                              onClick={() => navigate(`/lobby/${lobby.code}`)}
+                            >
+                              <RefreshCw className="h-3 w-3" /> Rejoin
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>

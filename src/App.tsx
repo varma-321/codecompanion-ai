@@ -52,6 +52,8 @@ import AdminSignup from "./pages/AdminSignup";
 import AdminAgentDashboard from "./pages/AdminAgentDashboard";
 import QuickPractice from "./pages/QuickPractice";
 import RewardsStore from "./pages/RewardsStore";
+import Mailbox from "./pages/Mailbox";
+import Lobby from "./pages/Lobby";
 import AppShell from "./components/AppShell";
 
 const queryClient = new QueryClient();
@@ -110,11 +112,7 @@ const App = () => (
               />
               <Route
                 path="/leaderboard"
-                element={shell(
-                  <Leaderboard />,
-                  "Leaderboard",
-                  "Community progress and rankings",
-                )}
+                element={<Leaderboard />}
               />
               <Route path="/problem/:key" element={<ProblemWorkspace />} />
               <Route
@@ -369,7 +367,9 @@ const App = () => (
               />
               <Route path="/admin/agent" element={<AdminAgentDashboard />} />
               <Route path="/quick-practice" element={<QuickPractice />} />
+              <Route path="/mailbox" element={<Mailbox />} />
               <Route path="/store" element={<RewardsStore />} />
+              <Route path="/lobby/:code" element={<Lobby />} />
               <Route path="*" element={shell(<NotFound />, "Not Found")} />
             </Routes>
           </BrowserRouter>

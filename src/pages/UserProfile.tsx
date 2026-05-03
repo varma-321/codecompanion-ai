@@ -17,7 +17,7 @@ const UserProfile = () => {
   const navigate = useNavigate();
   const { authUser } = useUser();
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<{ username: string; created_at: string } | null>(null);
+  const [profile, setProfile] = useState<{ username: string; created_at: string; display_id?: number } | null>(null);
   const [progress, setProgress] = useState<any[]>([]);
   const [execHistory, setExecHistory] = useState<any[]>([]);
   const [contestResults, setContestResults] = useState<any[]>([]);
@@ -111,7 +111,12 @@ const UserProfile = () => {
               {initials}
             </div>
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl font-semibold tracking-tight">{username}</h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-semibold tracking-tight">{username}</h1>
+                <Badge variant="outline" className="text-[10px] font-mono border-primary/20 text-primary">
+                  ID: {profile?.display_id || '...'}
+                </Badge>
+              </div>
               <p className="text-sm text-muted-foreground mt-1">{authUser.email}</p>
               <div className="flex flex-wrap gap-2 mt-3">
                 <Badge variant="secondary" className="text-[11px] gap-1 font-normal"><Flame className="h-3 w-3" />{stats.streak} day streak</Badge>

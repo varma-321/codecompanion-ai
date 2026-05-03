@@ -26,6 +26,7 @@ import SolutionComparison from '@/components/SolutionComparison';
 import ExecutionHistoryPanel, { saveExecutionHistory } from '@/components/ExecutionHistoryPanel';
 import KeyboardShortcutsDialog from '@/components/KeyboardShortcutsDialog';
 import SuccessCelebration from '@/components/SuccessCelebration';
+import { ReportIssueDialog } from '@/components/ReportIssueDialog';
 import { useUser } from '@/lib/user-context';
 import { supabase } from '@/integrations/supabase/client';
 import { STRIVER_ROADMAP, getDifficultyBg, type RoadmapProblem } from '@/lib/striver-roadmap-data';
@@ -929,6 +930,11 @@ const ProblemWorkspace = () => {
           <Button variant="ghost" size="sm" onClick={() => setShowShortcuts(true)} className="h-7 w-7 p-0 hidden sm:flex text-muted-foreground" title="Keyboard Shortcuts (Ctrl+K)">
             <Keyboard className="h-3.5 w-3.5" />
           </Button>
+          <ReportIssueDialog pageTitle={roadmapProblem?.title} trigger={
+            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-warning" title="Report Issue">
+              <AlertTriangle className="h-3.5 w-3.5" />
+            </Button>
+          } />
           <div className="h-4 w-px bg-border hidden sm:block mx-0.5" />
           {isAdmin && (
             <Button onClick={() => navigate('/admin')} size="sm" variant="outline" className="h-7 gap-1.5 text-xs font-medium text-destructive hover:bg-destructive hover:text-destructive-foreground">

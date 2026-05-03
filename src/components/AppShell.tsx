@@ -2,9 +2,10 @@ import { ReactNode, useMemo } from 'react';
 import { useNavigate, useLocation, NavLink } from 'react-router-dom';
 import {
   Home, Map, Code2, BookOpen, Brain, Trophy, Calendar, Target, Sparkles, Search,
-  User, LogOut, Settings, Moon, Sun, BarChart3, Layers, GraduationCap, Clock,
+  User, Users, LogOut, Settings, Moon, Sun, BarChart3, Layers, GraduationCap, Clock,
   Building2, MessageSquare, Award, Bookmark, FileSpreadsheet, Activity, Flame,
   Plus, Dices, Zap, Timer, Share2, AlertTriangle, RotateCcw, TrendingUp, Shield,
+  Mail,
 } from 'lucide-react';
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
@@ -16,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { useTheme } from '@/lib/theme-context';
 import { useUser } from '@/lib/user-context';
 import { signOut } from '@/lib/supabase';
+import { ReportIssueDialog } from './ReportIssueDialog';
 
 interface NavItem { title: string; url: string; icon: React.ComponentType<{ className?: string }>; }
 interface NavGroup { label: string; items: NavItem[]; }
@@ -26,6 +28,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { title: 'Home', url: '/', icon: Home },
       { title: 'All Modules', url: '/modules', icon: Layers },
+      { title: 'Mailbox', url: '/mailbox', icon: Mail },
       { title: 'Search', url: '/search', icon: Search },
     ],
   },
@@ -221,6 +224,7 @@ function Topbar({ title, subtitle, actions }: { title?: string; subtitle?: strin
       )}
       <div className="flex items-center gap-1 shrink-0">
         {actions}
+        <ReportIssueDialog pageTitle={title} />
         <Button variant="ghost" size="icon" onClick={toggleTheme} className="h-8 w-8" aria-label="Toggle theme">
           {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>

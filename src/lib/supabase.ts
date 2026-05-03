@@ -68,6 +68,49 @@ export interface DbTestCase {
   created_at: string;
 }
 
+export interface DbIssue {
+  id: string;
+  user_id: string;
+  user_email?: string;
+  page_url: string;
+  page_title: string;
+  comment: string;
+  admin_reply?: string;
+  status: 'open' | 'resolved' | 'closed';
+  created_at: string;
+}
+
+export interface DbIssueMessage {
+  id: string;
+  issue_id: string;
+  sender_id: string;
+  sender_role: 'user' | 'admin';
+  message: string;
+  created_at: string;
+}
+
+export interface DbDirectMessage {
+  id: string;
+  sender_id: string;
+  receiver_id: string;
+  sender_username?: string;
+  receiver_username?: string;
+  subject: string;
+  content: string;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface PublicProfile {
+  user_id: string;
+  username: string;
+  display_id: number;
+  created_at: string;
+  solved_count: number;
+  attempted_count: number;
+  last_active: string | null;
+}
+
 // ── Auth ──────────────────────────────────────────────────
 
 export async function signUp(email: string, password: string, username: string) {
@@ -272,6 +315,155 @@ export async function updateTestCase(id: string, updates: { inputs?: Record<stri
 export async function deleteTestCase(id: string): Promise<void> {
   const { error } = await supabase.from('test_cases').delete().eq('id', id);
   if (error) throw error;
+}
+
+// ── Issues ────────────────────────────────────────────────
+
+export async function fetchIssues(): Promise<DbIssue[]> {
+  const { data, error } = await supabase
+    .from('issues')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as DbIssue[];
+}
+
+export async function fetchUserIssues(userId: string): Promise<DbIssue[]> {
+  const { data, error } = await supabase
+    .from('issues')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as DbIssue[];
+}
+
+export async function createIssue(userId: string, email: string, pageUrl: string, pageTitle: string, comment: string): Promise<DbIssue> {
+  const { data, error } = await supabase
+    .from('issues')
+    .insert({
+      user_id: userId,
+      user_email: email,
+      page_url: pageUrl,
+      page_title: pageTitle,
+      comment,
+      status: 'open'
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as DbIssue;
+}
+
+export async function updateIssueStatus(id: string, status: DbIssue['status']): Promise<void> {
+  const { error } = await supabase
+    .from('issues')
+    .update({ status })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+export async function updateIssueReply(id: string, reply: string): Promise<void> {
+  const { error } = await supabase
+    .from('issues')
+    .update({ admin_reply: reply, status: 'resolved' })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+export async function fetchIssueMessages(issueId: string): Promise<DbIssueMessage[]> {
+  const { data, error } = await supabase
+    .from('issue_messages')
+    .select('*')
+    .eq('issue_id', issueId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as DbIssueMessage[];
+}
+
+export async function addIssueMessage(issueId: string, userId: string, role: 'user' | 'admin', message: string): Promise<DbIssueMessage> {
+  const { data, error } = await supabase
+    .from('issue_messages')
+    .insert({
+      issue_id: issueId,
+      sender_id: userId,
+      sender_role: role,
+      message
+    })
+    .select()
+    .single();
+  if (error) throw error;
+
+  // If admin is replying, we might want to update issue status to resolved
+  // but let's keep it 'open' if we want multiple messages.
+  // We'll let the admin explicitly resolve it if they want.
+  
+  if (error) throw error;
+  
+  return data as DbIssueMessage;
+}
+
+export async function searchUsers(query: string): Promise<PublicProfile[]> {
+  const isNumeric = !isNaN(Number(query)) && query.trim() !== "";
+  
+  // Construct the OR filter
+  let filter = `username.ilike.%${query}%`;
+  if (isNumeric) {
+    filter += `,display_id.eq.${query}`;
+  }
+
+  const { data, error } = await supabase
+    .from('public_profile_stats')
+    .select('*')
+    .or(filter)
+    .order('solved_count', { ascending: false })
+    .limit(50);
+  if (error) throw error;
+  return data as PublicProfile[];
+}
+
+export async function fetchDirectMessages(userId: string): Promise<DbDirectMessage[]> {
+  const { data, error } = await supabase
+    .from('direct_messages')
+    .select(`
+      *,
+      sender:profiles!sender_id(username),
+      receiver:profiles!receiver_id(username)
+    `)
+    .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  
+  return (data || []).map(msg => ({
+    ...msg,
+    sender_username: msg.sender?.username,
+    receiver_username: msg.receiver?.username
+  })) as DbDirectMessage[];
+}
+
+export async function sendDirectMessage(senderId: string, receiverId: string, subject: string, content: string): Promise<DbDirectMessage> {
+  const { data, error } = await supabase
+    .from('direct_messages')
+    .insert({
+      sender_id: senderId,
+      receiver_id: receiverId,
+      subject,
+      content
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as DbDirectMessage;
+}
+
+export async function fetchUserPublicStats(userId: string) {
+  const { data: progress, error: pError } = await supabase
+    .from('user_problem_progress')
+    .select('problem_key, solved, attempts, last_attempted')
+    .eq('user_id', userId);
+  
+  if (pError) throw pError;
+  return progress ?? [];
 }
 
 export const DEFAULT_CODE = `import java.util.*;

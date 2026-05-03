@@ -16,7 +16,9 @@ import {
   AlertTriangle,
   RefreshCw,
   Bot,
+  MessageSquare,
 } from "lucide-react";
+import { fetchIssues, updateIssueStatus, updateIssueReply, fetchIssueMessages, addIssueMessage, DbIssue, DbIssueMessage } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +46,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useUser } from "@/lib/user-context";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -93,13 +96,18 @@ const AdminDashboard = () => {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeView, setActiveView] = useState<"users" | "moderation">("users");
+  const [activeView, setActiveView] = useState<"users" | "moderation" | "issues">("users");
   const [customProblems, setCustomProblems] = useState<any[]>([]);
+  const [issues, setIssues] = useState<DbIssue[]>([]);
+  const [issueMessages, setIssueMessages] = useState<DbIssueMessage[]>([]);
+  const [issuesLoading, setIssuesLoading] = useState(false);
   const [problemsLoading, setProblemsLoading] = useState(false);
+  const [adminReply, setAdminReply] = useState("");
   const [actionDialog, setActionDialog] = useState<{
     type: string;
     user?: UserRow | null;
     problem?: any;
+    issue?: DbIssue | null;
   }>({ type: "", user: null });
   const [banDays, setBanDays] = useState("7");
   const [actionLoading, setActionLoading] = useState(false);
@@ -108,6 +116,7 @@ const AdminDashboard = () => {
     role: "user",
     status: "approved",
   });
+  const [newPassword, setNewPassword] = useState("");
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -157,6 +166,17 @@ const AdminDashboard = () => {
     setProblemsLoading(false);
   }, []);
 
+  const fetchIssuesList = useCallback(async () => {
+    setIssuesLoading(true);
+    try {
+      const data = await fetchIssues();
+      setIssues(data);
+    } catch (err: any) {
+      toast.error("Failed to load issues");
+    }
+    setIssuesLoading(false);
+  }, []);
+
   const handleDeleteProblem = async (problemId: string) => {
     setActionLoading(true);
     try {
@@ -183,6 +203,7 @@ const AdminDashboard = () => {
     }
     fetchUsers();
     if (activeView === "moderation") fetchProblems();
+    if (activeView === "issues") fetchIssuesList();
   }, [
     authUser,
     isAdmin,
@@ -228,12 +249,15 @@ const AdminDashboard = () => {
     if (!actionDialog.user) return;
     setActionLoading(true);
     try {
-      // Update profile
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({ username: editForm.username, status: editForm.status })
-        .eq("id", actionDialog.user.id);
+      // Update profile using RPC for robustness
+      const { error: profileError } = await supabase.rpc("admin_reset_username", {
+        target_user_id: actionDialog.user.id,
+        new_username: editForm.username
+      });
       if (profileError) throw profileError;
+
+      // Also update status directly as it's just a profile field
+      await supabase.from("profiles").update({ status: editForm.status }).eq("id", actionDialog.user.id);
 
       // Update role gracefully
       await handleRemoveRole(actionDialog.user.id); // clean up old roles first
@@ -242,7 +266,17 @@ const AdminDashboard = () => {
         .insert({ user_id: actionDialog.user.id, role: editForm.role });
       if (roleError && roleError.code !== "23505") throw roleError; // ignore unique constraint if exists
 
+      // Update password if provided
+      if (newPassword.trim()) {
+        const { error: pwdError } = await supabase.rpc("admin_reset_password", {
+          target_user_id: actionDialog.user.id,
+          new_password: newPassword
+        });
+        if (pwdError) throw pwdError;
+      }
+
       toast.success("User details updated");
+      setNewPassword("");
       fetchUsers();
     } catch (err: any) {
       toast.error(
@@ -251,6 +285,42 @@ const AdminDashboard = () => {
     }
     setActionLoading(false);
     setActionDialog({ type: "", user: null });
+  };
+
+
+  const handleUpdateIssueStatus = async (id: string, status: DbIssue['status']) => {
+    setActionLoading(true);
+    try {
+      await updateIssueStatus(id, status);
+      toast.success(`Issue marked as ${status}`);
+      fetchIssuesList();
+    } catch (err: any) {
+      toast.error("Failed to update issue status");
+    }
+    setActionLoading(false);
+    setActionDialog({ type: "", issue: null });
+  };
+
+  const handleSendReply = async () => {
+    if (!actionDialog.issue || !adminReply.trim() || !authUser) return;
+    setActionLoading(true);
+    try {
+      // Add the message to the thread
+      await addIssueMessage(actionDialog.issue.id, authUser.id, 'admin', adminReply);
+      
+      // Optionally resolve the issue if it was open
+      if (actionDialog.issue.status === 'open') {
+        await updateIssueStatus(actionDialog.issue.id, 'resolved');
+      }
+
+      toast.success("Reply sent");
+      setAdminReply("");
+      fetchIssuesList();
+    } catch (err: any) {
+      toast.error("Failed to send reply");
+    }
+    setActionLoading(false);
+    setActionDialog({ type: "", issue: null });
   };
 
   const openEditDialog = (user: UserRow) => {
@@ -453,6 +523,12 @@ const AdminDashboard = () => {
           >
             Content Moderation
           </button>
+          <button
+            onClick={() => setActiveView("issues")}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeView === "issues" ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            User Issues
+          </button>
         </div>
 
         {activeView === "users" ? (
@@ -584,14 +660,14 @@ const AdminDashboard = () => {
                                     <Ban className="h-3 w-3" /> Ban
                                   </Button>
                                 )}
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-7 text-[11px] px-2"
-                                  onClick={() => openEditDialog(user)}
-                                >
-                                  Edit
-                                </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 text-[11px] px-2"
+                                    onClick={() => openEditDialog(user)}
+                                  >
+                                    Edit
+                                  </Button>
                                 <Button
                                   size="sm"
                                   variant="ghost"
@@ -613,7 +689,7 @@ const AdminDashboard = () => {
               </Table>
             </div>
           </>
-        ) : (
+        ) : activeView === "moderation" ? (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold">Public Custom Problems</h3>
@@ -682,6 +758,101 @@ const AdminDashboard = () => {
                           >
                             <Trash2 className="h-3.5 w-3.5" /> Flag & Delete
                           </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold">User Reported Issues</h3>
+              <span className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">
+                {issues.length} Total Reports
+              </span>
+            </div>
+
+            <div className="rounded-xl border border-border bg-card overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">Page</TableHead>
+                    <TableHead className="text-xs">User</TableHead>
+                    <TableHead className="text-xs">Comment</TableHead>
+                    <TableHead className="text-xs">Status</TableHead>
+                    <TableHead className="text-xs">Date</TableHead>
+                    <TableHead className="text-xs text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {issuesLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-10">
+                        <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground/30" />
+                      </TableCell>
+                    </TableRow>
+                  ) : issues.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-10 text-xs text-muted-foreground">
+                        No issues reported yet
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    issues.map((issue) => (
+                      <TableRow key={issue.id}>
+                        <TableCell className="max-w-[200px]">
+                          <div className="text-sm font-bold truncate">{issue.page_title}</div>
+                          <div className="text-[10px] text-muted-foreground truncate">{issue.page_url}</div>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {issue.user_email || 'Unknown'}
+                        </TableCell>
+                        <TableCell className="max-w-[300px]">
+                          <p className="text-xs line-clamp-2">{issue.comment}</p>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={issue.status === 'open' ? 'destructive' : 'default'} className="text-[10px]">
+                            {issue.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {new Date(issue.created_at).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            {issue.status === 'open' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-[10px]"
+                                onClick={() => handleUpdateIssueStatus(issue.id, 'resolved')}
+                                disabled={actionLoading}
+                              >
+                                Mark Resolved
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 text-[10px]"
+                              onClick={async () => {
+                                setActionDialog({ type: "view_issue", issue });
+                                setActionLoading(true);
+                                try {
+                                  const msgs = await fetchIssueMessages(issue.id);
+                                  setIssueMessages(msgs);
+                                } catch (e) {
+                                  toast.error("Failed to load conversation");
+                                }
+                                setActionLoading(false);
+                              }}
+                            >
+                              View
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))
@@ -905,6 +1076,19 @@ const AdminDashboard = () => {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2 border-t pt-4">
+              <Label className="text-destructive">Reset Password (Optional)</Label>
+              <Input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter new password to reset"
+                className="border-destructive/20 focus-visible:ring-destructive"
+              />
+              <p className="text-[10px] text-muted-foreground italic">
+                Leave blank to keep the current password.
+              </p>
+            </div>
           </div>
           <DialogFooter>
             <Button
@@ -919,6 +1103,108 @@ const AdminDashboard = () => {
               ) : null}
               Save Changes
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={actionDialog.type === "view_issue"}
+        onOpenChange={() => setActionDialog({ type: "", issue: null })}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-primary" />
+              Issue Details
+            </DialogTitle>
+          </DialogHeader>
+          {actionDialog.issue && (
+            <div className="space-y-6 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-[10px] uppercase text-muted-foreground">Status</Label>
+                  <div>
+                    <Badge variant={actionDialog.issue.status === 'open' ? 'destructive' : 'default'}>
+                      {actionDialog.issue.status}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="space-y-1 text-right">
+                  <Label className="text-[10px] uppercase text-muted-foreground">Reported On</Label>
+                  <div className="text-sm">{new Date(actionDialog.issue.created_at).toLocaleString()}</div>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-[10px] uppercase text-muted-foreground">Reporter</Label>
+                <div className="text-sm font-medium">{actionDialog.issue.user_email}</div>
+                <div className="text-[10px] text-muted-foreground font-mono">{actionDialog.issue.user_id}</div>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-[10px] uppercase text-muted-foreground">Page</Label>
+                <div className="text-sm font-bold">{actionDialog.issue.page_title}</div>
+                <div className="p-2 bg-secondary/50 rounded text-xs font-mono break-all">
+                  {actionDialog.issue.page_url}
+                </div>
+              </div>
+
+              <div className="space-y-4 max-h-[300px] overflow-y-auto p-4 bg-muted/30 rounded-lg border border-border">
+                {actionLoading ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  </div>
+                ) : issueMessages.length === 0 ? (
+                  <div className="text-center py-4 text-xs text-muted-foreground">No messages found</div>
+                ) : (
+                  issueMessages.map((msg) => (
+                    <div key={msg.id} className={`flex flex-col ${msg.sender_role === 'admin' ? 'items-end' : 'items-start'}`}>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[10px] font-bold">{msg.sender_role === 'admin' ? 'Admin' : 'User'}</span>
+                        <span className="text-[9px] text-muted-foreground">{new Date(msg.created_at).toLocaleString()}</span>
+                      </div>
+                      <div className={`p-3 rounded-lg text-xs max-w-[80%] ${
+                        msg.sender_role === 'admin' 
+                          ? 'bg-primary text-primary-foreground rounded-tr-none' 
+                          : 'bg-muted border border-border rounded-tl-none'
+                      }`}>
+                        {msg.message}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="space-y-1 pt-2">
+                <Label className="text-[10px] uppercase text-muted-foreground">Send Reply</Label>
+                <div className="space-y-3">
+                  <Textarea
+                    placeholder="Write your response to the user..."
+                    value={adminReply}
+                    onChange={(e) => setAdminReply(e.target.value)}
+                    className="min-h-[100px] resize-none"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => {
+              setActionDialog({ type: "", issue: null });
+              setAdminReply("");
+            }}>
+              Close
+            </Button>
+            {actionDialog.issue?.status === 'open' && (
+              <Button 
+                onClick={handleSendReply}
+                disabled={actionLoading || !adminReply.trim()}
+                className="bg-primary hover:bg-primary/90"
+              >
+                {actionLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Send Reply & Resolve
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
