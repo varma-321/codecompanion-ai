@@ -187,6 +187,65 @@ export type Database = {
         }
         Relationships: []
       }
+      direct_messages: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          receiver_id: string | null
+          sender_id: string | null
+          subject: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          receiver_id?: string | null
+          sender_id?: string | null
+          subject?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          receiver_id?: string | null
+          sender_id?: string | null
+          subject?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "direct_messages_receiver_id_fkey"
+            columns: ["receiver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "direct_messages_receiver_id_fkey"
+            columns: ["receiver_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "direct_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "direct_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       discussion_posts: {
         Row: {
           content: string
@@ -299,6 +358,80 @@ export type Database = {
           },
         ]
       }
+      interview_lobbies: {
+        Row: {
+          closed_at: string | null
+          code: string
+          created_at: string
+          current_code: string | null
+          guest_id: string | null
+          host_id: string
+          id: string
+          last_activity: string
+          max_participants: number | null
+          problem_key: string | null
+          status: string
+          time_limit: number | null
+        }
+        Insert: {
+          closed_at?: string | null
+          code: string
+          created_at?: string
+          current_code?: string | null
+          guest_id?: string | null
+          host_id: string
+          id?: string
+          last_activity?: string
+          max_participants?: number | null
+          problem_key?: string | null
+          status?: string
+          time_limit?: number | null
+        }
+        Update: {
+          closed_at?: string | null
+          code?: string
+          created_at?: string
+          current_code?: string | null
+          guest_id?: string | null
+          host_id?: string
+          id?: string
+          last_activity?: string
+          max_participants?: number | null
+          problem_key?: string | null
+          status?: string
+          time_limit?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interview_lobbies_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interview_lobbies_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "interview_lobbies_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interview_lobbies_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       interview_results: {
         Row: {
           ai_feedback: string | null
@@ -335,6 +468,77 @@ export type Database = {
         }
         Relationships: []
       }
+      issue_messages: {
+        Row: {
+          created_at: string | null
+          id: string
+          issue_id: string | null
+          message: string
+          sender_id: string | null
+          sender_role: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          issue_id?: string | null
+          message: string
+          sender_id?: string | null
+          sender_role: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          issue_id?: string | null
+          message?: string
+          sender_id?: string | null
+          sender_role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "issue_messages_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "issues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      issues: {
+        Row: {
+          admin_reply: string | null
+          comment: string
+          created_at: string | null
+          id: string
+          page_title: string | null
+          page_url: string
+          status: string | null
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          admin_reply?: string | null
+          comment: string
+          created_at?: string | null
+          id?: string
+          page_title?: string | null
+          page_url: string
+          status?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          admin_reply?: string | null
+          comment?: string
+          created_at?: string | null
+          id?: string
+          page_title?: string | null
+          page_url?: string
+          status?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       learning_history: {
         Row: {
           algorithm: string
@@ -367,6 +571,107 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      lobby_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          lobby_id: string
+          sender_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          lobby_id: string
+          sender_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          lobby_id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lobby_messages_lobby_id_fkey"
+            columns: ["lobby_id"]
+            isOneToOne: false
+            referencedRelation: "interview_lobbies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lobby_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lobby_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      lobby_participants: {
+        Row: {
+          id: string
+          joined_at: string
+          left_at: string | null
+          lobby_id: string
+          role: string
+          status: string
+          user_id: string
+          username: string | null
+        }
+        Insert: {
+          id?: string
+          joined_at?: string
+          left_at?: string | null
+          lobby_id: string
+          role?: string
+          status?: string
+          user_id: string
+          username?: string | null
+        }
+        Update: {
+          id?: string
+          joined_at?: string
+          left_at?: string | null
+          lobby_id?: string
+          role?: string
+          status?: string
+          user_id?: string
+          username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lobby_participants_lobby_id_fkey"
+            columns: ["lobby_id"]
+            isOneToOne: false
+            referencedRelation: "interview_lobbies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lobby_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lobby_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       problem_test_cases: {
         Row: {
@@ -477,6 +782,7 @@ export type Database = {
         Row: {
           ban_until: string | null
           created_at: string
+          display_id: number
           id: string
           status: string
           username: string
@@ -484,6 +790,7 @@ export type Database = {
         Insert: {
           ban_until?: string | null
           created_at?: string
+          display_id?: number
           id: string
           status?: string
           username: string
@@ -491,6 +798,7 @@ export type Database = {
         Update: {
           ban_until?: string | null
           created_at?: string
+          display_id?: number
           id?: string
           status?: string
           username?: string
@@ -785,9 +1093,32 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_profile_stats: {
+        Row: {
+          attempted_count: number | null
+          created_at: string | null
+          display_id: number | null
+          last_active: string | null
+          solved_count: number | null
+          user_id: string | null
+          username: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      admin_delete_user: {
+        Args: { target_user_id: string }
+        Returns: undefined
+      }
+      admin_reset_password: {
+        Args: { new_password: string; target_user_id: string }
+        Returns: undefined
+      }
+      admin_reset_username: {
+        Args: { new_username: string; target_user_id: string }
+        Returns: undefined
+      }
       get_user_status: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
