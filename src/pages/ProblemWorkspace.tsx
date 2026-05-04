@@ -5,7 +5,7 @@ import {
   ArrowLeft, Play, FlaskConical, Loader2, CheckCircle2, XCircle, Brain, ChevronRight, 
   Code2, GitCompare, Cloud, Keyboard, Sparkles, AlertTriangle, Zap, TrendingUp, 
   Trophy, Eye, EyeOff, BarChart3, ChevronDown, ChevronUp, MessageSquare, 
-  FileText, Bot, Square, Workflow, Shield, Lightbulb, Github
+  FileText, Bot, Square, Workflow, Shield, Lightbulb, Github, BookOpen
 } from 'lucide-react';
 import { CONTEST_PROBLEMS } from '../lib/contest-problems-data';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -531,6 +531,46 @@ const ProblemWorkspace = () => {
     return () => window.removeEventListener('keydown', handler);
   });
 
+  // Listen for AI dropdown trigger to generate test cases and add them to the Tests tab.
+  const [isGeneratingTests, setIsGeneratingTests] = useState(false);
+  useEffect(() => {
+    const handler = async (e: Event) => {
+      const detailEvt = (e as CustomEvent).detail as string;
+      if (detailEvt !== '__generate_tests__') return;
+      if (isGeneratingTests) return;
+      setIsGeneratingTests(true);
+      const tid = toast.loading('🧪 Generating test cases via AI…');
+      try {
+        const { generateTestCases } = await import('@/lib/ai-backend');
+        const generated = await generateTestCases(code, key || null);
+        const normalized = (Array.isArray(generated) ? generated : [])
+          .map((t: any) => {
+            const inputs: Record<string, string> =
+              t.inputs && typeof t.inputs === 'object'
+                ? Object.fromEntries(Object.entries(t.inputs).map(([k, v]) => [k, String(v)]))
+                : {};
+            const expected = String(t.expectedOutput ?? t.expected ?? '').trim();
+            return Object.keys(inputs).length > 0 && expected ? { inputs, expected } : null;
+          })
+          .filter(Boolean) as { inputs: Record<string, string>; expected: string }[];
+
+        if (normalized.length === 0) {
+          toast.error('AI returned no usable test cases.', { id: tid });
+        } else {
+          setDetail(prev => ({ ...prev, testCases: [...(prev.testCases || []), ...normalized] }));
+          toast.success(`✅ Added ${normalized.length} AI test case${normalized.length === 1 ? '' : 's'} to the Tests tab.`, { id: tid });
+          setBottomTab('description');
+        }
+      } catch (err: any) {
+        toast.error(err?.message || 'Failed to generate test cases', { id: tid });
+      }
+      setIsGeneratingTests(false);
+    };
+    window.addEventListener('trigger-explain', handler);
+    return () => window.removeEventListener('trigger-explain', handler);
+  }, [code, key, isGeneratingTests]);
+
+
   const addConsoleEntry = (type: ConsoleEntry['type'], text: string) => {
     setConsoleEntries(prev => [...prev, {
       type, text,
@@ -993,33 +1033,27 @@ const ProblemWorkspace = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__vibe__' }))}>
-                  <Sparkles className="h-3.5 w-3.5 mr-2" /> AI Code Aura
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__visualize__' }))}>
-                  <Eye className="h-3.5 w-3.5 mr-2" /> Visualize Logic Flow
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__performance__' }))}>
-                  <BarChart3 className="h-3.5 w-3.5 mr-2" /> Performance Audit
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__dry_run__' }))}>
-                  <Workflow className="h-3.5 w-3.5 mr-2" /> Step-by-Step Trace
+                  <Workflow className="h-3.5 w-3.5 mr-2" /> Logic Trace
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__hints__' }))}>
+                  <Brain className="h-3.5 w-3.5 mr-2" /> Hints
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__optimal__' }))}>
+                  <Trophy className="h-3.5 w-3.5 mr-2" /> Optimal
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__mistakes__' }))}>
+                  <AlertTriangle className="h-3.5 w-3.5 mr-2" /> Find Bugs
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__patterns__' }))}>
+                  <BookOpen className="h-3.5 w-3.5 mr-2" /> Patterns
                 </DropdownMenuItem>
                 <div className="h-px bg-border my-1" />
                 <DropdownMenuItem onClick={handleAnalyze} disabled={isAnalyzing || !code.trim()}>
                   <TrendingUp className="h-3.5 w-3.5 mr-2" /> Complexity Analysis
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__mistakes__' }))}>
-                  <AlertTriangle className="h-3.5 w-3.5 mr-2" /> Find Mistakes
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__hints__' }))}>
-                  <Brain className="h-3.5 w-3.5 mr-2" /> Hints
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__generate_tests__' }))}>
                   <FlaskConical className="h-3.5 w-3.5 mr-2" /> Generate Test Cases
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__optimal__' }))}>
-                  <Trophy className="h-3.5 w-3.5 mr-2" /> Optimal Solution
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -1137,24 +1171,27 @@ const ProblemWorkspace = () => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-56">
-            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__vibe__' }))}>
-              <Sparkles className="h-3.5 w-3.5 mr-2 text-primary" /> Code Aura
+            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__dry_run__' }))}>
+              <Workflow className="h-3.5 w-3.5 mr-2" /> Logic Trace
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__visualize__' }))}>
-              <Eye className="h-3.5 w-3.5 mr-2 text-blue-500" /> Visualize Logic
+            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__hints__' }))}>
+              <Brain className="h-3.5 w-3.5 mr-2" /> Hints
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__performance__' }))}>
-              <BarChart3 className="h-3.5 w-3.5 mr-2 text-orange-500" /> Performance Audit
+            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__optimal__' }))}>
+              <Trophy className="h-3.5 w-3.5 mr-2" /> Optimal
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__mistakes__' }))}>
+              <AlertTriangle className="h-3.5 w-3.5 mr-2" /> Find Bugs
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__patterns__' }))}>
+              <BookOpen className="h-3.5 w-3.5 mr-2" /> Patterns
             </DropdownMenuItem>
             <div className="h-px bg-panel-border my-1" />
             <DropdownMenuItem onClick={handleAnalyze} disabled={isAnalyzing || !code.trim()}>
               <TrendingUp className="h-3.5 w-3.5 mr-2" /> Complexity Analysis
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__mistakes__' }))}>
-              <AlertTriangle className="h-3.5 w-3.5 mr-2" /> Find Mistakes
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__hints__' }))}>
-              <Brain className="h-3.5 w-3.5 mr-2" /> Hints
+            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__generate_tests__' }))}>
+              <FlaskConical className="h-3.5 w-3.5 mr-2" /> Generate Test Cases
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -1348,24 +1385,45 @@ const ProblemWorkspace = () => {
             </div>
             <div className="h-[calc(100%-32px)] overflow-hidden">
               {bottomTab === 'description' && (
-                <ScrollArea className="h-full">
-                  <div className="p-3 space-y-2">
-                    {detail.testCases.map((tc, i) => (
-                      <div key={i} className="flex items-start gap-3 rounded border border-panel-border bg-secondary/20 p-2 font-mono text-xs">
-                        <span className="font-bold text-muted-foreground">#{i + 1}</span>
-                        <div className="flex-1 space-y-0.5">
-                          {Object.entries(tc.inputs).map(([k, v]) => (
-                            <span key={k} className="mr-3"><span className="text-muted-foreground">{k}=</span>{v}</span>
-                          ))}
-                        </div>
-                        <span className="text-success font-semibold">→ {tc.expected}</span>
-                      </div>
-                    ))}
-                    {detail.testCases.length === 0 && (
-                      <p className="text-xs text-muted-foreground text-center py-6">No built-in test cases for this problem yet. Use AI to generate them!</p>
-                    )}
-                  </div>
-                </ScrollArea>
+                <TestCasePanel
+                  testCases={detail.testCases.map((tc, i) => ({
+                    id: `wstc-${i}`,
+                    user_id: '',
+                    problem_id: key || '',
+                    input: Object.values(tc.inputs || {})[0] || '',
+                    expected_output: tc.expected || '',
+                    variable_name: Object.keys(tc.inputs || {})[0] || 'arg',
+                    inputs: tc.inputs || {},
+                    created_at: '',
+                  }))}
+                  testResults={testResults}
+                  onAdd={(inputs, expectedOutput) => {
+                    setDetail(prev => ({
+                      ...prev,
+                      testCases: [...(prev.testCases || []), { inputs, expected: expectedOutput }],
+                    }));
+                    toast.success('Custom test case added — runs with built-in tests on Run/Submit.');
+                  }}
+                  onUpdate={(id, inputs, expectedOutput) => {
+                    const idx = parseInt(id.replace('wstc-', ''), 10);
+                    if (Number.isNaN(idx)) return;
+                    setDetail(prev => {
+                      const next = [...(prev.testCases || [])];
+                      if (next[idx]) next[idx] = { inputs, expected: expectedOutput };
+                      return { ...prev, testCases: next };
+                    });
+                  }}
+                  onDelete={(id) => {
+                    const idx = parseInt(id.replace('wstc-', ''), 10);
+                    if (Number.isNaN(idx)) return;
+                    setDetail(prev => ({
+                      ...prev,
+                      testCases: (prev.testCases || []).filter((_, i) => i !== idx),
+                    }));
+                  }}
+                  onGenerateAI={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__generate_tests__' }))}
+                  isGenerating={isGeneratingTests}
+                />
               )}
               {bottomTab === 'console' && (
                 <ConsolePanel

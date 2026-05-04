@@ -5,22 +5,11 @@ import {
   Send,
   Loader2,
   AlertCircle,
-  Lightbulb,
-  Zap,
-  Code2,
-  Bug,
-  BookOpen,
-  FlaskConical,
-  Sparkles,
   Trash2,
   Copy,
   ArrowUpRight,
-  BarChart3,
-  Workflow,
-  Trophy,
   Volume2,
   VolumeX,
-  Eye,
   GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -29,11 +18,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   analyzeCode,
   getHints as getAIHints,
-  getSolution,
   detectMistakes,
   detectPatterns,
   chat as aiChat,
-  getExtraInsights,
   checkBackendStatus,
 } from "@/lib/ai-backend";
 import ReactMarkdown from "react-markdown";
@@ -226,20 +213,12 @@ interface AIChatPanelProps {
   aiEnabled?: boolean;
 }
 
-const quickActions = [
-  { label: "✨ Code Aura", icon: Sparkles, prompt: "__vibe__" },
-  { label: "🧠 Visualize", icon: Eye, prompt: "__visualize__" },
-  { label: "🔍 Performance", icon: BarChart3, prompt: "__performance__" },
-  { label: "⚙️ Logic Trace", icon: Workflow, prompt: "__dry_run__" },
-  { label: "💡 Hints", icon: Lightbulb, prompt: "__hints__" },
-  { label: "🏆 Optimal", icon: Trophy, prompt: "__solution_optimal__" },
-  { label: "🐛 Find Bugs", icon: Bug, prompt: "__mistakes__" },
-  { label: "📚 Patterns", icon: BookOpen, prompt: "__patterns__" },
-  { label: "🎯 Approach", icon: AlertCircle, prompt: "__approach__" },
-  { label: "♻️ Refactor", icon: Code2, prompt: "__refactor__" },
-  { label: "🎤 Interview Q", icon: Brain, prompt: "__interview__" },
-  { label: "🧪 Test Cases", icon: FlaskConical, prompt: "__testcases__" },
-];
+// Quick action bar removed by design — all AI features live in the upper "AI" dropdown.
+// Internal prompt sentinels still used (dispatched from the workspace dropdown):
+//   __dry_run__ (Logic Trace), __hints__ (Hints), __optimal__ (Optimal Approach),
+//   __mistakes__ (Find Bugs), __patterns__ (Patterns), __generate_tests__ (handled in workspace),
+//   __analyze__ (Complexity Analysis).
+
 
 const AIChatPanel = ({
   code,
@@ -327,77 +306,137 @@ const AIChatPanel = ({
     if (!customPrompt) setInput("");
     setIsLoading(true);
 
+    // Build a compact transcript of the recent conversation so follow-up
+    // questions ("now give me the code", etc.) stay grounded in prior context.
+    const buildHistory = (limit = 8) => {
+      const recent = messages.slice(-limit);
+      if (recent.length === 0) return "";
+      const lines = recent.map(
+        (m) => `${m.role === "user" ? "USER" : m.role === "assistant" ? "AI" : "SYSTEM"}: ${m.content.slice(0, 1200)}`,
+      );
+      return `\n\n=== Recent conversation (most recent last) ===\n${lines.join("\n\n")}\n=== End conversation ===`;
+    };
+
     try {
-      if (text === "__vibe__") {
-        addMessage("user", "✨ Perform AI Code Aura Analysis");
-        const result = await getExtraInsights(code, "vibe-check", problemId);
-        addMessage("assistant", result);
-      } else if (text === "__performance__") {
-        addMessage("user", "🔍 Run Deep JVM Performance Audit");
-        const result = await getExtraInsights(
-          code,
-          "performance-audit",
-          problemId,
-        );
-        addMessage("assistant", result);
-      } else if (text === "__visualize__") {
-        addMessage("user", "🧠 Visualize Logic Flow");
-        const result = await getExtraInsights(code, "visualize", problemId);
-        addMessage("assistant", result);
-      } else if (text === "__analyze__") {
+      if (text === "__analyze__") {
         addMessage("user", "🔍 Run Deep Java Analysis");
         const result = await analyzeCode(code, problemId);
         addMessage("assistant", result.summary);
       } else if (text === "__dry_run__") {
-        addMessage("user", "⚙️ Perform Step-by-Step Logic Trace");
-        const result = await getExtraInsights(code, "dry-run", problemId);
+        // LOGIC TRACE: explain the user's CURRENT code line-by-line, marking
+        // which steps are correct and which contain errors. Not a brute/optimal
+        // suggestion — purely an explanation of what the user wrote.
+        addMessage("user", "⚙️ Logic Trace — explain my code step by step");
+        const prompt =
+          `LOGIC TRACE MODE.\n` +
+          `Walk through the Java code below line-by-line / block-by-block.\n` +
+          `For each meaningful step:\n` +
+          `  • State exactly what that line/block does.\n` +
+          `  • Mark it ✅ Correct, ⚠️ Suspicious, or ❌ Error and explain why.\n` +
+          `  • Show how key variables change (use a small markdown table when useful).\n` +
+          `Do NOT rewrite the code. Do NOT propose a brute/better/optimal solution.\n` +
+          `Focus only on explaining and validating the user's own code.\n` +
+          `If the code is empty, say so and ask the user to write some code first.`;
+        const result = await aiChat(code, prompt, problemId);
         addMessage("assistant", result);
       } else if (text === "__hints__") {
-        const nextLevel = Math.min(hintLevel + 1, 4);
-        addMessage("user", `💡 Elite Hint ${nextLevel}`);
-        const hint = await getAIHints(code, nextLevel, problemId);
-        addMessage("assistant", `### Hint ${nextLevel} of 4\n\n${hint}`);
-        setHintLevel(nextLevel);
-      } else if (text.startsWith("__solution_")) {
-        const type = text.replace("__solution_", "").replace("__", "") as
-          | "brute"
-          | "better"
-          | "optimal";
-        addMessage("user", `📝 Master ${type} Java Solution`);
-        const sol = await getSolution(code, type, problemId);
-        addMessage("assistant", sol.explanation);
+        // HINTS: give exactly ONE hint per click, up to 4 total.
+        if (hintLevel >= 4) {
+          addMessage("user", "💡 Hint");
+          addMessage(
+            "assistant",
+            `### All 4 hints used\n\nYou've already received the maximum of 4 hints for this problem. Try the **Optimal** option in the AI menu for the recommended approach, or ask a specific question in the chat.`,
+          );
+        } else {
+          const nextLevel = hintLevel + 1;
+          addMessage("user", `💡 Hint ${nextLevel} of 4`);
+          const prompt =
+            `HINT MODE — Give ONLY hint #${nextLevel} of 4 (progressive).\n` +
+            `Hint 1 = nudge about the data structure / pattern to consider.\n` +
+            `Hint 2 = describe the high-level approach in 2–3 sentences (no code).\n` +
+            `Hint 3 = outline the algorithm steps as a short bullet list (no code).\n` +
+            `Hint 4 = pseudocode-level outline (still no full Java solution).\n` +
+            `Return ONLY hint ${nextLevel}. Do not include other hints. Keep it short and focused.`;
+          const hint = await aiChat(code, prompt, problemId);
+          addMessage(
+            "assistant",
+            `### 💡 Hint ${nextLevel} of 4\n\n${hint}\n\n_${4 - nextLevel} hint${4 - nextLevel === 1 ? "" : "s"} remaining._`,
+          );
+          setHintLevel(nextLevel);
+        }
+      } else if (text === "__optimal__" || text === "__solution_optimal__") {
+        // OPTIMAL: give the optimal APPROACH NAME + LOGIC ONLY, no code.
+        // Follow-up "give me the code" in chat will use the conversation history.
+        addMessage("user", "🏆 Optimal Approach");
+        const prompt =
+          `OPTIMAL APPROACH MODE — DO NOT WRITE ANY CODE.\n` +
+          `Respond in this exact structure:\n` +
+          `### 🏆 Optimal Approach: <name of the approach / algorithm>\n` +
+          `**Time:** O(...)  •  **Space:** O(...)\n\n` +
+          `**Why this is optimal:** 2–3 sentences.\n\n` +
+          `**Logic / intuition:**\n` +
+          `- step-by-step bullet list explaining the algorithm in plain English.\n\n` +
+          `**Key data structures:** comma-separated list.\n\n` +
+          `Do NOT include any Java code, pseudocode blocks, or code fences. ` +
+          `If the user later asks for the code in chat, you will provide it then.`;
+        const result = await aiChat(code, prompt, problemId);
+        addMessage("assistant", result);
       } else if (text === "__mistakes__") {
-        addMessage("user", "🐛 Hunt for Logic Bugs");
-        const result = await detectMistakes(code, problemId);
+        // FIND BUGS: report bugs only, no full corrected code.
+        addMessage("user", "🐛 Find Bugs");
+        const prompt =
+          `BUG-FINDING MODE.\n` +
+          `Review the Java code below and report ONLY the bugs / issues you find.\n` +
+          `For each bug, output:\n` +
+          `  • **Location:** line number or method name + the offending snippet (≤ 1 line).\n` +
+          `  • **Type:** compile error / runtime error / logic bug / edge-case miss / performance.\n` +
+          `  • **Why it's wrong:** 1–2 sentences.\n` +
+          `  • **How to fix (described in words):** short description, NO code block.\n\n` +
+          `Strict rules:\n` +
+          `  - Do NOT output the corrected full code.\n` +
+          `  - Do NOT output method-level rewrites.\n` +
+          `  - At most 1-line code snippets when quoting the bug.\n` +
+          `If the user asks for the fixed code in a follow-up message, you may provide it then.`;
+        const result = await aiChat(code, prompt, problemId);
         addMessage("assistant", result);
       } else if (text === "__patterns__") {
-        addMessage("user", "📚 Detect Algorithm Patterns");
-        const result = await detectPatterns(code, problemId);
+        // PATTERNS: list applicable patterns + identify the pattern in user's code + verdict.
+        addMessage("user", "📚 Patterns");
+        const prompt =
+          `PATTERN ANALYSIS MODE.\n` +
+          `Respond in this exact structure (markdown):\n\n` +
+          `### 📚 Patterns Applicable to This Problem\n` +
+          `Bullet list of every relevant DSA pattern (e.g. Two Pointers, Sliding Window, Hash Map, ` +
+          `Binary Search, BFS/DFS, DP, Greedy, Backtracking, Heap, Union-Find, Monotonic Stack, etc.). ` +
+          `For each: 1-line reason it could apply.\n\n` +
+          `### 🔍 Pattern Detected in Your Code\n` +
+          `If the user has written code, name the pattern they're currently using. ` +
+          `If the editor is empty or no clear pattern, say so.\n\n` +
+          `### ✅ Is It Optimal?\n` +
+          `Compare the user's pattern to the best applicable pattern and give a clear verdict ` +
+          `(Optimal / Sub-optimal / Brute-force) with a 1–2 sentence justification. ` +
+          `If sub-optimal, name the better pattern — but do NOT write code.`;
+        const result = await aiChat(code, prompt, problemId);
         addMessage("assistant", result);
-      } else if (text === "__approach__") {
-        addMessage("user", "🎯 Suggest Best Approach");
-        const result = await getExtraInsights(code, "approach", problemId);
-        addMessage("assistant", result);
-      } else if (text === "__refactor__") {
-        addMessage("user", "♻️ Refactor My Code");
-        const result = await getExtraInsights(code, "refactor", problemId);
-        addMessage("assistant", result);
-      } else if (text === "__interview__") {
-        addMessage("user", "🎤 Generate Interview Questions");
-        const result = await getExtraInsights(code, "interview", problemId);
-        addMessage("assistant", result);
-      } else if (text === "__testcases__") {
+      } else if (text === "__generate_tests__" || text === "__testcases__") {
+        // Test-case generation is handled by the workspace (auto-adds to the
+        // Tests tab). We just acknowledge here.
         addMessage("user", "🧪 Generate Test Cases");
-        const result = await getExtraInsights(code, "testcases", problemId);
-        addMessage("assistant", result);
+        addMessage(
+          "assistant",
+          `Generating test cases and adding them to the **Tests** tab. They'll run together with the built-in cases when you click **Run Tests** or **Submit**.`,
+        );
       } else {
         addMessage("user", text);
-        const finalPrompt = isTutorMode
-          ? `(TUTOR MODE: Do NOT give direct code or answers. Ask guiding questions, point out logic gaps, and encourage the user to find the solution. Use Socratic method.) User says: ${text}`
-          : text;
+        const history = buildHistory();
+        const tutorPrefix = isTutorMode
+          ? `(TUTOR MODE: Do NOT give direct code or answers. Ask guiding questions, point out logic gaps, and encourage the user to find the solution. Use Socratic method.)\n`
+          : "";
+        const finalPrompt = `${tutorPrefix}Use the recent conversation below as context (especially any prior "Optimal Approach", "Find Bugs", or "Patterns" responses) when answering. If the user is asking for code that follows a previously-discussed approach, produce that exact approach.${history}\n\nUSER NEW MESSAGE: ${text}`;
         const response = await aiChat(code, finalPrompt, problemId);
         addMessage("assistant", response);
       }
+
     } catch (err: any) {
       console.error("AI Chat Error:", err);
       addMessage(
@@ -537,26 +576,9 @@ const AIChatPanel = ({
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="px-3 py-2 border-t border-panel-border bg-secondary/5 backdrop-blur-md relative overflow-hidden group/actions">
-        <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-ide-sidebar to-transparent z-20 pointer-events-none opacity-0 group-hover/actions:opacity-100 transition-opacity" />
-        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-ide-sidebar to-transparent z-20 pointer-events-none opacity-60 group-hover/actions:opacity-100 transition-opacity" />
+      {/* Quick-action chip strip removed by design — all AI features now live
+          in the upper "AI" dropdown in the workspace header. */}
 
-        <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent pb-1.5 relative z-10 flex gap-2 no-scrollbar sm:scrollbar-auto">
-          {quickActions.map((action) => (
-            <Button
-              key={action.label}
-              variant="outline"
-              size="sm"
-              disabled={isLoading}
-              onClick={() => handleSend(action.prompt)}
-              className="h-7 gap-1.5 rounded-full border-panel-border bg-card/50 hover:bg-primary/10 hover:border-primary/30 hover:text-primary transition-all duration-300 text-[10px] font-bold px-3 flex-shrink-0 shadow-sm"
-            >
-              <action.icon className="h-3 w-3" />
-              {action.label}
-            </Button>
-          ))}
-        </div>
-      </div>
 
       <div className="p-3 bg-ide-sidebar border-t border-panel-border backdrop-blur-2xl">
         <div className="relative group transition-all duration-300 focus-within:ring-2 focus-within:ring-primary/20 rounded-2xl overflow-hidden shadow-sm border border-white/5 inset-shadow-sm">
