@@ -531,6 +531,46 @@ const ProblemWorkspace = () => {
     return () => window.removeEventListener('keydown', handler);
   });
 
+  // Listen for AI dropdown trigger to generate test cases and add them to the Tests tab.
+  const [isGeneratingTests, setIsGeneratingTests] = useState(false);
+  useEffect(() => {
+    const handler = async (e: Event) => {
+      const detailEvt = (e as CustomEvent).detail as string;
+      if (detailEvt !== '__generate_tests__') return;
+      if (isGeneratingTests) return;
+      setIsGeneratingTests(true);
+      const tid = toast.loading('🧪 Generating test cases via AI…');
+      try {
+        const { generateTestCases } = await import('@/lib/ai-backend');
+        const generated = await generateTestCases(code, key || null);
+        const normalized = (Array.isArray(generated) ? generated : [])
+          .map((t: any) => {
+            const inputs: Record<string, string> =
+              t.inputs && typeof t.inputs === 'object'
+                ? Object.fromEntries(Object.entries(t.inputs).map(([k, v]) => [k, String(v)]))
+                : {};
+            const expected = String(t.expectedOutput ?? t.expected ?? '').trim();
+            return Object.keys(inputs).length > 0 && expected ? { inputs, expected } : null;
+          })
+          .filter(Boolean) as { inputs: Record<string, string>; expected: string }[];
+
+        if (normalized.length === 0) {
+          toast.error('AI returned no usable test cases.', { id: tid });
+        } else {
+          setDetail(prev => ({ ...prev, testCases: [...(prev.testCases || []), ...normalized] }));
+          toast.success(`✅ Added ${normalized.length} AI test case${normalized.length === 1 ? '' : 's'} to the Tests tab.`, { id: tid });
+          setBottomTab('description');
+        }
+      } catch (err: any) {
+        toast.error(err?.message || 'Failed to generate test cases', { id: tid });
+      }
+      setIsGeneratingTests(false);
+    };
+    window.addEventListener('trigger-explain', handler);
+    return () => window.removeEventListener('trigger-explain', handler);
+  }, [code, key, isGeneratingTests]);
+
+
   const addConsoleEntry = (type: ConsoleEntry['type'], text: string) => {
     setConsoleEntries(prev => [...prev, {
       type, text,
