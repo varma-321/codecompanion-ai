@@ -213,20 +213,12 @@ interface AIChatPanelProps {
   aiEnabled?: boolean;
 }
 
-const quickActions = [
-  { label: "✨ Code Aura", icon: Sparkles, prompt: "__vibe__" },
-  { label: "🧠 Visualize", icon: Eye, prompt: "__visualize__" },
-  { label: "🔍 Performance", icon: BarChart3, prompt: "__performance__" },
-  { label: "⚙️ Logic Trace", icon: Workflow, prompt: "__dry_run__" },
-  { label: "💡 Hints", icon: Lightbulb, prompt: "__hints__" },
-  { label: "🏆 Optimal", icon: Trophy, prompt: "__solution_optimal__" },
-  { label: "🐛 Find Bugs", icon: Bug, prompt: "__mistakes__" },
-  { label: "📚 Patterns", icon: BookOpen, prompt: "__patterns__" },
-  { label: "🎯 Approach", icon: AlertCircle, prompt: "__approach__" },
-  { label: "♻️ Refactor", icon: Code2, prompt: "__refactor__" },
-  { label: "🎤 Interview Q", icon: Brain, prompt: "__interview__" },
-  { label: "🧪 Test Cases", icon: FlaskConical, prompt: "__testcases__" },
-];
+// Quick action bar removed by design — all AI features live in the upper "AI" dropdown.
+// Internal prompt sentinels still used (dispatched from the workspace dropdown):
+//   __dry_run__ (Logic Trace), __hints__ (Hints), __optimal__ (Optimal Approach),
+//   __mistakes__ (Find Bugs), __patterns__ (Patterns), __generate_tests__ (handled in workspace),
+//   __analyze__ (Complexity Analysis).
+
 
 const AIChatPanel = ({
   code,
