@@ -993,33 +993,27 @@ const ProblemWorkspace = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__vibe__' }))}>
-                  <Sparkles className="h-3.5 w-3.5 mr-2" /> AI Code Aura
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__visualize__' }))}>
-                  <Eye className="h-3.5 w-3.5 mr-2" /> Visualize Logic Flow
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__performance__' }))}>
-                  <BarChart3 className="h-3.5 w-3.5 mr-2" /> Performance Audit
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__dry_run__' }))}>
-                  <Workflow className="h-3.5 w-3.5 mr-2" /> Step-by-Step Trace
+                  <Workflow className="h-3.5 w-3.5 mr-2" /> Logic Trace
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__hints__' }))}>
+                  <Brain className="h-3.5 w-3.5 mr-2" /> Hints
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__optimal__' }))}>
+                  <Trophy className="h-3.5 w-3.5 mr-2" /> Optimal
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__mistakes__' }))}>
+                  <AlertTriangle className="h-3.5 w-3.5 mr-2" /> Find Bugs
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__patterns__' }))}>
+                  <BookOpen className="h-3.5 w-3.5 mr-2" /> Patterns
                 </DropdownMenuItem>
                 <div className="h-px bg-border my-1" />
                 <DropdownMenuItem onClick={handleAnalyze} disabled={isAnalyzing || !code.trim()}>
                   <TrendingUp className="h-3.5 w-3.5 mr-2" /> Complexity Analysis
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__mistakes__' }))}>
-                  <AlertTriangle className="h-3.5 w-3.5 mr-2" /> Find Mistakes
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__hints__' }))}>
-                  <Brain className="h-3.5 w-3.5 mr-2" /> Hints
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__generate_tests__' }))}>
                   <FlaskConical className="h-3.5 w-3.5 mr-2" /> Generate Test Cases
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__optimal__' }))}>
-                  <Trophy className="h-3.5 w-3.5 mr-2" /> Optimal Solution
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
