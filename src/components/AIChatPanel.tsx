@@ -18,11 +18,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   analyzeCode,
   getHints as getAIHints,
-  getSolution,
   detectMistakes,
   detectPatterns,
   chat as aiChat,
-  getExtraInsights,
   checkBackendStatus,
 } from "@/lib/ai-backend";
 import ReactMarkdown from "react-markdown";
