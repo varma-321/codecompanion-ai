@@ -576,26 +576,9 @@ const AIChatPanel = ({
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="px-3 py-2 border-t border-panel-border bg-secondary/5 backdrop-blur-md relative overflow-hidden group/actions">
-        <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-ide-sidebar to-transparent z-20 pointer-events-none opacity-0 group-hover/actions:opacity-100 transition-opacity" />
-        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-ide-sidebar to-transparent z-20 pointer-events-none opacity-60 group-hover/actions:opacity-100 transition-opacity" />
+      {/* Quick-action chip strip removed by design — all AI features now live
+          in the upper "AI" dropdown in the workspace header. */}
 
-        <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent pb-1.5 relative z-10 flex gap-2 no-scrollbar sm:scrollbar-auto">
-          {quickActions.map((action) => (
-            <Button
-              key={action.label}
-              variant="outline"
-              size="sm"
-              disabled={isLoading}
-              onClick={() => handleSend(action.prompt)}
-              className="h-7 gap-1.5 rounded-full border-panel-border bg-card/50 hover:bg-primary/10 hover:border-primary/30 hover:text-primary transition-all duration-300 text-[10px] font-bold px-3 flex-shrink-0 shadow-sm"
-            >
-              <action.icon className="h-3 w-3" />
-              {action.label}
-            </Button>
-          ))}
-        </div>
-      </div>
 
       <div className="p-3 bg-ide-sidebar border-t border-panel-border backdrop-blur-2xl">
         <div className="relative group transition-all duration-300 focus-within:ring-2 focus-within:ring-primary/20 rounded-2xl overflow-hidden shadow-sm border border-white/5 inset-shadow-sm">
