@@ -221,11 +221,11 @@ const ProblemWorkspace = () => {
       ? `custom_${customId || 'anon'}_`
       : '';
     const saveKey = `${prefix}${key}__${activeApproach}`;
-    try { localStorage.setItem(`workspace-code-${saveKey}`, code); } catch {}
-  }, [code, key, activeApproach, isCodeLoading, contestMode, contestId, generatorMode, genId, customMode, customId]);
+    try { localStorage.setItem(`workspace-code-${authUser?.id || 'anon'}-${saveKey}`, code); } catch {}
+  }, [code, key, activeApproach, isCodeLoading, contestMode, contestId, generatorMode, genId, customMode, customId, authUser?.id]);
 
   // Debounced Supabase autosave (every 2s)
-  const autosaveWorkspaceCode = useCallback(async (val: string) => {
+  const autosaveWorkspaceCode = useCallback(async (approach: Approach, val: string) => {
     if (!authUser || !key) return;
     const prefix = contestMode 
       ? `contest_${contestId || 'anon'}_` 
@@ -234,7 +234,7 @@ const ProblemWorkspace = () => {
       : customMode
       ? `custom_${customId || 'anon'}_`
       : '';
-    const saveKey = `${prefix}${key}__${activeApproach}`;
+    const saveKey = `${prefix}${key}__${approach}`;
     try {
       const { error } = await supabase.from('user_code_saves').upsert({
         user_id: authUser.id,
@@ -246,28 +246,47 @@ const ProblemWorkspace = () => {
     } catch (e) {
       console.error('Autosave exception:', e);
     }
-  }, [authUser, key, activeApproach, contestMode, contestId, generatorMode, genId, customMode, customId]);
+  }, [authUser, key, contestMode, contestId, generatorMode, genId, customMode, customId]);
 
-  const { isDirty: wsCodeDirty, isSaving: wsAutoSaving, resetSavedValue: wsResetSaved } = useAutosave(code, autosaveWorkspaceCode, {
+  const bruteAutosave = useAutosave(codes.brute, (val) => autosaveWorkspaceCode('brute', val), {
     delay: 2000,
-    // Disable autosave while codes are loading to prevent stale writes
     enabled: !!key && !!authUser && !isCodeLoading,
   });
+  const betterAutosave = useAutosave(codes.better, (val) => autosaveWorkspaceCode('better', val), {
+    delay: 2000,
+    enabled: !!key && !!authUser && !isCodeLoading,
+  });
+  const optimalAutosave = useAutosave(codes.optimal, (val) => autosaveWorkspaceCode('optimal', val), {
+    delay: 2000,
+    enabled: !!key && !!authUser && !isCodeLoading,
+  });
+
+  const activeAutosave = useMemo(() => {
+    if (activeApproach === 'brute') return bruteAutosave;
+    if (activeApproach === 'better') return betterAutosave;
+    return optimalAutosave;
+  }, [activeApproach, bruteAutosave, betterAutosave, optimalAutosave]);
+
+  const wsCodeDirty = activeAutosave.isDirty;
+  const wsAutoSaving = activeAutosave.isSaving;
+  const wsResetSaved = activeAutosave.resetSavedValue;
 
   // Reset autosave ref when switching approaches so it doesn't incorrectly detect dirty
   useEffect(() => {
     wsResetSaved(codes[activeApproach]);
-  }, [activeApproach]);
+  }, [activeApproach, wsResetSaved]);
 
   // Fetch full problem details from Java Spring Boot Backend
   const generateFullDetail = useCallback(async () => {
     if (!roadmapProblem || !key || hasHardcodedDetail) return;
     const cached = getCachedDetail(key);
-    if (cached && cached.testCases && cached.testCases.length >= 1) {
-      setDetail(cached);
-      if (!codesLoadedFromDb.current && cached.starterCode) {
+    const isValid = (d: any) => d && Array.isArray(d.testCases) && d.testCases.length >= 1 && d.testCases.every((tc: any) => tc.expected && String(tc.expected).trim() !== '');
+
+    if (isValid(cached)) {
+      setDetail(cached!);
+      if (!codesLoadedFromDb.current && cached!.starterCode) {
         setCodes(prev => {
-          const starter = cached.starterCode;
+          const starter = cached!.starterCode;
           return {
             brute: prev.brute === detail.starterCode ? starter : prev.brute,
             better: prev.better === detail.starterCode ? starter : prev.better,
@@ -289,22 +308,29 @@ const ProblemWorkspace = () => {
 
       if (cachedRow && Array.isArray((cachedRow as any).test_cases) && (cachedRow as any).test_cases.length >= 1) {
         const c: any = cachedRow;
-        const enhanced: EnhancedDetail = {
-          key,
-          description: c.description || detail.description,
-          examples: c.examples || [],
-          starterCode: c.starter_code || detail.starterCode,
-          testCases: c.test_cases,
-          functionName: c.function_name || 'solve',
-          returnType: c.return_type || 'void',
-          params: c.params || [],
-          constraints: c.constraints || [],
-          hints: c.hints || [],
-        };
-        setCachedDetail(key, enhanced);
-        setDetail(enhanced);
-        setIsGenerating(false);
-        return;
+        
+        // Quality check: ensure test cases actually have expected values
+        const tcs = c.test_cases || [];
+        const isLowQuality = tcs.some((tc: any) => !tc.expected || String(tc.expected).trim() === '');
+        
+        if (!isLowQuality) {
+          const enhanced: EnhancedDetail = {
+            key,
+            description: c.description || detail.description,
+            examples: c.examples || [],
+            starterCode: c.starter_code || detail.starterCode,
+            testCases: c.test_cases,
+            functionName: c.function_name || 'solve',
+            returnType: c.return_type || 'void',
+            params: c.params || [],
+            constraints: c.constraints || [],
+            hints: c.hints || [],
+          };
+          setCachedDetail(key, enhanced);
+          setDetail(enhanced);
+          setIsGenerating(false);
+          return;
+        }
       }
 
       // If Custom Mode, check custom_problems table instead of generator or roadway
@@ -439,7 +465,7 @@ const ProblemWorkspace = () => {
           } catch (e) { console.error('Load code exception:', e); }
         }
         if (!savedCode) {
-          savedCode = localStorage.getItem(`workspace-code-${saveKey}`);
+          savedCode = localStorage.getItem(`workspace-code-${authUser?.id || 'anon'}-${saveKey}`);
         }
         // Also check legacy key (no approach suffix) for brute force migration
         if (!savedCode && approach === 'brute') {
@@ -454,10 +480,10 @@ const ProblemWorkspace = () => {
               if (data && (data as any).code) { savedCode = (data as any).code; anyFromDb = true; }
             } catch {}
           }
-          if (!savedCode) savedCode = localStorage.getItem(`workspace-code-${loadKey}`);
+          if (!savedCode) savedCode = localStorage.getItem(`workspace-code-${authUser?.id || 'anon'}-${loadKey}`);
         }
         if (savedCode) {
-          try { localStorage.setItem(`workspace-code-${saveKey}`, savedCode); } catch {}
+          try { localStorage.setItem(`workspace-code-${authUser?.id || 'anon'}-${saveKey}`, savedCode); } catch {}
         }
         loaded[approach] = savedCode || detail.starterCode;
       }
@@ -1281,8 +1307,24 @@ const ProblemWorkspace = () => {
             <span className="ml-auto text-[11px] text-muted-foreground tracking-tight font-mono">Java</span>
           </div>
 
-          <div className="flex-1 overflow-hidden">
-            <CodeEditor code={code} onChange={setCode} />
+          <div className="flex-1 overflow-hidden relative">
+            {APPROACHES.map(approach => (
+              <div 
+                key={approach.key} 
+                className="absolute inset-0"
+                style={{ 
+                  visibility: activeApproach === approach.key ? 'visible' : 'hidden',
+                  opacity: activeApproach === approach.key ? 1 : 0,
+                  pointerEvents: activeApproach === approach.key ? 'auto' : 'none',
+                  zIndex: activeApproach === approach.key ? 1 : 0
+                }}
+              >
+                <CodeEditor 
+                  code={codes[approach.key]} 
+                  onChange={(val) => setCodes(prev => ({ ...prev, [approach.key]: val }))} 
+                />
+              </div>
+            ))}
           </div>
 
           <div onMouseDown={handleDividerMouseDown} className="resize-handle h-1 cursor-row-resize border-t border-panel-border hover:bg-primary/40 transition-colors" />
