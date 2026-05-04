@@ -5,7 +5,7 @@ import {
   ArrowLeft, Play, FlaskConical, Loader2, CheckCircle2, XCircle, Brain, ChevronRight, 
   Code2, GitCompare, Cloud, Keyboard, Sparkles, AlertTriangle, Zap, TrendingUp, 
   Trophy, Eye, EyeOff, BarChart3, ChevronDown, ChevronUp, MessageSquare, 
-  FileText, Bot, Square, Workflow, Shield, Lightbulb, Github
+  FileText, Bot, Square, Workflow, Shield, Lightbulb, Github, BookOpen
 } from 'lucide-react';
 import { CONTEST_PROBLEMS } from '../lib/contest-problems-data';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
