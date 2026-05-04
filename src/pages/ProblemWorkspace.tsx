@@ -1385,24 +1385,45 @@ const ProblemWorkspace = () => {
             </div>
             <div className="h-[calc(100%-32px)] overflow-hidden">
               {bottomTab === 'description' && (
-                <ScrollArea className="h-full">
-                  <div className="p-3 space-y-2">
-                    {detail.testCases.map((tc, i) => (
-                      <div key={i} className="flex items-start gap-3 rounded border border-panel-border bg-secondary/20 p-2 font-mono text-xs">
-                        <span className="font-bold text-muted-foreground">#{i + 1}</span>
-                        <div className="flex-1 space-y-0.5">
-                          {Object.entries(tc.inputs).map(([k, v]) => (
-                            <span key={k} className="mr-3"><span className="text-muted-foreground">{k}=</span>{v}</span>
-                          ))}
-                        </div>
-                        <span className="text-success font-semibold">→ {tc.expected}</span>
-                      </div>
-                    ))}
-                    {detail.testCases.length === 0 && (
-                      <p className="text-xs text-muted-foreground text-center py-6">No built-in test cases for this problem yet. Use AI to generate them!</p>
-                    )}
-                  </div>
-                </ScrollArea>
+                <TestCasePanel
+                  testCases={detail.testCases.map((tc, i) => ({
+                    id: `wstc-${i}`,
+                    user_id: '',
+                    problem_id: key || '',
+                    input: Object.values(tc.inputs || {})[0] || '',
+                    expected_output: tc.expected || '',
+                    variable_name: Object.keys(tc.inputs || {})[0] || 'arg',
+                    inputs: tc.inputs || {},
+                    created_at: '',
+                  }))}
+                  testResults={testResults}
+                  onAdd={(inputs, expectedOutput) => {
+                    setDetail(prev => ({
+                      ...prev,
+                      testCases: [...(prev.testCases || []), { inputs, expected: expectedOutput }],
+                    }));
+                    toast.success('Custom test case added — runs with built-in tests on Run/Submit.');
+                  }}
+                  onUpdate={(id, inputs, expectedOutput) => {
+                    const idx = parseInt(id.replace('wstc-', ''), 10);
+                    if (Number.isNaN(idx)) return;
+                    setDetail(prev => {
+                      const next = [...(prev.testCases || [])];
+                      if (next[idx]) next[idx] = { inputs, expected: expectedOutput };
+                      return { ...prev, testCases: next };
+                    });
+                  }}
+                  onDelete={(id) => {
+                    const idx = parseInt(id.replace('wstc-', ''), 10);
+                    if (Number.isNaN(idx)) return;
+                    setDetail(prev => ({
+                      ...prev,
+                      testCases: (prev.testCases || []).filter((_, i) => i !== idx),
+                    }));
+                  }}
+                  onGenerateAI={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__generate_tests__' }))}
+                  isGenerating={isGeneratingTests}
+                />
               )}
               {bottomTab === 'console' && (
                 <ConsolePanel
