@@ -56,8 +56,9 @@ interface UserRow {
   status: string;
   ban_until: string | null;
   created_at: string;
-  email?: string;
-  role?: string;
+  email: string | null;
+  role: string;
+  requested_role: string | null;
 }
 
 const STATUS_CONFIG: Record<
@@ -92,7 +93,7 @@ const STATUS_CONFIG: Record<
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { authUser, isAdmin, loading: authLoading } = useUser();
+  const { authUser, isAdmin, isModerator, loading: authLoading } = useUser();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -123,7 +124,7 @@ const AdminDashboard = () => {
     try {
       const { data: profiles, error } = await supabase
         .from("profiles")
-        .select("id, username, status, ban_until, created_at")
+        .select("id, username, status, ban_until, created_at, email, requested_role")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -140,6 +141,7 @@ const AdminDashboard = () => {
           ...p,
           status: p.status || "pending",
           role: rolesMap.get(p.id) || "user",
+          requested_role: p.requested_role || "user",
         }))
         .filter((u) => u.status !== "deleted");
 
@@ -198,7 +200,7 @@ const AdminDashboard = () => {
   // Use UserContext to verify admin access — no external API needed
   useEffect(() => {
     if (authLoading) return;
-    if (!authUser || !isAdmin) {
+    if (!authUser || (!isAdmin && !isModerator)) {
       navigate("/admin-login");
       return;
     }
@@ -264,15 +266,18 @@ const AdminDashboard = () => {
 
       if (profileUpdateError) throw profileUpdateError;
 
-      // Only update role if it has actually changed
+      // Only update role if it has actually changed and requester is admin
       const currentRole = actionDialog.user.role || "user";
       if (editForm.role !== currentRole) {
-        // Update role gracefully
-        await handleRemoveRole(actionDialog.user.id); // clean up old roles first
-        const { error: roleError } = await supabase
-          .from("user_roles")
-          .insert({ user_id: actionDialog.user.id, role: editForm.role });
-        if (roleError && roleError.code !== "23505") throw roleError; // ignore unique constraint if exists
+        if (!isAdmin) {
+          toast.error("Moderators cannot change user roles");
+          return;
+        }
+        const { error: roleError } = await supabase.rpc("admin_update_user_role", {
+          target_user_id: actionDialog.user.id,
+          new_role: editForm.role as any
+        });
+        if (roleError) throw roleError;
       }
 
       // Update password if provided
@@ -418,6 +423,7 @@ const AdminDashboard = () => {
     approved: users.filter((u) => u.status === "approved").length,
     blocked: users.filter((u) => u.status === "blocked").length,
     banned: users.filter((u) => u.status === "temporarily_banned").length,
+    adminRequests: users.filter((u) => u.status === "pending" && u.requested_role === "admin").length,
   };
 
   if (authLoading || loading) {
@@ -504,6 +510,12 @@ const AdminDashboard = () => {
               icon: <Ban className="h-4 w-4" />,
               color: "text-warning",
             },
+            {
+              label: "Admin Requests",
+              value: stats.adminRequests,
+              icon: <Shield className="h-4 w-4" />,
+              color: "text-destructive",
+            },
           ].map((stat) => (
             <div
               key={stat.label}
@@ -557,8 +569,8 @@ const AdminDashboard = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-xs">Username</TableHead>
-                    <TableHead className="text-xs">Role</TableHead>
+                    <TableHead className="text-xs">User / Email</TableHead>
+                    <TableHead className="text-xs">Role / Request</TableHead>
                     <TableHead className="text-xs">Status</TableHead>
                     <TableHead className="text-xs">Ban Until</TableHead>
                     <TableHead className="text-xs">Joined</TableHead>
@@ -585,24 +597,31 @@ const AdminDashboard = () => {
                       return (
                         <TableRow key={user.id}>
                           <TableCell className="font-medium text-sm">
-                            {user.username}
-                            {isCurrentUser && (
-                              <span className="ml-1.5 text-[10px] text-muted-foreground">
-                                (you)
-                              </span>
-                            )}
+                            <div className="flex flex-col">
+                              <span>{user.username} {isCurrentUser && <span className="text-[10px] text-muted-foreground">(you)</span>}</span>
+                              <span className="text-[10px] text-muted-foreground font-mono">{user.email || "No Email"}</span>
+                            </div>
                           </TableCell>
                           <TableCell>
-                            <Badge
-                              variant={
-                                user.role === "admin"
-                                  ? "destructive"
-                                  : "secondary"
-                              }
-                              className="text-[10px]"
-                            >
-                              {user.role === "admin" ? "Admin" : "User"}
-                            </Badge>
+                            <div className="flex flex-col gap-1">
+                              <Badge
+                                variant={
+                                  user.role === "admin"
+                                    ? "destructive"
+                                    : user.role === "moderator"
+                                    ? "default"
+                                    : "secondary"
+                                }
+                                className="text-[10px] w-fit"
+                              >
+                                {user.role === "admin" ? "Admin" : user.role === "moderator" ? "Moderator" : "User"}
+                              </Badge>
+                              {user.status === "pending" && user.requested_role && user.requested_role !== user.role && (
+                                <Badge variant="outline" className="text-[9px] border-warning text-warning w-fit bg-warning/5 animate-pulse">
+                                  Requesting {user.requested_role}
+                                </Badge>
+                              )}
+                            </div>
                           </TableCell>
 
                           <TableCell>
@@ -627,10 +646,17 @@ const AdminDashboard = () => {
                                   <Button
                                     size="sm"
                                     variant="default"
-                                    className="h-7 text-[11px] gap-1"
-                                    onClick={() => handleApprove(user)}
+                                    className={`h-7 text-[11px] gap-1 ${user.requested_role === 'admin' ? 'bg-destructive hover:bg-destructive/90' : ''}`}
+                                    onClick={async () => {
+                                      // If requesting admin, also grant the role
+                                      if (user.requested_role === 'admin') {
+                                         await supabase.from("user_roles").insert({ user_id: user.id, role: 'admin' });
+                                      }
+                                      handleApprove(user);
+                                    }}
                                   >
-                                    <CheckCircle className="h-3 w-3" /> Approve
+                                    <CheckCircle className="h-3 w-3" /> 
+                                    {user.requested_role === 'admin' ? 'Approve Admin' : 'Approve'}
                                   </Button>
                                 )}
                                 {user.status !== "approved" &&
@@ -681,6 +707,7 @@ const AdminDashboard = () => {
                                   size="sm"
                                   variant="ghost"
                                   className="h-7 text-[11px] gap-1 text-destructive hover:text-destructive"
+                                  disabled={!isAdmin && user.role === 'admin'}
                                   onClick={() =>
                                     setActionDialog({ type: "remove", user })
                                   }
@@ -1054,16 +1081,19 @@ const AdminDashboard = () => {
               <Label>Role</Label>
               <Select
                 value={editForm.role}
-                onValueChange={(v) => setEditForm({ ...editForm, role: v })}
+                onValueChange={(val) => setEditForm({ ...editForm, role: val })}
+                disabled={!isAdmin}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-9 text-sm">
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="user">User</SelectItem>
+                  <SelectItem value="moderator">Moderator</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
+              {!isAdmin && <p className="text-[10px] text-muted-foreground">Only administrators can change roles.</p>}
             </div>
             <div className="space-y-2">
               <Label>Status</Label>

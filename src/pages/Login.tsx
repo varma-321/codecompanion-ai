@@ -50,7 +50,7 @@ const Login = () => {
     setLoading(true);
     try {
       if (mode === 'signup') {
-        await signUp(email.trim(), password, username.trim());
+        await signUp(email.trim(), password, username.trim(), 'user');
         setSignupSuccess(true);
       } else {
         await signIn(email.trim(), password);

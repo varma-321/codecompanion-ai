@@ -36,7 +36,10 @@ export default function AdminSignup() {
         email: formData.email,
         password: formData.password,
         options: {
-          data: { username: formData.name },
+          data: { 
+            username: formData.name,
+            requested_role: 'admin'
+          },
           emailRedirectTo: window.location.origin,
         },
       });

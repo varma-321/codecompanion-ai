@@ -13,6 +13,7 @@ interface UserContextType {
   loading: boolean;
   isGuest: boolean;
   isAdmin: boolean;
+  isModerator: boolean;
   userStatus: string | null;
   setProfile: (p: ExtendedProfile | null) => void;
   enterGuestMode: () => void;
@@ -25,6 +26,7 @@ const UserContext = createContext<UserContextType>({
   loading: true,
   isGuest: false,
   isAdmin: false,
+  isModerator: false,
   userStatus: null,
   setProfile: () => {},
   enterGuestMode: () => {},
@@ -41,12 +43,12 @@ async function fetchExtendedProfile(userId: string): Promise<ExtendedProfile | n
   return data as ExtendedProfile;
 }
 
-async function checkIsAdmin(userId: string): Promise<boolean> {
+async function checkRole(userId: string, role: string): Promise<boolean> {
   const { data } = await supabase
     .from('user_roles')
     .select('role')
     .eq('user_id', userId)
-    .eq('role', 'admin')
+    .eq('role', role)
     .maybeSingle();
   return !!data;
 }
@@ -57,6 +59,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [isGuest, setIsGuest] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isModerator, setIsModerator] = useState(false);
 
   const enterGuestMode = useCallback(() => {
     setIsGuest(true);
@@ -74,15 +77,20 @@ export function UserProvider({ children }: { children: ReactNode }) {
         if (session?.user) {
           setIsGuest(false);
           setTimeout(async () => {
-            const p = await fetchExtendedProfile(session.user.id);
+            const [p, admin, moderator] = await Promise.all([
+              fetchExtendedProfile(session.user.id),
+              checkRole(session.user.id, 'admin'),
+              checkRole(session.user.id, 'moderator')
+            ]);
             setProfile(p);
-            const admin = await checkIsAdmin(session.user.id);
             setIsAdmin(admin);
+            setIsModerator(moderator);
             setLoading(false);
           }, 0);
         } else {
           setProfile(null);
           setIsAdmin(false);
+          setIsModerator(false);
           setLoading(false);
         }
       }
@@ -92,12 +100,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
       setAuthUser(session?.user ?? null);
       if (session?.user) {
         try {
-          const [p, admin] = await Promise.all([
+          const [p, admin, moderator] = await Promise.all([
             fetchExtendedProfile(session.user.id),
-            checkIsAdmin(session.user.id)
+            checkRole(session.user.id, 'admin'),
+            checkRole(session.user.id, 'moderator')
           ]);
           setProfile(p);
           setIsAdmin(admin);
+          setIsModerator(moderator);
         } catch (e) {
           console.error("Error loading user context:", e);
         } finally {
@@ -114,7 +124,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const userStatus = profile?.status ?? null;
 
   return (
-    <UserContext.Provider value={{ authUser, profile, loading, isGuest, isAdmin, userStatus, setProfile, enterGuestMode, exitGuestMode }}>
+    <UserContext.Provider value={{ authUser, profile, loading, isGuest, isAdmin, isModerator, userStatus, setProfile, enterGuestMode, exitGuestMode }}>
       {children}
     </UserContext.Provider>
   );
