@@ -13,7 +13,16 @@ async function postAPI(endpoint: string, body: Record<string, any>): Promise<any
     });
     clearTimeout(timeoutId);
 
-    if (!res.ok) throw new Error(`Server error: ${res.status}`);
+    if (!res.ok) {
+      let errorDetail = '';
+      try {
+        const errJson = await res.json();
+        errorDetail = errJson.message || errJson.error || JSON.stringify(errJson);
+      } catch {
+        errorDetail = `HTTP ${res.status}`;
+      }
+      throw new Error(`Server error: ${errorDetail}`);
+    }
     return await res.json();
   } catch (error: any) {
     clearTimeout(timeoutId);
@@ -114,8 +123,24 @@ export async function chat(code: string, userMessage: string, problemId?: string
   return data.response || data.reply || JSON.stringify(data);
 }
 
-export async function generateTestCases(code: string, problemId?: string | null): Promise<any[]> {
-  const data = await postAPI('/api/generate-test-cases', { code, problemId });
+export async function generateTestCases(
+  code: string,
+  problemId?: string | null,
+  problemTitle?: string | null,
+  problemDescription?: string | null,
+  existingTestCases?: Array<{ inputs: Record<string, string>; expected: string }> | null,
+  paramNames?: string[] | null,
+): Promise<any[]> {
+  const data = await postAPI('/api/generate-test-cases', {
+    code,
+    problemId,
+    problemTitle: problemTitle || problemId || '',
+    problemDescription: problemDescription || '',
+    paramNames: paramNames || [],
+    existingTestCases: existingTestCases && existingTestCases.length > 0
+      ? JSON.stringify(existingTestCases.slice(-15))
+      : '[]',
+  });
   return data.testCases || [];
 }
 

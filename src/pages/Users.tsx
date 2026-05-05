@@ -161,6 +161,7 @@ export default function Users() {
                     </div>
                     <div className="text-[10px] text-muted-foreground">Platform activity</div>
                   </div>
+
                 </div>
 
                 <Tabs defaultValue="overview">

@@ -24,7 +24,7 @@ import {
   fetchTestCases, insertTestCase, updateTestCase, deleteTestCase,
 } from '@/lib/supabase';
 import { executeJavaCode, stopExecution, type ExecutionStatus as ExecStatusType } from '@/lib/executor';
-import { detectProblemTitle } from '@/lib/ai-backend';
+import { detectProblemTitle, generateTestCases } from '@/lib/ai-backend';
 import { supabase } from '@/integrations/supabase/client';
 import { API_BASE_URL } from '@/lib/api';
 import { isMainClassStyle } from '@/lib/test-runner';
@@ -285,20 +285,32 @@ const Dashboard = () => {
     if (!activeProblem || !userId) { toast.error('Select a problem first'); return; }
     setIsGeneratingTests(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/generate-test-cases`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code })
-      });
-      if (!res.ok) throw new Error('Server error: ' + res.status);
-      const data = await res.json();
-      const generated = data?.testCases || [];
-      if (generated.length === 0) { toast.info('No test cases generated'); setIsGeneratingTests(false); return; }
+      const currentTestCases = testCases.map(tc => ({
+        inputs: tc.inputs as Record<string, string>,
+        expected: tc.expected_output
+      }));
+      
+      const generated = await generateTestCases(
+        code,
+        activeProblem.id,
+        activeProblem.title,
+        activeProblem.description || '',
+        currentTestCases
+      );
+
+      if (generated.length === 0) {
+        toast.info('AI returned no new test cases');
+        setIsGeneratingTests(false);
+        return;
+      }
 
       const newCases: DbTestCase[] = [];
       for (const tc of generated) {
-        const inputs: Record<string, string> = tc.inputs || { [tc.variableName || 'arr']: tc.input || '' };
-        const saved = await insertTestCase(userId, activeProblem.id, inputs, tc.expectedOutput || '');
+        // Handle both API response formats
+        const inputs = tc.inputs || tc.input || {};
+        const expected = tc.expectedOutput || tc.expected || '';
+        
+        const saved = await insertTestCase(userId, activeProblem.id, inputs, expected);
         newCases.push(saved);
       }
       setTestCases(prev => [...prev, ...newCases]);

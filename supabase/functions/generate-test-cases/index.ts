@@ -16,7 +16,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { code, title, difficulty, problem_key } = await req.json();
+    const { code, title, difficulty, problem_key, problemDescription } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -60,10 +60,14 @@ Expected output must EXACTLY match what System.out.println() would produce in Ja
 - 2D arrays: "[[1, 2], [3, 4]]" (Arrays.deepToString format)
 - Booleans: "true" or "false"
 - Strings: just the string without extra quotes`
+- Strings: just the string without extra quotes`
           },
           {
             role: "user",
-            content: `Generate 5 high-quality test cases (normal, edge, boundary, large input, corner) for this Java function${title ? ` (Problem: ${title}, Difficulty: ${difficulty || 'Medium'})` : ''}:\n\n${code}`
+            content: `Generate 5 high-quality test cases (normal, edge, boundary, large input, corner) for this Java function:
+${title ? `Problem Title: ${title}\n` : ''}${difficulty ? `Difficulty: ${difficulty}\n` : ''}${problemDescription ? `Problem Description: ${problemDescription}\n` : ''}
+Code:
+${code}`
           }
         ],
         tools: [
@@ -153,9 +157,11 @@ Expected output must EXACTLY match what System.out.println() would produce in Ja
             .eq("problem_key", problem_key)
             .maybeSingle();
           if (existing) {
-            const merged = Array.isArray((existing as any).test_cases) && (existing as any).test_cases.length > 0
-              ? (existing as any).test_cases
-              : normalized;
+            // ALWAYS update the cache with the new generated cases, but prepend them to existing ones
+            // Actually, let's just REPLACE them if the user is explicitly generating new ones, 
+            // or merge them and deduplicate. For now, let's just merge.
+            const existingCases = Array.isArray((existing as any).test_cases) ? (existing as any).test_cases : [];
+            const merged = [...existingCases, ...normalized].slice(-20); // Keep last 20
             await adminClient.from("problem_test_cases").update({ test_cases: merged }).eq("id", (existing as any).id);
           } else {
             const authHeader = req.headers.get("Authorization") || "";

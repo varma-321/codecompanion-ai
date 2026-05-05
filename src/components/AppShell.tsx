@@ -5,7 +5,7 @@ import {
   User, Users, LogOut, Settings, Moon, Sun, BarChart3, Layers, GraduationCap, Clock,
   Building2, MessageSquare, Award, Bookmark, FileSpreadsheet, Activity, Flame,
   Plus, Dices, Zap, Timer, Share2, AlertTriangle, RotateCcw, TrendingUp, Shield,
-  Mail,
+  Mail, LayoutGrid
 } from 'lucide-react';
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
@@ -27,7 +27,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Workspace',
     items: [
       { title: 'Home', url: '/', icon: Home },
-      { title: 'All Modules', url: '/modules', icon: Layers },
+      { title: 'All Modules', url: '/modules', icon: LayoutGrid },
       { title: 'Mailbox', url: '/mailbox', icon: Mail },
       { title: 'Search', url: '/search', icon: Search },
     ],
@@ -104,16 +104,20 @@ function AppSidebar() {
   }, [authUser]);
 
   const navGroups = useMemo(() => {
-    if (!isAdmin) return NAV_GROUPS;
-    return [
-      ...NAV_GROUPS,
-      {
-        label: 'Admin',
-        items: [
-          { title: 'Dashboard', url: '/admin', icon: Shield },
-        ],
-      }
-    ];
+    let groups = [...NAV_GROUPS];
+    if (isAdmin) {
+      // Add Admin to the very top of Workspace or as its own prominent group
+      groups = [
+        {
+          label: 'Administration',
+          items: [
+            { title: 'Admin Dashboard', url: '/admin', icon: Shield },
+          ],
+        },
+        ...groups
+      ];
+    }
+    return groups;
   }, [isAdmin]);
 
   return (
@@ -196,6 +200,7 @@ interface AppShellProps {
 
 function Topbar({ title, subtitle, actions }: { title?: string; subtitle?: string; actions?: ReactNode }) {
   const { theme, toggleTheme } = useTheme();
+  const { authUser, profile, setProfile } = useUser();
   const navigate = useNavigate();
   const handleLogout = async () => { await signOut(); navigate('/'); };
 
@@ -225,6 +230,9 @@ function Topbar({ title, subtitle, actions }: { title?: string; subtitle?: strin
       <div className="flex items-center gap-1 shrink-0">
         {actions}
         <ReportIssueDialog pageTitle={title} />
+        
+
+
         <Button variant="ghost" size="icon" onClick={toggleTheme} className="h-8 w-8" aria-label="Toggle theme">
           {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>

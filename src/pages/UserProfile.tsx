@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, useMemo } from 'react';
-import { Trophy, Flame, Target, Calendar, Code2, TrendingUp, Award, ArrowRight } from 'lucide-react';
+import { Trophy, Flame, Target, Calendar, Code2, TrendingUp, Award, ArrowRight, Coins } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useUser } from '@/lib/user-context';
@@ -121,6 +121,7 @@ const UserProfile = () => {
               <div className="flex flex-wrap gap-2 mt-3">
                 <Badge variant="secondary" className="text-[11px] gap-1 font-normal"><Flame className="h-3 w-3" />{stats.streak} day streak</Badge>
                 <Badge variant="secondary" className="text-[11px] gap-1 font-normal"><Award className="h-3 w-3" />{achievements.length} badges</Badge>
+
                 <Badge variant="secondary" className="text-[11px] gap-1 font-normal"><Trophy className="h-3 w-3" />{stats.totalContests} contests</Badge>
               </div>
             </div>

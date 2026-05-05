@@ -78,7 +78,7 @@ const QuickPractice = () => {
     if (idx === current.correct) {
       setScore(prev => prev + 10 + (timeLeft > 15 ? 5 : 0));
       setStreak(prev => prev + 1);
-      toast.success('Correct! +' + (timeLeft > 15 ? '15' : '10') + ' XP');
+      toast.success('Correct! +' + (timeLeft > 15 ? '15' : '10') + ' Points');
     } else {
       setStreak(0);
       toast.error('Wrong! The correct answer was: ' + current.options[current.correct]);
@@ -161,7 +161,7 @@ const QuickPractice = () => {
             <div className="space-y-2">
               <div className="flex justify-between text-[10px] font-bold uppercase text-muted-foreground tracking-widest px-1">
                 <span>Question {currentIdx + 1} of {MOCK_MCQS.length}</span>
-                <span>XP: {score}</span>
+                <span>Score: {score}</span>
               </div>
               <Progress value={((currentIdx + 1) / MOCK_MCQS.length) * 100} className="h-2" />
             </div>

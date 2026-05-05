@@ -250,7 +250,7 @@ const LearningMode = () => {
                      <div className="max-w-xl mx-auto space-y-6">
                         <div className="text-center space-y-2">
                            <h3 className="text-xl font-bold">Quick Concept Check</h3>
-                           <p className="text-xs text-muted-foreground">Finish strong! Answer these questions to earn your XP.</p>
+                           <p className="text-xs text-muted-foreground">Finish strong! Answer these questions to complete the lesson.</p>
                         </div>
                         
                         <div className="space-y-4">
@@ -281,7 +281,7 @@ const LearningMode = () => {
                               </div>
                               <div className="space-y-1">
                                  <h4 className="text-lg font-bold">Lesson Mastered!</h4>
-                                 <p className="text-xs text-muted-foreground">+50 XP added to your profile.</p>
+                                 <p className="text-xs text-muted-foreground">Lesson progress saved.</p>
                               </div>
                               <Button onClick={() => { setSelectedAlgorithm(null); setSelectedTopic(null); setProgress(0); setActiveStep('reading'); }} className="w-full bg-emerald-600 hover:bg-emerald-700">
                                  Explore More Topics

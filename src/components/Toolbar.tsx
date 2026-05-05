@@ -41,12 +41,7 @@ const Toolbar = ({ onRun, onSave, onAnalyze, onSettings, onLogout, username, isR
           <span className="hidden xs:inline">Modules</span>
         </Button>
 
-        <div className="h-4 w-px bg-border hidden sm:block" />
 
-        <Button onClick={onRun} disabled={isRunning || runDisabled} size="sm" className="h-8 gap-1 sm:gap-1.5 text-xs font-medium shrink-0 rounded-lg">
-          {isRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
-          Run
-        </Button>
         <Button onClick={onSave} disabled={isSaving} size="sm" variant="outline" className="h-8 gap-1 sm:gap-1.5 text-xs font-medium shrink-0 rounded-lg">
           {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
           <span className="hidden sm:inline">Save</span>

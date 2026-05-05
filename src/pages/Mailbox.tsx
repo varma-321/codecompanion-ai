@@ -18,11 +18,11 @@ import {
 } from "@/components/ui/dialog";
 import { useUser } from '@/lib/user-context';
 import { 
+  supabase,
   fetchUserIssues, fetchIssueMessages, addIssueMessage, 
   fetchDirectMessages, sendDirectMessage, searchUsers,
   DbIssue, DbIssueMessage, DbDirectMessage, PublicProfile 
 } from '@/lib/supabase';
-import AppShell from '@/components/AppShell';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -250,8 +250,8 @@ export default function Mailbox() {
   });
 
   return (
-    <AppShell title="Mailbox" subtitle="Your reports, messages and support tickets">
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 h-[calc(100vh-12rem)]">
+    <div>
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 h-[calc(100vh-14rem)]">
         {/* Sidebar / List */}
         <Card className="md:col-span-4 flex flex-col overflow-hidden border-sidebar-border bg-card/50">
           <CardHeader className="px-4 py-3 border-b border-sidebar-border shrink-0 space-y-4">
@@ -583,6 +583,6 @@ export default function Mailbox() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </AppShell>
+    </div>
   );
 }

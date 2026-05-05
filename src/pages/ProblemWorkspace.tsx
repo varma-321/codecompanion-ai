@@ -5,8 +5,10 @@ import {
   ArrowLeft, Play, FlaskConical, Loader2, CheckCircle2, XCircle, Brain, ChevronRight, 
   Code2, GitCompare, Cloud, Keyboard, Sparkles, AlertTriangle, Zap, TrendingUp, 
   Trophy, Eye, EyeOff, BarChart3, ChevronDown, ChevronUp, MessageSquare, 
-  FileText, Bot, Square, Workflow, Shield, Lightbulb, Github, BookOpen
+  FileText, Bot, Square, Workflow, Shield, Lightbulb, Github, BookOpen, RotateCcw,
+  ExternalLink
 } from 'lucide-react';
+import { getGitHubSettings, pushFileToGitHub } from '@/lib/github';
 import { CONTEST_PROBLEMS } from '../lib/contest-problems-data';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAutosave } from '@/hooks/use-autosave';
@@ -277,12 +279,12 @@ const ProblemWorkspace = () => {
   }, [activeApproach, wsResetSaved]);
 
   // Fetch full problem details from Java Spring Boot Backend
-  const generateFullDetail = useCallback(async () => {
-    if (!roadmapProblem || !key || hasHardcodedDetail) return;
+  const generateFullDetail = useCallback(async (force = false) => {
+    if (!roadmapProblem || !key || (hasHardcodedDetail && !force)) return;
     const cached = getCachedDetail(key);
     const isValid = (d: any) => d && Array.isArray(d.testCases) && d.testCases.length >= 1 && d.testCases.every((tc: any) => tc.expected && String(tc.expected).trim() !== '');
 
-    if (isValid(cached)) {
+    if (isValid(cached) && !force) {
       setDetail(cached!);
       if (!codesLoadedFromDb.current && cached!.starterCode) {
         setCodes(prev => {
@@ -313,7 +315,7 @@ const ProblemWorkspace = () => {
         const tcs = c.test_cases || [];
         const isLowQuality = tcs.some((tc: any) => !tc.expected || String(tc.expected).trim() === '');
         
-        if (!isLowQuality) {
+        if (!isLowQuality && !force) {
           const enhanced: EnhancedDetail = {
             key,
             description: c.description || detail.description,
@@ -369,6 +371,7 @@ const ProblemWorkspace = () => {
           title: roadmapProblem.title,
           difficulty: roadmapProblem.difficulty,
           topic: (roadmapProblem as any).topic || '',
+          force: force
         },
       });
 
@@ -435,6 +438,7 @@ const ProblemWorkspace = () => {
       setGenerateError('Could not generate problem details. You can still code!');
     }
     setIsGenerating(false);
+    if (force) toast.success('Successfully purged bad cache and regenerated problem details!');
   }, [key, roadmapProblem, hasHardcodedDetail]);
 
   // ★ STEP 3: Async load of saved codes. Uses a snapshot of `key` at call time
@@ -529,7 +533,7 @@ const ProblemWorkspace = () => {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  });
+  }, []);
 
   // Listen for AI dropdown trigger to generate test cases and add them to the Tests tab.
   const [isGeneratingTests, setIsGeneratingTests] = useState(false);
@@ -542,7 +546,36 @@ const ProblemWorkspace = () => {
       const tid = toast.loading('🧪 Generating test cases via AI…');
       try {
         const { generateTestCases } = await import('@/lib/ai-backend');
-        const generated = await generateTestCases(code, key || null);
+        // Snapshot current test cases to send for dedup
+        const currentTestCases = (detail.testCases || []).map(tc => ({
+          inputs: tc.inputs || {},
+          expected: tc.expected || '',
+        }));
+        const problemTitle = roadmapProblem?.title || key || '';
+        const paramNames = (detail.params || []).map(p => p.name);
+        
+        const getSignature = (inputs: Record<string, string>) => {
+          const sortedKeys = Object.keys(inputs).sort();
+          const normalized: Record<string, string> = {};
+          sortedKeys.forEach(k => { normalized[k] = String(inputs[k]).trim(); });
+          return JSON.stringify(normalized);
+        };
+
+        const existingSignatures = new Set(
+          currentTestCases.map(tc => getSignature(tc.inputs))
+        );
+
+        // Enhance description with explicit AI instructions for uniqueness and accuracy
+        const enhancedDescription = `${detail.description}\n\n` +
+          `IMPORTANT FOR AI:\n` +
+          `1. Generate 3-5 high-quality, UNIQUE test cases.\n` +
+          `2. Include edge cases (empty inputs, large values, minimum/maximum values).\n` +
+          `3. Match parameter names EXACTLY: ${paramNames.join(', ')}.\n` +
+          `4. DO NOT generate any inputs already provided in the existingTestCases list.\n` +
+          `5. Ensure the 'expected' output is 100% correct based on the problem logic.`;
+
+        const generated = await generateTestCases(code, key || null, problemTitle, enhancedDescription, currentTestCases, paramNames);
+
         const normalized = (Array.isArray(generated) ? generated : [])
           .map((t: any) => {
             const inputs: Record<string, string> =
@@ -550,15 +583,36 @@ const ProblemWorkspace = () => {
                 ? Object.fromEntries(Object.entries(t.inputs).map(([k, v]) => [k, String(v)]))
                 : {};
             const expected = String(t.expectedOutput ?? t.expected ?? '').trim();
+            
+            // Validation: Ensure inputs match problem parameters
+            const validParamNames = (detail.params || []).map(p => p.name);
+            if (validParamNames.length > 0) {
+              const inputKeys = Object.keys(inputs);
+              // If the AI generated keys that aren't in our params, it's likely a hallucination from another problem
+              const hasMismatch = inputKeys.some(k => !validParamNames.includes(k));
+              if (hasMismatch) return null;
+              
+              // Also ensure all required params are present
+              const hasAllParams = validParamNames.every(name => inputKeys.includes(name));
+              if (!hasAllParams) return null;
+            }
+
             return Object.keys(inputs).length > 0 && expected ? { inputs, expected } : null;
           })
           .filter(Boolean) as { inputs: Record<string, string>; expected: string }[];
 
-        if (normalized.length === 0) {
-          toast.error('AI returned no usable test cases.', { id: tid });
+        // Deduplicate: remove any that match existing test case input signatures
+        const unique = normalized.filter(tc => !existingSignatures.has(getSignature(tc.inputs)));
+
+        if (unique.length === 0) {
+          if (normalized.length > 0) {
+            toast.error('AI generated test cases, but they already exist in your list.', { id: tid });
+          } else {
+            toast.error('AI failed to generate valid test cases for this problem. Try again.', { id: tid });
+          }
         } else {
-          setDetail(prev => ({ ...prev, testCases: [...(prev.testCases || []), ...normalized] }));
-          toast.success(`✅ Added ${normalized.length} AI test case${normalized.length === 1 ? '' : 's'} to the Tests tab.`, { id: tid });
+          setDetail(prev => ({ ...prev, testCases: [...(prev.testCases || []), ...unique] }));
+          toast.success(`✅ Added ${unique.length} new AI test case${unique.length === 1 ? '' : 's'} to the Tests tab.`, { id: tid });
           setBottomTab('description');
         }
       } catch (err: any) {
@@ -568,7 +622,7 @@ const ProblemWorkspace = () => {
     };
     window.addEventListener('trigger-explain', handler);
     return () => window.removeEventListener('trigger-explain', handler);
-  }, [code, key, isGeneratingTests]);
+  }, [code, key, isGeneratingTests, detail.testCases, roadmapProblem]);
 
 
   const addConsoleEntry = (type: ConsoleEntry['type'], text: string) => {
@@ -759,6 +813,28 @@ const ProblemWorkspace = () => {
       if (allPassed) {
         addConsoleEntry('info', `✅ ACCEPTED — ${passed}/${total} test cases passed (${execTime}ms)`);
         setExecStatus('complete');
+
+        // Automatic GitHub Sync
+        const gh = getGitHubSettings();
+        if (gh && gh.autoPush && gh.token && gh.repo && roadmapProblem) {
+          addConsoleEntry('system', `☁ Synchronizing with GitHub...`);
+          const sanitizedTitle = roadmapProblem.title.replace(/[^a-zA-Z0-9]/g, '');
+          const fileName = `${sanitizedTitle}.java`;
+          const filePath = `${((roadmapProblem as any).topic || 'Uncategorized').replace(/[^a-zA-Z0-9/]/g, '_')}/${fileName}`;
+          pushFileToGitHub(
+            gh.token,
+            gh.repo,
+            filePath,
+            code,
+            `Solved: ${roadmapProblem.title}`
+          ).then(res => {
+            if (res.success) {
+              addConsoleEntry('info', `🔗 Pushed to GitHub: ${res.url}`);
+            } else {
+              addConsoleEntry('error', `⚠ GitHub sync failed: ${res.error}`);
+            }
+          });
+        }
       } else {
         addConsoleEntry('error', `❌ FAILED — ${passed}/${total} test cases passed (${execTime}ms)`);
         const failed = results.find(r => r.status === 'FAILED');
@@ -800,7 +876,9 @@ const ProblemWorkspace = () => {
               ...(allPassed ? { solved: true, solved_at: new Date().toISOString(), status: 'solved' } : { status: 'attempted' }),
             } as any);
           }
-          if (allPassed) toast.success('🎉 Problem solved! Progress saved.');
+          if (allPassed) {
+            toast.success('🎉 Problem solved! Progress saved.');
+          }
         } catch {}
       }
 
@@ -815,15 +893,7 @@ const ProblemWorkspace = () => {
     setIsRunningTests(false);
   };
 
-  const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    const startY = e.clientY;
-    const startH = consoleHeight;
-    const onMove = (ev: MouseEvent) => setConsoleHeight(Math.max(100, Math.min(600, startH + (startY - ev.clientY))));
-    const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-  }, [consoleHeight]);
+
 
   // Analyze complexity
   const handleAnalyze = async () => {
@@ -929,6 +999,37 @@ const ProblemWorkspace = () => {
       </div>
     );
   }
+
+  const handleGitHubPush = async () => {
+    const gh = getGitHubSettings();
+    if (!gh || !gh.token || !gh.repo) {
+      toast.error('GitHub not configured. Visit Settings > Integrations.');
+      return;
+    }
+    if (!roadmapProblem) return;
+    const tid = toast.loading('Pushing to GitHub...');
+    const sanitizedTitle = roadmapProblem.title.replace(/[^a-zA-Z0-9]/g, '');
+    const fileName = `${sanitizedTitle}.java`;
+    const filePath = `${((roadmapProblem as any).topic || 'Uncategorized').replace(/[^a-zA-Z0-9/]/g, '_')}/${fileName}`;
+    const res = await pushFileToGitHub(gh.token, gh.repo, filePath, code, `Manual Sync: ${roadmapProblem.title}`);
+    toast.dismiss(tid);
+    if (res.success) {
+      toast.success('Successfully pushed to GitHub!');
+      if (res.url) window.open(res.url, '_blank');
+    } else {
+      toast.error('Push failed: ' + res.error);
+    }
+  };
+
+  const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    const startY = e.clientY;
+    const startH = consoleHeight;
+    const onMove = (ev: MouseEvent) => setConsoleHeight(Math.max(100, Math.min(600, startH + (startY - ev.clientY))));
+    const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }, [consoleHeight]);
 
   const tabItems = [
     { key: 'description' as const, label: 'Tests' },
@@ -1058,144 +1159,152 @@ const ProblemWorkspace = () => {
               </DropdownMenuContent>
             </DropdownMenu>
           )}
-          <Button 
-            onClick={() => {
-              toast.promise(new Promise(res => setTimeout(res, 1500)), {
-                loading: 'Pushing to GitHub...',
-                success: 'Solution pushed to my-dsa-solutions!',
-                error: 'Push failed'
-              });
-            }} 
-            size="sm" 
-            variant="ghost" 
-            className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-foreground hidden lg:flex"
-          >
-            <Github className="h-3 w-3" />
-            <span className="hidden xl:inline">GitHub</span>
-          </Button>
-          <Button onClick={() => navigate(`/discuss?problem=${key}`)} size="sm" variant="ghost" className="h-7 w-7 p-0 hidden lg:flex text-muted-foreground" title="Discuss">
-            <MessageSquare className="h-3.5 w-3.5" />
-          </Button>
-          <ExecutionStatus status={execStatus} />
-        </div>
-      </header>
-
-      {/* Mobile action bar - visible only on small screens */}
-      <div className="flex sm:hidden items-center gap-1.5 border-b border-panel-border bg-card px-2 py-1.5 overflow-x-auto scrollbar-none">
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button variant="outline" size="sm" className="h-7 gap-1 text-[11px] shrink-0">
-              <FileText className="h-3 w-3" /> Problem
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="w-[85vw] sm:max-w-md p-0">
-            <SheetHeader className="px-4 pt-4 pb-2">
-              <SheetTitle className="text-sm">{roadmapProblem.title}</SheetTitle>
-            </SheetHeader>
-            <ScrollArea className="h-[calc(100%-60px)]">
-              <div className="p-4 space-y-4">
-                <div className="flex items-center gap-2">
-                  <Badge className={`text-[10px] ${getDifficultyBg(roadmapProblem.difficulty)}`}>{roadmapProblem.difficulty}</Badge>
-                  <Badge variant="outline" className="text-[10px]">{(roadmapProblem as any).topic}</Badge>
-                </div>
-                <div className="prose prose-sm max-w-none dark:prose-invert [&_p]:text-foreground [&_li]:text-foreground">
-                  <ReactMarkdown>{detail.description}</ReactMarkdown>
-                </div>
-                {detail.examples.length > 0 && (
-                  <div className="space-y-3">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Examples</h3>
-                    {detail.examples.map((ex, i) => (
-                      <div key={i} className="rounded-lg border border-panel-border bg-secondary/30 p-3 space-y-1">
-                        <p className="text-xs font-semibold text-muted-foreground">Example {i + 1}:</p>
-                        <div className="font-mono text-xs">
-                          <p><span className="text-muted-foreground">Input:</span> <span className="text-foreground">{ex.input}</span></p>
-                          <p><span className="text-muted-foreground">Output:</span> <span className="font-semibold text-foreground">{ex.output}</span></p>
-                          {ex.explanation && <p className="text-muted-foreground mt-1">💡 {ex.explanation}</p>}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {(detail as EnhancedDetail).constraints && (detail as EnhancedDetail).constraints!.length > 0 && (
-                  <div className="space-y-2">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Constraints</h3>
-                    <ul className="space-y-1">
-                      {(detail as EnhancedDetail).constraints!.map((c, i) => (
-                        <li key={i} className="text-xs text-foreground font-mono flex items-start gap-2">
-                          <span className="text-muted-foreground mt-0.5">•</span>
-                          <code className="bg-secondary/50 px-1.5 py-0.5 rounded text-[11px]">{c}</code>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {detail.testCases.length > 0 && (
-                  <div className="space-y-2">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Test Cases</h3>
-                    {detail.testCases.map((tc, i) => (
-                      <div key={i} className="rounded border border-panel-border bg-secondary/20 p-2 font-mono text-[11px] space-y-0.5">
-                        <p className="font-semibold text-muted-foreground">Test {i + 1}:</p>
-                        {Object.entries(tc.inputs).map(([k, v]) => (
-                          <p key={k}><span className="text-muted-foreground">{k}</span> = <span className="text-foreground">{v}</span></p>
-                        ))}
-                        <p><span className="text-muted-foreground">Expected:</span> <span className="text-success font-semibold">{tc.expected}</span></p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-          </SheetContent>
-        </Sheet>
-
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button variant="outline" size="sm" className="h-7 gap-1 text-[11px] shrink-0">
-              <Bot className="h-3 w-3" /> AI Chat
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="right" className="w-[85vw] sm:max-w-md p-0">
-            <SheetHeader className="px-4 pt-4 pb-2">
-              <SheetTitle className="text-sm">AI Assistant</SheetTitle>
-            </SheetHeader>
-            <div className="h-[calc(100%-60px)] overflow-hidden">
-              <AIChatPanel code={code} problemId={null} aiEnabled={true} />
-            </div>
-          </SheetContent>
-        </Sheet>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button size="sm" variant="outline" className="h-7 gap-1 text-[11px] shrink-0">
-              <Sparkles className="h-3 w-3" /> AI Tools
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56">
-            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__dry_run__' }))}>
-              <Workflow className="h-3.5 w-3.5 mr-2" /> Logic Trace
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__hints__' }))}>
-              <Brain className="h-3.5 w-3.5 mr-2" /> Hints
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__optimal__' }))}>
-              <Trophy className="h-3.5 w-3.5 mr-2" /> Optimal
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__mistakes__' }))}>
-              <AlertTriangle className="h-3.5 w-3.5 mr-2" /> Find Bugs
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__patterns__' }))}>
-              <BookOpen className="h-3.5 w-3.5 mr-2" /> Patterns
-            </DropdownMenuItem>
-            <div className="h-px bg-panel-border my-1" />
-            <DropdownMenuItem onClick={handleAnalyze} disabled={isAnalyzing || !code.trim()}>
-              <TrendingUp className="h-3.5 w-3.5 mr-2" /> Complexity Analysis
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__generate_tests__' }))}>
-              <FlaskConical className="h-3.5 w-3.5 mr-2" /> Generate Test Cases
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button 
+          onClick={handleGitHubPush}
+          size="sm" 
+          variant="ghost" 
+          className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-foreground hidden lg:flex"
+          title="Push to GitHub"
+        >
+          <Github className="h-3.5 w-3.5" />
+          <span className="hidden xl:inline">Push to GitHub</span>
+        </Button>
+        <Button onClick={() => navigate(`/discuss?problem=${key}`)} size="sm" variant="ghost" className="h-7 w-7 p-0 hidden lg:flex text-muted-foreground" title="Discuss">
+          <MessageSquare className="h-3.5 w-3.5" />
+        </Button>
+        <ExecutionStatus status={execStatus} />
       </div>
+    </header>
+
+    {/* Mobile action bar - visible only on small screens */}
+    <div className="flex sm:hidden items-center gap-1.5 border-b border-panel-border bg-card px-2 py-1.5 overflow-x-auto scrollbar-none">
+      <Sheet>
+        <SheetTrigger asChild>
+          <Button variant="outline" size="sm" className="h-7 gap-1 text-[11px] shrink-0">
+            <FileText className="h-3 w-3" /> Problem
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="left" className="w-[85vw] sm:max-w-md p-0">
+          <SheetHeader className="px-4 pt-4 pb-2">
+            <SheetTitle className="text-sm">{roadmapProblem?.title}</SheetTitle>
+          </SheetHeader>
+          <ScrollArea className="h-[calc(100%-60px)]">
+            <div className="p-4 space-y-4">
+              <div className="flex items-center gap-2">
+                <Badge className={`text-[10px] ${getDifficultyBg(roadmapProblem?.difficulty || 'Medium')}`}>{roadmapProblem?.difficulty}</Badge>
+                <Badge variant="outline" className="text-[10px]">{(roadmapProblem as any)?.topic}</Badge>
+              </div>
+              <div className="prose prose-sm max-w-none dark:prose-invert [&_p]:text-foreground [&_li]:text-foreground">
+                <ReactMarkdown>{detail.description}</ReactMarkdown>
+              </div>
+              {detail.examples.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Examples</h3>
+                  {detail.examples.map((ex, i) => (
+                    <div key={i} className="rounded-lg border border-panel-border bg-secondary/30 p-3 space-y-1">
+                      <p className="text-xs font-semibold text-muted-foreground">Example {i + 1}:</p>
+                      <div className="font-mono text-xs">
+                        <p><span className="text-muted-foreground">Input:</span> <span className="text-foreground">{ex.input}</span></p>
+                        <p><span className="text-muted-foreground">Output:</span> <span className="font-semibold text-foreground">{ex.output}</span></p>
+                        {ex.explanation && <p className="text-muted-foreground mt-1">💡 {ex.explanation}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {(detail as EnhancedDetail).constraints && (detail as EnhancedDetail).constraints!.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Constraints</h3>
+                  <ul className="space-y-1">
+                    {(detail as EnhancedDetail).constraints!.map((c, i) => (
+                      <li key={i} className="text-xs text-foreground font-mono flex items-start gap-2">
+                        <span className="text-muted-foreground mt-0.5">•</span>
+                        <code className="bg-secondary/50 px-1.5 py-0.5 rounded text-[11px]">{c}</code>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {detail.testCases.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Test Cases</h3>
+                  {detail.testCases.map((tc, i) => (
+                    <div key={i} className="rounded border border-panel-border bg-secondary/20 p-2 font-mono text-[11px] space-y-0.5">
+                      <p className="font-semibold text-muted-foreground">Test {i + 1}:</p>
+                      {Object.entries(tc.inputs).map(([k, v]) => (
+                        <p key={k}><span className="text-muted-foreground">{k}</span> = <span className="text-foreground">{v}</span></p>
+                      ))}
+                      <p><span className="text-muted-foreground">Expected:</span> <span className="text-success font-semibold">{tc.expected}</span></p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet>
+        <SheetTrigger asChild>
+          <Button variant="outline" size="sm" className="h-7 gap-1 text-[11px] shrink-0">
+            <Bot className="h-3 w-3" /> AI Chat
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="right" className="w-[85vw] sm:max-w-md p-0">
+          <SheetHeader className="px-4 pt-4 pb-2">
+            <SheetTitle className="text-sm">AI Assistant</SheetTitle>
+          </SheetHeader>
+          <div className="h-[calc(100%-60px)] overflow-hidden">
+            <AIChatPanel code={code} problemId={null} aiEnabled={true} />
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button size="sm" variant="outline" className="h-7 gap-1 text-[11px] shrink-0">
+            <Sparkles className="h-3 w-3" /> AI Tools
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-56">
+          <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__dry_run__' }))}>
+            <Workflow className="h-3.5 w-3.5 mr-2" /> Logic Trace
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__hints__' }))}>
+            <Brain className="h-3.5 w-3.5 mr-2" /> Hints
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__optimal__' }))}>
+            <Trophy className="h-3.5 w-3.5 mr-2" /> Optimal
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__mistakes__' }))}>
+            <AlertTriangle className="h-3.5 w-3.5 mr-2" /> Find Bugs
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__patterns__' }))}>
+            <BookOpen className="h-3.5 w-3.5 mr-2" /> Patterns
+          </DropdownMenuItem>
+          <div className="h-px bg-panel-border my-1" />
+          <DropdownMenuItem onClick={handleAnalyze} disabled={isAnalyzing || !code.trim()}>
+            <TrendingUp className="h-3.5 w-3.5 mr-2" /> Complexity Analysis
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__generate_tests__' }))}>
+            <FlaskConical className="h-3.5 w-3.5 mr-2" /> Generate Test Cases
+          </DropdownMenuItem>
+          <div className="h-px bg-panel-border my-1" />
+          <DropdownMenuItem onClick={() => generateFullDetail(true)} className="text-destructive focus:text-destructive">
+            <RotateCcw className="h-3.5 w-3.5 mr-2" /> Fix Bad Problem Data
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <Button 
+        onClick={handleGitHubPush} 
+        variant="outline" 
+        size="sm" 
+        className="h-7 gap-1 text-[11px] shrink-0 text-muted-foreground hover:text-foreground"
+      >
+        <Github className="h-3 w-3" /> Push
+      </Button>
+    </div>
 
       {/* Main layout: responsive columns */}
       <div className="flex flex-1 overflow-hidden flex-col md:flex-row">

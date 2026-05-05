@@ -122,6 +122,50 @@
     --shadow-card: var(--shadow-sm);
     --shadow-card-hover: var(--shadow-md);
   }
+
+  .midnight {
+    --background: 240 10% 4%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 5%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 5%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 220 100% 70%;
+    --primary-foreground: 240 10% 4%;
+    --secondary: 240 10% 10%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 10% 10%;
+    --muted-foreground: 240 5% 65%;
+    --accent: 240 10% 12%;
+    --accent-foreground: 0 0% 98%;
+    --border: 240 10% 14%;
+    --input: 240 10% 14%;
+    --ring: 220 100% 70%;
+    
+    --sidebar-background: 240 10% 3%;
+    --sidebar-foreground: 240 5% 85%;
+    --sidebar-primary: 220 100% 70%;
+    --sidebar-primary-foreground: 240 10% 3%;
+    --sidebar-accent: 240 10% 8%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 240 10% 12%;
+    
+    background-image: radial-gradient(at top left, hsl(240 10% 8%), transparent),
+                      radial-gradient(at bottom right, hsl(240 10% 4%), transparent);
+  }
+
+  .midnight .glass {
+    background: hsla(240, 10%, 6%, 0.4);
+    backdrop-filter: saturate(180%) blur(25px);
+    -webkit-backdrop-filter: saturate(180%) blur(25px);
+    border-bottom: 1px solid hsla(240, 10%, 20%, 0.2);
+  }
+
+  .midnight .surface, .midnight .bg-card {
+    background: hsla(240, 10%, 8%, 0.4);
+    backdrop-filter: blur(10px);
+    border: 1px solid hsla(240, 10%, 20%, 0.2);
+  }
 }
 
 @layer base {

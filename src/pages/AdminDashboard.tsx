@@ -136,15 +136,16 @@ const AdminDashboard = () => {
       roles?.forEach((r) => rolesMap.set(r.user_id, r.role));
 
       const enriched: UserRow[] = (profiles || [])
-        .map((p) => ({
+        .map((p: any) => ({
           ...p,
           status: p.status || "pending",
           role: rolesMap.get(p.id) || "user",
         }))
-        .filter((u) => u.status !== "deleted"); // Hide soft-deleted users completely
+        .filter((u) => u.status !== "deleted");
 
       setUsers(enriched);
     } catch (err: any) {
+      console.error("Error fetching users:", err);
       toast.error("Failed to load users");
     }
     setLoading(false);
@@ -256,15 +257,23 @@ const AdminDashboard = () => {
       });
       if (profileError) throw profileError;
 
-      // Also update status directly as it's just a profile field
-      await supabase.from("profiles").update({ status: editForm.status }).eq("id", actionDialog.user.id);
+      // Also update status directly as it is a profile field
+      const { error: profileUpdateError } = await supabase.from("profiles").update({ 
+        status: editForm.status
+      }).eq("id", actionDialog.user.id);
 
-      // Update role gracefully
-      await handleRemoveRole(actionDialog.user.id); // clean up old roles first
-      const { error: roleError } = await supabase
-        .from("user_roles")
-        .insert({ user_id: actionDialog.user.id, role: editForm.role });
-      if (roleError && roleError.code !== "23505") throw roleError; // ignore unique constraint if exists
+      if (profileUpdateError) throw profileUpdateError;
+
+      // Only update role if it has actually changed
+      const currentRole = actionDialog.user.role || "user";
+      if (editForm.role !== currentRole) {
+        // Update role gracefully
+        await handleRemoveRole(actionDialog.user.id); // clean up old roles first
+        const { error: roleError } = await supabase
+          .from("user_roles")
+          .insert({ user_id: actionDialog.user.id, role: editForm.role });
+        if (roleError && roleError.code !== "23505") throw roleError; // ignore unique constraint if exists
+      }
 
       // Update password if provided
       if (newPassword.trim()) {
@@ -595,6 +604,7 @@ const AdminDashboard = () => {
                               {user.role === "admin" ? "Admin" : "User"}
                             </Badge>
                           </TableCell>
+
                           <TableCell>
                             <Badge
                               variant={statusConf.variant}
@@ -612,8 +622,7 @@ const AdminDashboard = () => {
                             {new Date(user.created_at).toLocaleDateString()}
                           </TableCell>
                           <TableCell className="text-right">
-                            {!isCurrentUser && (
-                              <div className="flex items-center justify-end gap-1">
+                            <div className="flex items-center justify-end gap-1">
                                 {user.status === "pending" && (
                                   <Button
                                     size="sm"
@@ -679,7 +688,6 @@ const AdminDashboard = () => {
                                   <Trash2 className="h-3 w-3" />
                                 </Button>
                               </div>
-                            )}
                           </TableCell>
                         </TableRow>
                       );
@@ -1076,6 +1084,7 @@ const AdminDashboard = () => {
                 </SelectContent>
               </Select>
             </div>
+
             <div className="space-y-2 border-t pt-4">
               <Label className="text-destructive">Reset Password (Optional)</Label>
               <Input

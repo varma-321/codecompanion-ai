@@ -88,13 +88,21 @@ export function UserProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setAuthUser(session?.user ?? null);
       if (session?.user) {
-        fetchExtendedProfile(session.user.id).then(p => {
+        try {
+          const [p, admin] = await Promise.all([
+            fetchExtendedProfile(session.user.id),
+            checkIsAdmin(session.user.id)
+          ]);
           setProfile(p);
-          checkIsAdmin(session.user.id).then(setIsAdmin);
-        }).finally(() => setLoading(false));
+          setIsAdmin(admin);
+        } catch (e) {
+          console.error("Error loading user context:", e);
+        } finally {
+          setLoading(false);
+        }
       } else {
         setLoading(false);
       }

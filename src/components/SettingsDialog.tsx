@@ -7,12 +7,22 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { User, Mail, Lock, Shield, Bell, Palette, LogOut, Loader2, CheckCircle, Save, Github, Globe, GitBranch } from 'lucide-react';
+import { 
+  User, Mail, Lock, Shield, Bell, Palette, LogOut, Loader2, CheckCircle2, 
+  Save, Github, Globe, GitBranch, Check, AlertCircle, Search, Code2 
+} from 'lucide-react';
 import { checkBackendStatus } from '@/lib/ai-backend';
 import { useUser } from '@/lib/user-context';
 import { useTheme } from '@/lib/theme-context';
 import { supabase } from '@/integrations/supabase/client';
 import { signOut } from '@/lib/supabase';
+import { 
+  getGitHubSettings, 
+  saveGitHubSettings, 
+  createGitHubRepo, 
+  checkGitHubRepoExists,
+  type GitHubSettings 
+} from '@/lib/github';
 
 interface SettingsDialogProps {
   open: boolean;
@@ -33,13 +43,90 @@ const SettingsDialog = ({ open, onClose }: SettingsDialogProps) => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
+  
+  // GitHub integration state
+  const [ghToken, setGhToken] = useState('');
+  const [ghRepo, setGhRepo] = useState('');
+  const [ghAutoPush, setGhAutoPush] = useState(false);
+  const [ghSaving, setGhSaving] = useState(false);
+  const [ghCreating, setGhCreating] = useState(false);
+  const [ghChecking, setGhChecking] = useState(false);
+  const [ghRepoStatus, setGhRepoStatus] = useState<'idle' | 'exists' | 'missing' | 'error'>('idle');
 
   useEffect(() => {
     if (open) {
       checkBackendStatus().then(setBackendOnline);
       setEditUsername(profile?.username || '');
+      
+      const gh = getGitHubSettings();
+      if (gh) {
+        setGhToken(gh.token);
+        setGhRepo(gh.repo);
+        setGhAutoPush(gh.autoPush);
+      }
     }
   }, [open, profile]);
+
+  const handleSaveGitHub = async () => {
+    setGhSaving(true);
+    try {
+      saveGitHubSettings({
+        token: ghToken,
+        repo: ghRepo,
+        autoPush: ghAutoPush
+      });
+      toast.success('GitHub settings saved locally');
+    } catch (err: any) {
+      toast.error('Failed to save settings');
+    }
+    setGhSaving(false);
+  };
+
+  const handleCheckGitHubRepo = async () => {
+    if (!ghToken || !ghRepo) {
+      toast.error('Please enter both token and repository name');
+      return;
+    }
+    setGhChecking(true);
+    setGhRepoStatus('idle');
+    try {
+      const exists = await checkGitHubRepoExists(ghToken, ghRepo);
+      if (exists) {
+        setGhRepoStatus('exists');
+        toast.success('Repository found!');
+      } else {
+        setGhRepoStatus('missing');
+        toast.warning('Repository not found. You can create it.');
+      }
+    } catch (err) {
+      setGhRepoStatus('error');
+      toast.error('Failed to check repository');
+    }
+    setGhChecking(false);
+  };
+
+  const handleCreateGitHubRepo = async () => {
+    if (!ghToken || !ghRepo) {
+      toast.error('Please enter both token and repository name');
+      return;
+    }
+    setGhCreating(true);
+    const tid = toast.loading('Creating repository on GitHub...');
+    try {
+      const result = await createGitHubRepo(ghToken, ghRepo);
+      toast.dismiss(tid);
+      if (result.success) {
+        setGhRepoStatus('exists');
+        toast.success('Repository created successfully!');
+      } else {
+        toast.error(result.error || 'Failed to create repository');
+      }
+    } catch (err: any) {
+      toast.dismiss(tid);
+      toast.error('Error: ' + err.message);
+    }
+    setGhCreating(false);
+  };
 
   const handleSaveProfile = async () => {
     if (!authUser || !editUsername.trim()) return;
@@ -255,7 +342,7 @@ const SettingsDialog = ({ open, onClose }: SettingsDialogProps) => {
                     disabled={changingPassword}
                     className="h-9 gap-1.5 text-xs"
                   >
-                    {changingPassword ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5" />}
+                    {changingPassword ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
                     Update Password
                   </Button>
                 </div>
@@ -288,18 +375,66 @@ const SettingsDialog = ({ open, onClose }: SettingsDialogProps) => {
                <div className="space-y-4 pt-2">
                   <div className="space-y-2">
                      <Label className="text-xs">Personal Access Token</Label>
-                     <Input type="password" placeholder="ghp_xxxxxxxxxxxx" className="h-9 text-xs" />
-                     <p className="text-[10px] text-muted-foreground italic">Required for pushing code. Generate one in GitHub Settings.</p>
+                     <Input 
+                       type="password" 
+                       placeholder="ghp_xxxxxxxxxxxx" 
+                       className="h-9 text-xs" 
+                       value={ghToken}
+                       onChange={e => setGhToken(e.target.value)}
+                     />
+                     <p className="text-[10px] text-muted-foreground italic">
+                       Required for pushing code. 
+                       <a 
+                         href="https://github.com/settings/tokens/new?scopes=repo&description=CodeCompanion%20Sync" 
+                         target="_blank" 
+                         rel="noopener noreferrer"
+                         className="ml-1 text-primary hover:underline"
+                       >
+                         Generate one here (requires 'repo' scope)
+                       </a>.
+                     </p>
                   </div>
 
                   <div className="space-y-2">
                      <Label className="text-xs">Target Repository</Label>
                      <div className="flex gap-2">
-                        <Input placeholder="my-dsa-solutions" className="h-9 text-xs" />
-                        <Button size="sm" variant="outline" className="h-9 gap-1.5 text-xs">
-                           <GitBranch className="h-3.5 w-3.5" /> Create
+                        <Input 
+                           placeholder="my-dsa-solutions" 
+                           className="h-9 text-xs" 
+                           value={ghRepo}
+                           onChange={e => setGhRepo(e.target.value)}
+                        />
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="h-9 gap-1.5 text-xs"
+                          onClick={handleCheckGitHubRepo}
+                          disabled={ghChecking || !ghToken || !ghRepo}
+                        >
+                           {ghChecking ? <Loader2 className="h-3 w-3 animate-spin" /> : <Search className="h-3.5 w-3.5" />} 
+                           Check
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="h-9 gap-1.5 text-xs"
+                          onClick={handleCreateGitHubRepo}
+                          disabled={ghCreating || !ghToken || !ghRepo}
+                        >
+                           {ghCreating ? <Loader2 className="h-3 w-3 animate-spin" /> : <GitBranch className="h-3.5 w-3.5" />} 
+                           Create
                         </Button>
                      </div>
+                     {ghRepoStatus === 'exists' && (
+                       <p className="text-[10px] text-emerald-500 flex items-center gap-1">
+                         <CheckCircle2 className="h-3 w-3" /> Repository verified and ready.
+                       </p>
+                     )}
+                     {ghRepoStatus === 'missing' && (
+                       <p className="text-[10px] text-amber-500 flex items-center gap-1">
+                         <AlertCircle className="h-3 w-3" /> Repository not found. Click Create to initialize it.
+                       </p>
+                     )}
                   </div>
 
                   <div className="flex items-center justify-between p-3 rounded-xl bg-primary/5 border border-primary/10">
@@ -307,11 +442,19 @@ const SettingsDialog = ({ open, onClose }: SettingsDialogProps) => {
                         <Globe className="h-4 w-4 text-primary" />
                         <span className="text-[11px] font-medium">Automatic Push on Submit</span>
                      </div>
-                     <Switch />
+                     <Switch 
+                       checked={ghAutoPush}
+                       onCheckedChange={setGhAutoPush}
+                     />
                   </div>
 
-                  <Button className="w-full h-10 gap-2 font-bold shadow-lg shadow-primary/10">
-                     <Github className="h-4 w-4" /> Connect GitHub Account
+                  <Button 
+                     className="w-full h-10 gap-2 font-bold shadow-lg shadow-primary/10"
+                     onClick={handleSaveGitHub}
+                     disabled={ghSaving}
+                  >
+                     {ghSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Github className="h-4 w-4" />}
+                     Save GitHub Configuration
                   </Button>
                </div>
             </div>

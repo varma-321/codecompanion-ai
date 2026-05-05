@@ -41,9 +41,8 @@ const MODULES: ModuleCard[] = [
   { id: 'today-review', title: "Today's Review", subtitle: 'Spaced repetition queue', icon: <RotateCcw className="h-4 w-4" />, route: '/today-review', category: 'study' },
   { id: 'bigo', title: 'Big-O Visualizer', subtitle: 'Interactive complexity chart', icon: <BarChart3 className="h-4 w-4" />, route: '/bigo', category: 'study' },
 
-  { id: 'achievements', title: 'Achievements', subtitle: 'XP, levels & badges', icon: <Award className="h-4 w-4" />, route: '/achievements', category: 'social' },
+  { id: 'achievements', title: 'Achievements', subtitle: 'Badges & milestones', icon: <Award className="h-4 w-4" />, route: '/achievements', category: 'social' },
   { id: 'leaderboard', title: 'Leaderboard', subtitle: 'Compete with others', icon: <Trophy className="h-4 w-4" />, route: '/leaderboard', category: 'social' },
-  { id: 'store', title: 'Rewards Store', subtitle: 'Spend XP on boosters', icon: <ShoppingBag className="h-4 w-4" />, route: '/store', category: 'social' },
   { id: 'community', title: 'Community Solutions', subtitle: 'Share & learn from others', icon: <Share2 className="h-4 w-4" />, route: '/community', category: 'social' },
   { id: 'discuss', title: 'Discussion Forum', subtitle: 'Per-problem discussions', icon: <MessageSquare className="h-4 w-4" />, route: '/discuss', category: 'social' },
   { id: 'streak-calendar', title: 'Activity Calendar', subtitle: 'GitHub-style heatmap', icon: <Calendar className="h-4 w-4" />, route: '/streak-calendar', category: 'social' },
@@ -81,20 +80,32 @@ const ModuleSelector = () => {
     if (!authUser) return;
     supabase.from('user_problem_progress').select('problem_key, solved, last_attempted')
       .eq('user_id', authUser.id).eq('solved', true)
-      .then(({ data }) => {
-        setSolvedCount((data || []).length);
-        const dates = (data || []).filter((p: any) => p.last_attempted)
+      .then(({ data, error }) => {
+        if (error || !data) return;
+        setSolvedCount(data.length);
+        const dates = data.filter((p: any) => p.last_attempted)
           .map((p: any) => new Date(p.last_attempted).toDateString());
         const unique = [...new Set(dates)].sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+        
         let s = 0;
         const today = new Date();
         for (let i = 0; i < unique.length; i++) {
           const expected = new Date(today);
           expected.setDate(expected.getDate() - i);
-          if (unique[i] === expected.toDateString()) s++; else break;
+          if (unique[i] === expected.toDateString()) s++; 
+          else if (i === 0) {
+            // Check if streak was active yesterday
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            if (unique[i] === yesterday.toDateString()) {
+              // Streak still alive from yesterday
+              continue; 
+            }
+            break;
+          } else break;
         }
         setStreak(s);
-      });
+      }).catch(err => console.error("Streak calculation error:", err));
   }, [authUser]);
 
   const categories: Array<keyof typeof CATEGORY_INFO> = ['roadmap', 'practice', 'study', 'social', 'tools'];
