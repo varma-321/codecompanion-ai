@@ -188,8 +188,6 @@ const ProblemWorkspace = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isExplaining, setIsExplaining] = useState(false);
   const [showFullExplanation, setShowFullExplanation] = useState(false);
-  const [visualizerChart, setVisualizerChart] = useState<string>('');
-  const [isVisualizing, setIsVisualizing] = useState(false);
   const [submissionHistory, setSubmissionHistory] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
@@ -250,17 +248,20 @@ const ProblemWorkspace = () => {
     }
   }, [authUser, key, contestMode, contestId, generatorMode, genId, customMode, customId]);
 
-  const bruteAutosave = useAutosave(codes.brute, (val) => autosaveWorkspaceCode('brute', val), {
-    delay: 2000,
+  const bruteAutosave = useAutosave(codes.brute, (val, approachKey) => autosaveWorkspaceCode(approachKey || '', val), {
+    delay: 200,
     enabled: !!key && !!authUser && !isCodeLoading,
+    key: `${key}__brute`,
   });
-  const betterAutosave = useAutosave(codes.better, (val) => autosaveWorkspaceCode('better', val), {
-    delay: 2000,
+  const betterAutosave = useAutosave(codes.better, (val, approachKey) => autosaveWorkspaceCode(approachKey || '', val), {
+    delay: 200,
     enabled: !!key && !!authUser && !isCodeLoading,
+    key: `${key}__better`,
   });
-  const optimalAutosave = useAutosave(codes.optimal, (val) => autosaveWorkspaceCode('optimal', val), {
-    delay: 2000,
+  const optimalAutosave = useAutosave(codes.optimal, (val, approachKey) => autosaveWorkspaceCode(approachKey || '', val), {
+    delay: 200,
     enabled: !!key && !!authUser && !isCodeLoading,
+    key: `${key}__optimal`,
   });
 
   const activeAutosave = useMemo(() => {
@@ -268,6 +269,13 @@ const ProblemWorkspace = () => {
     if (activeApproach === 'better') return betterAutosave;
     return optimalAutosave;
   }, [activeApproach, bruteAutosave, betterAutosave, optimalAutosave]);
+
+  const handleApproachChange = useCallback((newApproach: Approach) => {
+    if (activeAutosave.isDirty) {
+      activeAutosave.triggerSave();
+    }
+    setActiveApproach(newApproach);
+  }, [activeApproach, activeAutosave]);
 
   const wsCodeDirty = activeAutosave.isDirty;
   const wsAutoSaving = activeAutosave.isSaving;
@@ -364,7 +372,10 @@ const ProblemWorkspace = () => {
         }
       }
 
-      // Cache miss → invoke edge function (which itself caches and writes to DB)
+      setIsGenerating(true);
+      const loadingToast = force ? toast.loading('Re-generating problem with high-quality test cases...') : null;
+      
+      // Cache miss or force → invoke edge function
       const { data, error } = await supabase.functions.invoke('generate-problem-detail', {
         body: {
           problem_key: key,
@@ -375,20 +386,30 @@ const ProblemWorkspace = () => {
         },
       });
 
-      if (error) throw new Error('Failed to generate problem details');
+      if (loadingToast) toast.dismiss(loadingToast);
+
+      if (error) {
+        setIsGenerating(false);
+        setGenerateError('Failed to generate problem details. Please try again.');
+        return;
+      }
+      
       const generated = data?.detail;
       if (generated) {
-        // Client-side fallback: derive test cases from examples if AI returned none.
+        // Client-side parsing of test cases
         let testCases = (generated.testCases || []).map((tc: any) => ({
           inputs: tc.inputs || {},
-          expected: tc.expected || tc.expectedOutput || '',
+          expected: String(tc.expected || tc.expectedOutput || '').trim(),
         })).filter((tc: any) => Object.keys(tc.inputs).length > 0 && tc.expected);
 
+        // Robust fallback: derive from examples if no test cases were provided
         if (testCases.length === 0 && Array.isArray(generated.examples) && Array.isArray(generated.params)) {
           const paramNames: string[] = generated.params.map((p: any) => p?.name).filter(Boolean);
           testCases = generated.examples.map((ex: any) => {
             const raw = String(ex?.input ?? '');
             const inputs: Record<string, string> = {};
+            
+            // Try to match "param = value" pairs
             const assignments = raw.split(/,\s*(?=[a-zA-Z_]\w*\s*=)/);
             let matched = 0;
             for (const part of assignments) {
@@ -398,11 +419,22 @@ const ProblemWorkspace = () => {
                 matched++;
               }
             }
+            
+            // If no assignments found but we have one parameter, use the whole input string
             if (matched === 0 && paramNames.length === 1) {
               inputs[paramNames[0]] = raw.replace(/^[a-zA-Z_]\w*\s*=\s*/, '');
+              matched = 1;
             }
-            return { inputs, expected: String(ex?.output ?? '').trim() };
-          }).filter((tc: any) => Object.keys(tc.inputs).length > 0 && tc.expected);
+            
+            return matched > 0 ? { inputs, expected: String(ex?.output ?? '').trim() } : null;
+          }).filter(Boolean) as any[];
+        }
+
+        // AUTO-RETRY once if still no test cases and this wasn't already a forced run
+        if (testCases.length === 0 && !force) {
+          console.warn('AI returned no test cases. Retrying with force...');
+          setIsGenerating(false);
+          return generateFullDetail(true);
         }
 
         const enhanced: EnhancedDetail = {
@@ -825,7 +857,7 @@ const ProblemWorkspace = () => {
           addConsoleEntry('system', `☁ Synchronizing with GitHub...`);
           const sanitizedTitle = roadmapProblem.title.replace(/[^a-zA-Z0-9]/g, '');
           const fileName = `${sanitizedTitle}.java`;
-          const filePath = `${((roadmapProblem as any).topic || 'Uncategorized').replace(/[^a-zA-Z0-9/]/g, '_')}/${fileName}`;
+          const filePath = `Java Codes/${((roadmapProblem as any).topic || 'Uncategorized').replace(/[^a-zA-Z0-9/]/g, '_')}/${fileName}`;
           pushFileToGitHub(
             gh.token,
             gh.repo,
@@ -953,22 +985,6 @@ const ProblemWorkspace = () => {
     setIsExplaining(false);
   };
 
-  const handleGenerateVisualization = async () => {
-    if (isVisualizing || !code.trim()) return;
-    setIsVisualizing(true);
-    setBottomTab('visualizer');
-    try {
-      const { getExtraInsights } = await import('@/lib/ai-backend');
-      const chart = await getExtraInsights(code, 'visualize', key);
-      // Extract mermaid chart if it's wrapped in code blocks
-      const match = /```mermaid\n([\s\S]*?)```/.exec(chart);
-      setVisualizerChart(match ? match[1] : chart);
-    } catch {
-      toast.error('Failed to visualize logic');
-    }
-    setIsVisualizing(false);
-  };
-
   const fetchSubmissionHistory = async () => {
     if (!authUser || !key) return;
     setLoadingHistory(true);
@@ -989,7 +1005,7 @@ const ProblemWorkspace = () => {
   };
 
   useEffect(() => {
-    if (bottomTab === 'analytics') {
+    if (bottomTab === 'history') {
       fetchSubmissionHistory();
     }
   }, [bottomTab, key]);
@@ -1021,7 +1037,7 @@ const ProblemWorkspace = () => {
     const tid = toast.loading('Pushing to GitHub...');
     const sanitizedTitle = roadmapProblem.title.replace(/[^a-zA-Z0-9]/g, '');
     const fileName = `${sanitizedTitle}.java`;
-    const filePath = `${((roadmapProblem as any).topic || 'Uncategorized').replace(/[^a-zA-Z0-9/]/g, '_')}/${fileName}`;
+    const filePath = `Java Codes/${((roadmapProblem as any).topic || 'Uncategorized').replace(/[^a-zA-Z0-9/]/g, '_')}/${fileName}`;
     const res = await pushFileToGitHub(gh.token, gh.repo, filePath, code, `Manual Sync: ${roadmapProblem.title}`);
     toast.dismiss(tid);
     if (res.success) {
@@ -1047,11 +1063,8 @@ const ProblemWorkspace = () => {
     { key: 'console' as const, label: 'Console' },
     { key: 'results' as const, label: testResults.length > 0 ? `Results (${testResults.filter(r => r.status === 'PASSED').length}/${testResults.length})` : 'Results' },
     { key: 'analysis' as const, label: analysisResult ? '📊 Analysis ✓' : '📊 Analysis' },
-    { key: 'visualizer' as const, label: '🧠 Visualizer' },
-    { key: 'analytics' as const, label: '📈 Stats' },
     { key: 'history' as const, label: '📜 History' },
     ...(!contestMode && !generatorMode ? [
-      { key: 'snippets' as const, label: '📋 Templates' },
       { key: 'solutions' as const, label: '⚡ Solutions' },
     ] : [])
   ];
@@ -1447,7 +1460,7 @@ const ProblemWorkspace = () => {
                 <button
                   key={approach.key}
                   onClick={() => {
-                    setActiveApproach(approach.key);
+                    handleApproachChange(approach.key);
                     wsResetSaved(codes[approach.key]);
                   }}
                   className={`flex items-center gap-1.5 px-3 h-7 rounded text-[11px] font-medium transition-all ${
@@ -1634,9 +1647,6 @@ const ProblemWorkspace = () => {
                   problemId={key}
                   onRestoreCode={(restored) => { setCode(restored); toast.success('Code restored from history'); }}
                 />
-              )}
-              {bottomTab === 'snippets' && (
-                <CodeSnippets onInsert={(snippet) => setCode(prev => prev + snippet)} />
               )}
               {bottomTab === 'solutions' && (
                 <SolutionComparison code={code} problemTitle={roadmapProblem.title} />

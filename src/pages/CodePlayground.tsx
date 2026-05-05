@@ -1,13 +1,15 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Play, Loader2, Trash2, Download, Copy, Check, Layers, Square } from 'lucide-react';
+import { ArrowLeft, Play, Loader2, Trash2, Download, Copy, Check, Layers, Square, Github } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectValue, SelectTrigger } from '@/components/ui/select';
 import CodeEditor from '@/components/CodeEditor';
 import { executeJavaCode, stopExecution, type ExecutionStatus as ExecStatusType } from '@/lib/executor';
+import { useUser } from '@/lib/user-context';
+import { getGitHubSettings, pushFileToGitHub } from '@/lib/github';
 
 const TEMPLATES: Record<string, string> = {
   'Hello World': `import java.util.*;
@@ -121,11 +123,13 @@ public class Main {
 
 const CodePlayground = () => {
   const navigate = useNavigate();
+  const { profile } = useUser();
   const [code, setCode] = useState(TEMPLATES['Hello World']);
   const [output, setOutput] = useState<string[]>([]);
   const [running, setRunning] = useState(false);
   const [execTime, setExecTime] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
+  const [isPushing, setIsPushing] = useState(false);
 
   const handleRun = async () => {
     if (running) return;
@@ -162,6 +166,49 @@ const CodePlayground = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleGitHubPush = async () => {
+    const gh = profile?.github_token ? {
+      token: profile.github_token,
+      repo: profile.github_repo || '',
+      autoPush: !!profile.github_auto_push
+    } : getGitHubSettings();
+
+    if (!gh || !gh.token || !gh.repo) {
+      toast.error('GitHub not configured. Visit Settings > Integrations.');
+      return;
+    }
+
+    setIsPushing(true);
+    const tid = toast.loading('Pushing to GitHub...');
+    try {
+      // Create a unique-ish filename or just use Main.java in a timestamped folder?
+      // User said "Java Codes" folder. Let's use "Java Codes/Playground_Main.java" 
+      // or try to extract a name if possible. For now, let's stick to a clear path.
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const filePath = `Java Codes/Playground_${timestamp}.java`;
+      
+      const res = await pushFileToGitHub(
+        gh.token, 
+        gh.repo, 
+        filePath, 
+        code, 
+        `Playground Save: ${timestamp}`
+      );
+      
+      toast.dismiss(tid);
+      if (res.success) {
+        toast.success('Successfully pushed to GitHub!');
+        if (res.url) window.open(res.url, '_blank');
+      } else {
+        toast.error('Push failed: ' + res.error);
+      }
+    } catch (err: any) {
+      toast.dismiss(tid);
+      toast.error('Error: ' + err.message);
+    }
+    setIsPushing(false);
+  };
+
   return (
     <div className="flex h-screen flex-col bg-background">
       <div className="flex items-center gap-1 sm:gap-2 border-b border-panel-border bg-ide-toolbar px-2 sm:px-3 py-1.5 overflow-x-auto scrollbar-none">
@@ -183,16 +230,27 @@ const CodePlayground = () => {
 
         <div className="ml-auto flex items-center gap-1 sm:gap-1.5 shrink-0">
           {execTime !== null && <span className="text-[10px] text-muted-foreground hidden sm:inline">{execTime}ms</span>}
-          <Button size="sm" variant="ghost" onClick={handleCopy} className="h-7 w-7 p-0">
+          <Button size="sm" variant="ghost" onClick={handleCopy} className="h-7 w-7 p-0" title="Copy Code">
             {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
           </Button>
-          <Button size="sm" variant="outline" onClick={handleDownload} className="h-7 gap-1 text-xs hidden sm:flex">
+          <Button size="sm" variant="outline" onClick={handleDownload} className="h-7 gap-1 text-xs hidden sm:flex" title="Download Local">
             <Download className="h-3 w-3" /> Save
+          </Button>
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={handleGitHubPush} 
+            disabled={isPushing} 
+            className="h-7 gap-1 text-xs text-primary border-primary/20 hover:bg-primary/5"
+            title="Push to GitHub"
+          >
+            {isPushing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Github className="h-3 w-3" />}
+            <span className="hidden md:inline">Sync</span>
           </Button>
           <Button size="sm" variant="outline" onClick={() => { setCode(TEMPLATES['Hello World']); setOutput([]); }} className="h-7 gap-1 text-xs hidden sm:flex">
             <Trash2 className="h-3 w-3" /> Reset
           </Button>
-          <Button size="sm" onClick={handleRun} disabled={running} className="h-7 gap-1 text-xs">
+          <Button size="sm" onClick={handleRun} disabled={running} className="h-7 gap-1 text-xs bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-4">
             {running ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
             Run
           </Button>

@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Play, Save, Zap, Settings, LogOut, Loader2, BookOpen, Moon, Sun, Cloud, User } from 'lucide-react';
+import { Play, Save, Zap, Settings, LogOut, Loader2, BookOpen, Moon, Sun, Cloud, User, Github } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -11,9 +11,11 @@ interface ToolbarProps {
   onAnalyze: () => void;
   onSettings: () => void;
   onLogout: () => void;
+  onGitHubPush?: () => void;
   username: string;
   isRunning: boolean;
   isSaving: boolean;
+  isPushing?: boolean;
   runDisabled?: boolean;
   aiEnabled: boolean;
   onAIToggle: (enabled: boolean) => void;
@@ -23,7 +25,11 @@ interface ToolbarProps {
   rightMobileActions?: React.ReactNode;
 }
 
-const Toolbar = ({ onRun, onSave, onAnalyze, onSettings, onLogout, username, isRunning, isSaving, runDisabled, aiEnabled, onAIToggle, isAutoSaving, codeIsDirty, leftMobileActions, rightMobileActions }: ToolbarProps) => {
+const Toolbar = ({ 
+  onRun, onSave, onAnalyze, onSettings, onLogout, onGitHubPush, 
+  username, isRunning, isSaving, isPushing, runDisabled, aiEnabled, 
+  onAIToggle, isAutoSaving, codeIsDirty, leftMobileActions, rightMobileActions 
+}: ToolbarProps) => {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
 
@@ -46,6 +52,19 @@ const Toolbar = ({ onRun, onSave, onAnalyze, onSettings, onLogout, username, isR
           {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
           <span className="hidden sm:inline">Save</span>
         </Button>
+
+        {onGitHubPush && (
+          <Button 
+            onClick={onGitHubPush} 
+            disabled={isPushing} 
+            size="sm" 
+            variant="outline" 
+            className="h-8 gap-1 sm:gap-1.5 text-xs font-medium shrink-0 rounded-lg text-primary border-primary/20 hover:bg-primary/5"
+          >
+            {isPushing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Github className="h-3.5 w-3.5" />}
+            <span className="hidden sm:inline">Sync</span>
+          </Button>
+        )}
 
         <span className="text-[11px] text-muted-foreground items-center gap-1.5 ml-1 shrink-0 hidden md:flex">
           {isAutoSaving ? (

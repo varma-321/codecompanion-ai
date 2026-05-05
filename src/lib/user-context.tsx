@@ -39,7 +39,7 @@ const UserContext = createContext<UserContextType>({
 async function fetchExtendedProfile(userId: string): Promise<ExtendedProfile | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, created_at, status, ban_until')
+    .select('id, username, created_at, status, ban_until, github_token, github_repo, github_auto_push')
     .eq('id', userId)
     .single();
   if (error || !data) return null;

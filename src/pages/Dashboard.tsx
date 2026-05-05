@@ -28,6 +28,7 @@ import { detectProblemTitle, generateTestCases } from '@/lib/ai-backend';
 import { supabase } from '@/integrations/supabase/client';
 import { API_BASE_URL } from '@/lib/api';
 import { isMainClassStyle } from '@/lib/test-runner';
+import { getGitHubSettings, pushFileToGitHub } from '@/lib/github';
 
 const Dashboard = () => {
   const { authUser, profile } = useUser();
@@ -47,6 +48,7 @@ const Dashboard = () => {
   const [consoleCollapsed, setConsoleCollapsed] = useState(false);
   const [consoleFullscreen, setConsoleFullscreen] = useState(false);
   const [consoleHeight, setConsoleHeight] = useState(288);
+  const [isPushing, setIsPushing] = useState(false);
   
   // Interactive stdin — promise-based so handleRun waits for user input
   const [waitingForInput, setWaitingForInput] = useState(false);
@@ -105,17 +107,21 @@ const Dashboard = () => {
     try { setProblems(await fetchProblems(userId)); } catch {}
   }, [userId]);
 
-  const autosaveCode = useCallback(async (val: string) => {
-    if (!activeProblem) return;
-    await updateProblem(activeProblem.id, { code: val });
-  }, [activeProblem]);
+  const autosaveCode = useCallback(async (val: string, problemId?: string) => {
+    if (!problemId || !userId) return;
+    await updateProblem(problemId, { code: val });
+  }, [userId]);
 
-  const { isDirty: codeIsDirty, isSaving: isAutoSaving, lastSaved, resetSavedValue } = useAutosave(code, autosaveCode, {
-    delay: 2000,
+  const { isDirty: codeIsDirty, isSaving: isAutoSaving, lastSaved, resetSavedValue, triggerSave } = useAutosave(code, autosaveCode, {
+    delay: 200,
     enabled: !!activeProblem && !!userId,
+    key: activeProblem?.id,
   });
 
   const handleSelectProblem = (problem: DbProblem) => {
+    if (activeProblem && codeIsDirty) {
+      triggerSave();
+    }
     setActiveProblem(problem);
     setCode(problem.code);
     resetSavedValue(problem.code);
@@ -372,6 +378,48 @@ const Dashboard = () => {
     try { await signOut(); } catch {}
   };
 
+  const handleGitHubPush = async () => {
+    const gh = profile?.github_token ? {
+      token: profile.github_token,
+      repo: profile.github_repo || '',
+      autoPush: !!profile.github_auto_push
+    } : getGitHubSettings();
+
+    if (!gh || !gh.token || !gh.repo) {
+      toast.error('GitHub not configured. Visit Settings > Integrations.');
+      return;
+    }
+
+    setIsPushing(true);
+    const tid = toast.loading('Pushing to GitHub...');
+    try {
+      const sanitizedTitle = (activeProblem?.title || 'CustomProblem').replace(/[^a-zA-Z0-9]/g, '_');
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const fileName = `${sanitizedTitle}_${timestamp}.java`;
+      const filePath = `Java Codes/${fileName}`;
+      
+      const res = await pushFileToGitHub(
+        gh.token, 
+        gh.repo, 
+        filePath, 
+        code, 
+        `Custom Code: ${activeProblem?.title || 'Untitled'}`
+      );
+      
+      toast.dismiss(tid);
+      if (res.success) {
+        toast.success('Successfully pushed to GitHub!');
+        if (res.url) window.open(res.url, '_blank');
+      } else {
+        toast.error('Push failed: ' + res.error);
+      }
+    } catch (err: any) {
+      toast.dismiss(tid);
+      toast.error('Error: ' + err.message);
+    }
+    setIsPushing(false);
+  };
+
   const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     const startY = e.clientY;
@@ -407,6 +455,8 @@ const Dashboard = () => {
         onAnalyze={handleAnalyze}
         onSettings={() => setShowSettings(true)}
         onLogout={signOut}
+        onGitHubPush={handleGitHubPush}
+        isPushing={isPushing}
         username={username}
         isRunning={isRunning}
         isSaving={isAutoSaving}
