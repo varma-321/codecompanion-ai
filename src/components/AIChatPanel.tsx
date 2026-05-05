@@ -582,7 +582,7 @@ const AIChatPanel = ({
               </Button>
             </PopoverTrigger>
             <PopoverContent 
-              className="w-72 p-0 bg-ide-sidebar/95 backdrop-blur-2xl border-panel-border shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-[100] overflow-hidden rounded-2xl" 
+              className="w-72 p-0 bg-ide-sidebar/95 backdrop-blur-2xl border-panel-border shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-[100] rounded-2xl" 
               align="end"
               sideOffset={8}
             >
@@ -632,7 +632,7 @@ const AIChatPanel = ({
                     <SelectTrigger className="h-9 text-[11px] bg-background/40 border-panel-border rounded-xl focus:ring-1 focus:ring-primary/30">
                       <SelectValue placeholder="Select Voice" />
                     </SelectTrigger>
-                    <SelectContent className="bg-ide-sidebar border-panel-border max-h-56 rounded-xl">
+                    <SelectContent className="bg-ide-sidebar border-panel-border max-h-56 rounded-xl z-[150]">
                       {availableVoices.map(v => (
                         <SelectItem key={v.name} value={v.name} className="text-[11px] focus:bg-primary/10">
                           <span className="font-medium">{v.name.split(' - ')[0]}</span>
