@@ -190,15 +190,26 @@ const MessageBubble = memo(({ msg, onInsertCode, onRepeat }: MessageBubbleProps 
           {isUser ? "User" : isAssistant ? "AI Architect" : "System"}
         </span>
         {isAssistant && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-5 w-5 rounded-full text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-all hover:bg-primary/5"
-            onClick={handleRepeat}
-            title="Repeat Speech"
-          >
-            <PlayCircle className="h-3 w-3" />
-          </Button>
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/5"
+              onClick={handleRepeat}
+              title="Repeat Speech"
+            >
+              <PlayCircle className="h-3 w-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/5"
+              onClick={() => window.speechSynthesis.cancel()}
+              title="Stop Speech"
+            >
+              <StopCircle className="h-3 w-3" />
+            </Button>
+          </div>
         )}
       </div>
 
@@ -264,17 +275,40 @@ const AIChatPanel = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Initialize voices
+  // Initialize and filter voices for EXACT selection (English Male/Female only)
   useEffect(() => {
     const loadVoices = () => {
-      const voices = window.speechSynthesis.getVoices();
-      setAvailableVoices(voices);
-      if (voices.length > 0 && !selectedVoice) {
-        // Prefer a natural-sounding English voice if available
-        const preferred = voices.find(v => v.name.includes("Natural") && v.lang.includes("en")) || 
-                          voices.find(v => v.lang.includes("en")) || 
-                          voices[0];
-        setSelectedVoice(preferred.name);
+      const allVoices = window.speechSynthesis.getVoices();
+      
+      // 1. Get all English voices
+      const englishVoices = allVoices.filter(v => v.lang.startsWith("en"));
+
+      if (englishVoices.length === 0) {
+        setAvailableVoices(allVoices.slice(0, 2));
+        return;
+      }
+
+      // 2. Identify best Male and Female English voices
+      const maleVoice = englishVoices.find(v => 
+        v.name.toLowerCase().includes("male") || 
+        v.name.toLowerCase().includes("david") || 
+        v.name.toLowerCase().includes("mark") ||
+        v.name.toLowerCase().includes("guy")
+      ) || englishVoices[0];
+
+      const femaleVoice = englishVoices.find(v => 
+        v.name.toLowerCase().includes("female") || 
+        v.name.toLowerCase().includes("zira") || 
+        v.name.toLowerCase().includes("samantha") ||
+        v.name.toLowerCase().includes("aria")
+      ) || (englishVoices[1] || englishVoices[0]);
+
+      // Set exactly two voices
+      const finalTwo = [maleVoice, femaleVoice].filter((v, i, a) => a.findIndex(t => t.name === v.name) === i);
+      setAvailableVoices(finalTwo);
+      
+      if (finalTwo.length > 0 && !selectedVoice) {
+        setSelectedVoice(finalTwo[0].name);
       }
     };
     loadVoices();
@@ -334,15 +368,33 @@ const AIChatPanel = ({
   const speak = (text: string) => {
     if (!isVoiceEnabled) return;
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(
-      text.replace(/```[\s\S]*?```/g, "").replace(/[*#]/g, ""),
-    );
+
+    // SMART SPEECH CLEANING:
+    // 1. Remove all code blocks entirely (they are hard to follow via audio)
+    // 2. Remove inline code backticks
+    // 3. Remove markdown headers, bold, and italics
+    // 4. Remove technical symbols that sound robotic
+    const smartText = text
+      .replace(/```[\s\S]*?```/g, " [Code block skipped] ") // Skip full code blocks
+      .replace(/`([^`]+)`/g, "$1") // Remove backticks but keep inline names
+      .replace(/[#*_-]/g, "") // Remove markdown syntax
+      .replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1") // Remove links but keep text
+      .replace(/>/g, "Quote: ") // Friendly quote prefix
+      .trim();
+
+    if (!smartText) return;
+
+    const utterance = new SpeechSynthesisUtterance(smartText);
     utterance.rate = voiceRate;
     utterance.pitch = voicePitch;
-    if (selectedVoice) {
-      const voice = availableVoices.find(v => v.name === selectedVoice);
-      if (voice) utterance.voice = voice;
+    
+    // Explicitly find and set the voice object
+    const voice = availableVoices.find(v => v.name === selectedVoice);
+    if (voice) {
+      utterance.voice = voice;
+      utterance.lang = voice.lang;
     }
+    
     window.speechSynthesis.speak(utterance);
   };
 
@@ -594,17 +646,6 @@ const AIChatPanel = ({
                     </div>
                     <h4 className="text-[11px] font-black uppercase tracking-widest text-foreground">Speech Engine</h4>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-7 w-7 text-destructive hover:bg-destructive/10 rounded-full" 
-                      onClick={stopSpeaking}
-                      title="Stop Current Speech"
-                    >
-                      <StopCircle className="h-4 w-4" />
-                    </Button>
-                  </div>
                 </div>
                 <p className="text-[10px] text-muted-foreground font-medium">Configure your personal Java mentor's voice</p>
               </div>
@@ -632,13 +673,24 @@ const AIChatPanel = ({
                     <SelectTrigger className="h-9 text-[11px] bg-background/40 border-panel-border rounded-xl focus:ring-1 focus:ring-primary/30">
                       <SelectValue placeholder="Select Voice" />
                     </SelectTrigger>
-                    <SelectContent className="bg-ide-sidebar border-panel-border max-h-56 rounded-xl z-[150]">
-                      {availableVoices.map(v => (
-                        <SelectItem key={v.name} value={v.name} className="text-[11px] focus:bg-primary/10">
-                          <span className="font-medium">{v.name.split(' - ')[0]}</span>
-                          <span className="ml-2 opacity-40 text-[9px]">({v.lang})</span>
-                        </SelectItem>
-                      ))}
+                    <SelectContent className="bg-ide-sidebar border-panel-border rounded-xl z-[150]">
+                      {availableVoices.map(v => {
+                        const isFemale = v.name.toLowerCase().includes("female") || 
+                                         v.name.toLowerCase().includes("zira") || 
+                                         v.name.toLowerCase().includes("samantha") ||
+                                         v.name.toLowerCase().includes("aria");
+                                         
+                        const label = `English (${isFemale ? "Female" : "Male"})`;
+                        
+                        return (
+                          <SelectItem key={v.name} value={v.name} className="text-[11px] focus:bg-primary/10">
+                            <div className="flex flex-col">
+                              <span className="font-bold text-primary">{label}</span>
+                              <span className="opacity-40 text-[9px]">{v.name.split(' - ')[0]}</span>
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </div>
@@ -745,19 +797,24 @@ const AIChatPanel = ({
             msg={msg}
             onInsertCode={handleInsertCode}
             onRepeat={(text) => {
-              // Forced speak even if voice toggled off for manual replay
-              const utterance = new SpeechSynthesisUtterance(
-                text.replace(/```[\s\S]*?```/g, "").replace(/[*#]/g, ""),
-              );
+              window.speechSynthesis.cancel();
+              // SMART SPEECH CLEANING for re-play
+              const smartText = text
+                .replace(/```[\s\S]*?```/g, " [Code block skipped] ")
+                .replace(/`([^`]+)`/g, "$1")
+                .replace(/[#*_-]/g, "")
+                .trim();
+
+              const utterance = new SpeechSynthesisUtterance(smartText);
               utterance.rate = voiceRate;
               utterance.pitch = voicePitch;
-              if (selectedVoice) {
-                const voice = availableVoices.find(v => v.name === selectedVoice);
-                if (voice) utterance.voice = voice;
+              const voice = availableVoices.find(v => v.name === selectedVoice);
+              if (voice) {
+                utterance.voice = voice;
+                utterance.lang = voice.lang;
               }
-              window.speechSynthesis.cancel();
               window.speechSynthesis.speak(utterance);
-              toast.info("Replaying speech...");
+              toast.info("Replaying smart speech...");
             }}
           />
         ))}
