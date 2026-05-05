@@ -97,17 +97,14 @@ const AdminDashboard = () => {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeView, setActiveView] = useState<"users" | "moderation" | "issues">("users");
-  const [customProblems, setCustomProblems] = useState<any[]>([]);
+  const [activeView, setActiveView] = useState<"users" | "issues">("users");
   const [issues, setIssues] = useState<DbIssue[]>([]);
   const [issueMessages, setIssueMessages] = useState<DbIssueMessage[]>([]);
   const [issuesLoading, setIssuesLoading] = useState(false);
-  const [problemsLoading, setProblemsLoading] = useState(false);
   const [adminReply, setAdminReply] = useState("");
   const [actionDialog, setActionDialog] = useState<{
     type: string;
     user?: UserRow | null;
-    problem?: any;
     issue?: DbIssue | null;
   }>({ type: "", user: null });
   const [banDays, setBanDays] = useState("7");
@@ -153,22 +150,6 @@ const AdminDashboard = () => {
     setLoading(false);
   }, []);
 
-  const fetchProblems = useCallback(async () => {
-    setProblemsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("problems")
-        .select("*")
-        .eq("is_public", true)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      setCustomProblems(data || []);
-    } catch (err: any) {
-      toast.error("Failed to load public problems");
-    }
-    setProblemsLoading(false);
-  }, []);
-
   const fetchIssuesList = useCallback(async () => {
     setIssuesLoading(true);
     try {
@@ -180,23 +161,6 @@ const AdminDashboard = () => {
     setIssuesLoading(false);
   }, []);
 
-  const handleDeleteProblem = async (problemId: string) => {
-    setActionLoading(true);
-    try {
-      const { error } = await supabase
-        .from("problems")
-        .delete()
-        .eq("id", problemId);
-      if (error) throw error;
-      toast.success("Problem removed from community library");
-      fetchProblems();
-    } catch (err: any) {
-      toast.error("Failed to delete problem: " + err.message);
-    }
-    setActionLoading(false);
-    setActionDialog({ type: "", problem: null });
-  };
-
   // Use UserContext to verify admin access — no external API needed
   useEffect(() => {
     if (authLoading) return;
@@ -205,15 +169,15 @@ const AdminDashboard = () => {
       return;
     }
     fetchUsers();
-    if (activeView === "moderation") fetchProblems();
     if (activeView === "issues") fetchIssuesList();
   }, [
     authUser,
     isAdmin,
+    isModerator,
     authLoading,
     navigate,
     fetchUsers,
-    fetchProblems,
+    fetchIssuesList,
     activeView,
   ]);
 
@@ -242,10 +206,6 @@ const AdminDashboard = () => {
     }
     setActionLoading(false);
     setActionDialog({ type: "", user: null });
-  };
-
-  const handleRemoveRole = async (userId: string) => {
-    await supabase.from("user_roles").delete().eq("user_id", userId);
   };
 
   const handleEditSave = async () => {
@@ -538,11 +498,6 @@ const AdminDashboard = () => {
           >
             User Management
           </button>
-          <button
-            onClick={() => setActiveView("moderation")}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeView === "moderation" ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:text-foreground"}`}
-          >
-            Content Moderation
           </button>
           <button
             onClick={() => setActiveView("issues")}
@@ -724,83 +679,6 @@ const AdminDashboard = () => {
               </Table>
             </div>
           </>
-        ) : activeView === "moderation" ? (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold">Public Custom Problems</h3>
-              <span className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">
-                {customProblems.length} Active Challenges
-              </span>
-            </div>
-
-            <div className="rounded-xl border border-border bg-card overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-xs">Problem Title</TableHead>
-                    <TableHead className="text-xs">Difficulty</TableHead>
-                    <TableHead className="text-xs">Created By</TableHead>
-                    <TableHead className="text-xs">Date</TableHead>
-                    <TableHead className="text-xs text-right">
-                      Actions
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {problemsLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-10">
-                        <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground/30" />
-                      </TableCell>
-                    </TableRow>
-                  ) : customProblems.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={5}
-                        className="text-center py-10 text-xs text-muted-foreground"
-                      >
-                        No public problems found
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    customProblems.map((prob) => (
-                      <TableRow key={prob.id}>
-                        <TableCell className="font-bold text-sm">
-                          {prob.title}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-[10px]">
-                            {prob.difficulty}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground font-mono">
-                          {prob.user_id.slice(0, 8)}...
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {new Date(prob.created_at).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 gap-1 text-destructive hover:bg-destructive/10"
-                            onClick={() =>
-                              setActionDialog({
-                                type: "delete_problem",
-                                problem: prob,
-                              })
-                            }
-                          >
-                            <Trash2 className="h-3.5 w-3.5" /> Flag & Delete
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
         ) : (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -900,42 +778,6 @@ const AdminDashboard = () => {
       </div>
 
       {/* Action Dialogs */}
-      <Dialog
-        open={actionDialog.type === "delete_problem"}
-        onOpenChange={() => setActionDialog({ type: "", problem: null })}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Public Problem</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete{" "}
-              <strong>{actionDialog.problem?.title}</strong>? This will remove
-              it from the community library permanently.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setActionDialog({ type: "", problem: null })}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() =>
-                actionDialog.problem &&
-                handleDeleteProblem(actionDialog.problem.id)
-              }
-              disabled={actionLoading}
-            >
-              {actionLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : null}
-              Confirm Deletion
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
       <Dialog
         open={actionDialog.type === "block"}
         onOpenChange={() => setActionDialog({ type: "", user: null })}
