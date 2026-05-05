@@ -1279,7 +1279,7 @@ const ProblemWorkspace = () => {
             <SheetTitle className="text-sm">AI Assistant</SheetTitle>
           </SheetHeader>
           <div className="h-[calc(100%-60px)] overflow-hidden">
-            <AIChatPanel code={code} problemId={null} aiEnabled={true} />
+            <AIChatPanel code={code} problemId={key || null} aiEnabled={true} />
           </div>
         </SheetContent>
       </Sheet>
@@ -1658,7 +1658,7 @@ const ProblemWorkspace = () => {
         {/* Right: AI Assistant */}
         {!focusMode && !contestMode && !generatorMode && (
           <div className="hidden lg:block w-[320px] xl:w-[360px] shrink-0 border-l border-panel-border overflow-hidden">
-            <AIChatPanel code={code} problemId={null} aiEnabled={true} />
+            <AIChatPanel code={code} problemId={key || null} aiEnabled={true} />
           </div>
         )}
         {(contestMode || generatorMode) && (

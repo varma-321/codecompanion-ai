@@ -11,10 +11,17 @@ import {
   Volume2,
   VolumeX,
   GraduationCap,
+  Settings2,
+  PlayCircle,
+  StopCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
+import { Label } from "@/components/ui/label";
 import {
   analyzeCode,
   getHints as getAIHints,
@@ -232,9 +239,31 @@ const AIChatPanel = ({
   const [isLoading, setIsLoading] = useState(false);
   const [hintLevel, setHintLevel] = useState(0);
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(false);
+  const [voiceRate, setVoiceRate] = useState(1.1);
+  const [voicePitch, setVoicePitch] = useState(1.0);
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [selectedVoice, setSelectedVoice] = useState<string>("");
   const [isTutorMode, setIsTutorMode] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Initialize voices
+  useEffect(() => {
+    const loadVoices = () => {
+      const voices = window.speechSynthesis.getVoices();
+      setAvailableVoices(voices);
+      if (voices.length > 0 && !selectedVoice) {
+        // Prefer a natural-sounding English voice if available
+        const preferred = voices.find(v => v.name.includes("Natural") && v.lang.includes("en")) || 
+                          voices.find(v => v.lang.includes("en")) || 
+                          voices[0];
+        setSelectedVoice(preferred.name);
+      }
+    };
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    return () => { window.speechSynthesis.onvoiceschanged = null; };
+  }, [selectedVoice]);
 
   useEffect(() => {
     const check = async () => {
@@ -259,7 +288,31 @@ const AIChatPanel = ({
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    // Persist messages whenever they change
+    if (problemId && messages.length > 0) {
+      localStorage.setItem(`ai-chat-history-${problemId}`, JSON.stringify(messages));
+    }
+  }, [messages, problemId]);
+
+  // Load persisted history on mount
+  useEffect(() => {
+    if (problemId) {
+      const saved = localStorage.getItem(`ai-chat-history-${problemId}`);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            setMessages(parsed);
+            // Derive hint level from previous hints in chat
+            const hints = parsed.filter(m => m.role === "user" && m.content.includes("💡 Hint")).length;
+            setHintLevel(hints);
+          }
+        } catch (e) {
+          console.error("Failed to load chat history", e);
+        }
+      }
+    }
+  }, [problemId]);
 
   const speak = (text: string) => {
     if (!isVoiceEnabled) return;
@@ -267,8 +320,17 @@ const AIChatPanel = ({
     const utterance = new SpeechSynthesisUtterance(
       text.replace(/```[\s\S]*?```/g, "").replace(/[*#]/g, ""),
     );
-    utterance.rate = 1.1;
+    utterance.rate = voiceRate;
+    utterance.pitch = voicePitch;
+    if (selectedVoice) {
+      const voice = availableVoices.find(v => v.name === selectedVoice);
+      if (voice) utterance.voice = voice;
+    }
     window.speechSynthesis.speak(utterance);
+  };
+
+  const stopSpeaking = () => {
+    window.speechSynthesis.cancel();
   };
 
   const addMessage = (
@@ -459,6 +521,9 @@ const AIChatPanel = ({
   const clearChat = () => {
     setMessages([]);
     setHintLevel(0);
+    if (problemId) {
+      localStorage.removeItem(`ai-chat-history-${problemId}`);
+    }
     window.speechSynthesis.cancel();
   };
 
@@ -499,6 +564,75 @@ const AIChatPanel = ({
               <VolumeX className="h-3.5 w-3.5" />
             )}
           </Button>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/5"
+                title="Voice Settings"
+              >
+                <Settings2 className="h-3.5 w-3.5" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-4 bg-ide-sidebar border-panel-border shadow-2xl z-[100]" align="end">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-primary">Speech Settings</h4>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:bg-destructive/10" onClick={stopSpeaking}>
+                    <StopCircle className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-[10px] text-muted-foreground uppercase font-bold">Voice</Label>
+                  <Select value={selectedVoice} onValueChange={setSelectedVoice}>
+                    <SelectTrigger className="h-8 text-xs bg-background/50 border-panel-border">
+                      <SelectValue placeholder="Select Voice" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-48">
+                      {availableVoices.map(v => (
+                        <SelectItem key={v.name} value={v.name} className="text-xs">
+                          {v.name} ({v.lang})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between text-[10px] text-muted-foreground uppercase font-bold">
+                    <Label>Speed</Label>
+                    <span>{voiceRate.toFixed(1)}x</span>
+                  </div>
+                  <Slider
+                    value={[voiceRate]}
+                    min={0.5}
+                    max={2.0}
+                    step={0.1}
+                    onValueChange={([v]) => setVoiceRate(v)}
+                    className="py-2"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between text-[10px] text-muted-foreground uppercase font-bold">
+                    <Label>Pitch</Label>
+                    <span>{voicePitch.toFixed(1)}</span>
+                  </div>
+                  <Slider
+                    value={[voicePitch]}
+                    min={0.5}
+                    max={2.0}
+                    step={0.1}
+                    onValueChange={([v]) => setVoicePitch(v)}
+                    className="py-2"
+                  />
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
           <Button
             variant="ghost"
             size="icon"

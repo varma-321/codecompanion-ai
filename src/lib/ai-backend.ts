@@ -23,7 +23,11 @@ async function postAPI(endpoint: string, body: Record<string, any>): Promise<any
       }
       throw new Error(`Server error: ${errorDetail}`);
     }
-    return await res.json();
+    const data = await res.json();
+    if (data && data.error) {
+      throw new Error(data.error);
+    }
+    return data;
   } catch (error: any) {
     clearTimeout(timeoutId);
     if (error.name === 'AbortError') {
