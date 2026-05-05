@@ -490,12 +490,16 @@ const AIChatPanel = ({
         );
       } else {
         addMessage("user", text);
-        const history = buildHistory();
+        const history = messages.map(m => ({ 
+          role: m.role === 'system' ? 'system' : m.role === 'assistant' ? 'assistant' : 'user', 
+          content: m.content 
+        }));
+        
         const tutorPrefix = isTutorMode
           ? `(TUTOR MODE: Do NOT give direct code or answers. Ask guiding questions, point out logic gaps, and encourage the user to find the solution. Use Socratic method.)\n`
           : "";
-        const finalPrompt = `${tutorPrefix}Use the recent conversation below as context (especially any prior "Optimal Approach", "Find Bugs", or "Patterns" responses) when answering. If the user is asking for code that follows a previously-discussed approach, produce that exact approach.${history}\n\nUSER NEW MESSAGE: ${text}`;
-        const response = await aiChat(code, finalPrompt, problemId);
+        
+        const response = await aiChat(code, text, problemId, history);
         addMessage("assistant", response);
       }
 

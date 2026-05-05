@@ -1,4 +1,5 @@
 import { API_BASE_URL } from './api';
+import { supabase } from '@/integrations/supabase/client';
 
 async function postAPI(endpoint: string, body: Record<string, any>): Promise<any> {
   const controller = new AbortController();
@@ -122,9 +123,30 @@ export async function analyzeComplexityAdvanced(code: string, problemId?: string
   return data.radar || JSON.stringify(data);
 }
 
-export async function chat(code: string, userMessage: string, problemId?: string | null): Promise<string> {
-  const data = await postAPI('/api/chat', { code, message: userMessage, problemId });
-  return data.response || data.reply || JSON.stringify(data);
+export async function chat(code: string, userMessage: string, problemId?: string | null, history: any[] = []): Promise<string> {
+  try {
+    const { data, error } = await supabase.functions.invoke('agent-chat', {
+      body: { 
+        message: userMessage, 
+        code, 
+        problemId, 
+        history 
+      }
+    });
+
+    if (error) {
+      console.error('Supabase function error:', error);
+      // Fallback to legacy backend if edge function fails
+      const legacyData = await postAPI('/api/chat', { code, message: userMessage, problemId });
+      return legacyData.response || legacyData.reply || JSON.stringify(legacyData);
+    }
+
+    return data.response || data.reply || JSON.stringify(data);
+  } catch (err) {
+    console.warn('Supabase chat function failed, trying legacy backend...', err);
+    const data = await postAPI('/api/chat', { code, message: userMessage, problemId });
+    return data.response || data.reply || JSON.stringify(data);
+  }
 }
 
 export async function generateTestCases(
