@@ -498,7 +498,6 @@ const AdminDashboard = () => {
           >
             User Management
           </button>
-          </button>
           <button
             onClick={() => setActiveView("issues")}
             className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeView === "issues" ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:text-foreground"}`}
