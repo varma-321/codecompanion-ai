@@ -72,7 +72,7 @@ const ProblemWorkspace = () => {
   const customMode = searchParams.get('customMode') === 'true';
   const customId = searchParams.get('customId');
   const navigate = useNavigate();
-  const { authUser, isAdmin } = useUser();
+  const { authUser, profile, isAdmin } = useUser();
 
   // Find the problem from any roadmap OR contest problems OR generated
   const roadmapProblem = useMemo(() => {
@@ -814,8 +814,13 @@ const ProblemWorkspace = () => {
         addConsoleEntry('info', `✅ ACCEPTED — ${passed}/${total} test cases passed (${execTime}ms)`);
         setExecStatus('complete');
 
-        // Automatic GitHub Sync
-        const gh = getGitHubSettings();
+        // Automatic GitHub Sync (prefer profile, fallback to localStorage)
+        const gh = profile?.github_token ? {
+          token: profile.github_token,
+          repo: profile.github_repo || '',
+          autoPush: !!profile.github_auto_push
+        } : getGitHubSettings();
+        
         if (gh && gh.autoPush && gh.token && gh.repo && roadmapProblem) {
           addConsoleEntry('system', `☁ Synchronizing with GitHub...`);
           const sanitizedTitle = roadmapProblem.title.replace(/[^a-zA-Z0-9]/g, '');
@@ -1001,7 +1006,13 @@ const ProblemWorkspace = () => {
   }
 
   const handleGitHubPush = async () => {
-    const gh = getGitHubSettings();
+    // Prefer profile settings, fallback to localStorage
+    const gh = profile?.github_token ? {
+      token: profile.github_token,
+      repo: profile.github_repo || '',
+      autoPush: !!profile.github_auto_push
+    } : getGitHubSettings();
+
     if (!gh || !gh.token || !gh.repo) {
       toast.error('GitHub not configured. Visit Settings > Integrations.');
       return;

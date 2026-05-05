@@ -5,6 +5,9 @@ import type { User, Session } from '@supabase/supabase-js';
 export interface ExtendedProfile extends Profile {
   status?: string;
   ban_until?: string | null;
+  github_token?: string | null;
+  github_repo?: string | null;
+  github_auto_push?: boolean;
 }
 
 interface UserContextType {

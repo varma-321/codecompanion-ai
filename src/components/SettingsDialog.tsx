@@ -58,26 +58,62 @@ const SettingsDialog = ({ open, onClose }: SettingsDialogProps) => {
       checkBackendStatus().then(setBackendOnline);
       setEditUsername(profile?.username || '');
       
-      const gh = getGitHubSettings();
-      if (gh) {
-        setGhToken(gh.token);
-        setGhRepo(gh.repo);
-        setGhAutoPush(gh.autoPush);
+      // Load GitHub settings (prefer DB, fallback to localStorage)
+      if (profile?.github_token) {
+        setGhToken(profile.github_token);
+        setGhRepo(profile.github_repo || '');
+        setGhAutoPush(!!profile.github_auto_push);
+      } else {
+        const gh = getGitHubSettings();
+        if (gh) {
+          setGhToken(gh.token);
+          setGhRepo(gh.repo);
+          setGhAutoPush(gh.autoPush);
+        }
       }
     }
   }, [open, profile]);
 
   const handleSaveGitHub = async () => {
+    if (!authUser) {
+      toast.error('You must be logged in to save settings');
+      return;
+    }
     setGhSaving(true);
     try {
+      // 1. Save to Supabase (Cloud Sync)
+      const { error: dbError } = await supabase
+        .from('profiles')
+        .update({
+          github_token: ghToken,
+          github_repo: ghRepo,
+          github_auto_push: ghAutoPush
+        })
+        .eq('id', authUser.id);
+      
+      if (dbError) throw dbError;
+
+      // 2. Update local context
+      if (profile) {
+        setProfile({
+          ...profile,
+          github_token: ghToken,
+          github_repo: ghRepo,
+          github_auto_push: ghAutoPush
+        });
+      }
+
+      // 3. Keep local storage for compatibility/fallback
       saveGitHubSettings({
         token: ghToken,
         repo: ghRepo,
         autoPush: ghAutoPush
       });
-      toast.success('GitHub settings saved locally');
+      
+      toast.success('GitHub settings synced to account');
     } catch (err: any) {
-      toast.error('Failed to save settings');
+      console.error('Save GitHub Error:', err);
+      toast.error('Failed to sync settings: ' + (err.message || 'Unknown error'));
     }
     setGhSaving(false);
   };
