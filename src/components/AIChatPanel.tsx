@@ -105,10 +105,16 @@ interface MessageBubbleProps {
   onInsertCode: (code: string) => void;
 }
 
-const MessageBubble = memo(({ msg, onInsertCode }: MessageBubbleProps) => {
+const MessageBubble = memo(({ msg, onInsertCode, onRepeat }: MessageBubbleProps & { onRepeat: (text: string) => void }) => {
   const isAssistant = msg.role === "assistant";
   const isUser = msg.role === "user";
   const isSystem = msg.role === "system";
+
+  const [isThisSpeaking, setIsThisSpeaking] = useState(false);
+
+  const handleRepeat = () => {
+    onRepeat(msg.content);
+  };
 
   const markdownComponents = useMemo(
     () => ({
@@ -172,17 +178,28 @@ const MessageBubble = memo(({ msg, onInsertCode }: MessageBubbleProps) => {
 
   return (
     <div
-      className={`mb-4 flex flex-col group ${isUser ? "items-end" : "items-start"}`}
+      className={`mb-6 flex flex-col group ${isUser ? "items-end" : "items-start"}`}
     >
-      <div className="flex items-center gap-2 mb-1 px-1">
+      <div className={`flex items-center gap-2 mb-1.5 px-1 ${isUser ? "flex-row-reverse" : "flex-row"}`}>
         {isAssistant && (
-          <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 shadow-sm">
-            <Brain className="h-3 w-3 text-primary" />
+          <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 shadow-sm transition-transform group-hover:scale-110">
+            <Brain className="h-3.5 w-3.5 text-primary" />
           </div>
         )}
-        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-          {isUser ? "You" : isAssistant ? "AI Architect" : "System"}
+        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">
+          {isUser ? "User" : isAssistant ? "AI Architect" : "System"}
         </span>
+        {isAssistant && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5 rounded-full text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-all hover:bg-primary/5"
+            onClick={handleRepeat}
+            title="Repeat Speech"
+          >
+            <PlayCircle className="h-3 w-3" />
+          </Button>
+        )}
       </div>
 
       <div
@@ -549,90 +566,120 @@ const AIChatPanel = ({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className={`h-7 w-7 rounded-full transition-all duration-300 ${isVoiceEnabled ? "text-primary bg-primary/10" : "text-muted-foreground"}`}
-            onClick={() => {
-              setIsVoiceEnabled(!isVoiceEnabled);
-              if (isVoiceEnabled) window.speechSynthesis.cancel();
-              toast.info(
-                `Voice Tutor ${!isVoiceEnabled ? "Enabled" : "Disabled"}`,
-              );
-            }}
-            title="Toggle Voice Tutor"
-          >
-            {isVoiceEnabled ? (
-              <Volume2 className="h-3.5 w-3.5" />
-            ) : (
-              <VolumeX className="h-3.5 w-3.5" />
-            )}
-          </Button>
-
           <Popover>
             <PopoverTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/5"
+                className={`h-7 w-7 rounded-full transition-all duration-300 ${isVoiceEnabled ? "text-primary bg-primary/10" : "text-muted-foreground"}`}
                 title="Voice Settings"
               >
-                <Settings2 className="h-3.5 w-3.5" />
+                {isVoiceEnabled ? (
+                  <Volume2 className="h-3.5 w-3.5 animate-pulse" />
+                ) : (
+                  <VolumeX className="h-3.5 w-3.5" />
+                )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-64 p-4 bg-ide-sidebar border-panel-border shadow-2xl z-[100]" align="end">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-primary">Speech Settings</h4>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:bg-destructive/10" onClick={stopSpeaking}>
-                    <StopCircle className="h-4 w-4" />
+            <PopoverContent 
+              className="w-72 p-0 bg-ide-sidebar/95 backdrop-blur-2xl border-panel-border shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-[100] overflow-hidden rounded-2xl" 
+              align="end"
+              sideOffset={8}
+            >
+              <div className="p-4 border-b border-white/5 bg-gradient-to-br from-primary/10 to-transparent">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-primary/20">
+                      <Volume2 className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                    <h4 className="text-[11px] font-black uppercase tracking-widest text-foreground">Speech Engine</h4>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-7 w-7 text-destructive hover:bg-destructive/10 rounded-full" 
+                      onClick={stopSpeaking}
+                      title="Stop Current Speech"
+                    >
+                      <StopCircle className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-[10px] text-muted-foreground font-medium">Configure your personal Java mentor's voice</p>
+              </div>
+
+              <div className="p-4 space-y-5">
+                <div className="flex items-center justify-between bg-black/20 p-2 rounded-xl border border-white/5">
+                  <span className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground ml-1">Enable Voice</span>
+                  <Button
+                    variant={isVoiceEnabled ? "default" : "secondary"}
+                    size="sm"
+                    className="h-7 px-3 text-[10px] rounded-lg font-bold transition-all"
+                    onClick={() => {
+                      setIsVoiceEnabled(!isVoiceEnabled);
+                      if (isVoiceEnabled) window.speechSynthesis.cancel();
+                      toast.info(`Voice Tutor ${!isVoiceEnabled ? "Enabled" : "Disabled"}`);
+                    }}
+                  >
+                    {isVoiceEnabled ? "ON" : "OFF"}
                   </Button>
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-[10px] text-muted-foreground uppercase font-bold">Voice</Label>
+                  <Label className="text-[9px] text-primary uppercase font-black tracking-widest">Select Voice Profile</Label>
                   <Select value={selectedVoice} onValueChange={setSelectedVoice}>
-                    <SelectTrigger className="h-8 text-xs bg-background/50 border-panel-border">
+                    <SelectTrigger className="h-9 text-[11px] bg-background/40 border-panel-border rounded-xl focus:ring-1 focus:ring-primary/30">
                       <SelectValue placeholder="Select Voice" />
                     </SelectTrigger>
-                    <SelectContent className="max-h-48">
+                    <SelectContent className="bg-ide-sidebar border-panel-border max-h-56 rounded-xl">
                       {availableVoices.map(v => (
-                        <SelectItem key={v.name} value={v.name} className="text-xs">
-                          {v.name} ({v.lang})
+                        <SelectItem key={v.name} value={v.name} className="text-[11px] focus:bg-primary/10">
+                          <span className="font-medium">{v.name.split(' - ')[0]}</span>
+                          <span className="ml-2 opacity-40 text-[9px]">({v.lang})</span>
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <div className="flex justify-between text-[10px] text-muted-foreground uppercase font-bold">
-                    <Label>Speed</Label>
-                    <span>{voiceRate.toFixed(1)}x</span>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-[9px] text-primary uppercase font-black tracking-widest">
+                      <Label>Speed</Label>
+                      <span className="opacity-60">{voiceRate.toFixed(1)}x</span>
+                    </div>
+                    <Slider
+                      value={[voiceRate]}
+                      min={0.5}
+                      max={2.0}
+                      step={0.1}
+                      onValueChange={([v]) => setVoiceRate(v)}
+                      className="py-1 cursor-pointer"
+                    />
                   </div>
-                  <Slider
-                    value={[voiceRate]}
-                    min={0.5}
-                    max={2.0}
-                    step={0.1}
-                    onValueChange={([v]) => setVoiceRate(v)}
-                    className="py-2"
-                  />
-                </div>
 
-                <div className="space-y-2">
-                  <div className="flex justify-between text-[10px] text-muted-foreground uppercase font-bold">
-                    <Label>Pitch</Label>
-                    <span>{voicePitch.toFixed(1)}</span>
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-[9px] text-primary uppercase font-black tracking-widest">
+                      <Label>Pitch</Label>
+                      <span className="opacity-60">{voicePitch.toFixed(1)}</span>
+                    </div>
+                    <Slider
+                      value={[voicePitch]}
+                      min={0.5}
+                      max={2.0}
+                      step={0.1}
+                      onValueChange={([v]) => setVoicePitch(v)}
+                      className="py-1 cursor-pointer"
+                    />
                   </div>
-                  <Slider
-                    value={[voicePitch]}
-                    min={0.5}
-                    max={2.0}
-                    step={0.1}
-                    onValueChange={([v]) => setVoicePitch(v)}
-                    className="py-2"
-                  />
+                </div>
+              </div>
+
+              <div className="px-4 py-3 bg-primary/5 border-t border-white/5 flex items-center justify-between">
+                <span className="text-[9px] text-muted-foreground font-bold">JDK 17+ Optimized</span>
+                <div className="flex gap-1">
+                   <div className={`h-1.5 w-1.5 rounded-full ${isVoiceEnabled ? "bg-primary animate-pulse shadow-[0_0_8px_rgba(var(--primary),0.5)]" : "bg-muted-foreground/30"}`} />
                 </div>
               </div>
             </PopoverContent>
@@ -697,6 +744,21 @@ const AIChatPanel = ({
             key={msg.id}
             msg={msg}
             onInsertCode={handleInsertCode}
+            onRepeat={(text) => {
+              // Forced speak even if voice toggled off for manual replay
+              const utterance = new SpeechSynthesisUtterance(
+                text.replace(/```[\s\S]*?```/g, "").replace(/[*#]/g, ""),
+              );
+              utterance.rate = voiceRate;
+              utterance.pitch = voicePitch;
+              if (selectedVoice) {
+                const voice = availableVoices.find(v => v.name === selectedVoice);
+                if (voice) utterance.voice = voice;
+              }
+              window.speechSynthesis.cancel();
+              window.speechSynthesis.speak(utterance);
+              toast.info("Replaying speech...");
+            }}
           />
         ))}
 
