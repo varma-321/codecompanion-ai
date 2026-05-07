@@ -1178,10 +1178,10 @@ const ProblemWorkspace = () => {
         </div>
       )}
 
-    <header className="flex h-12 md:h-11 items-center gap-1.5 border-b border-primary/20 bg-[#7c3aed] text-white px-2 sm:px-3 overflow-x-auto scrollbar-none z-20 shrink-0">
-      <SidebarTrigger className="h-8 w-8 text-white hover:bg-white/10" />
-      <div className="h-4 w-px bg-white/20 mx-1 hidden md:block" />
-      <span className="text-xs font-bold tracking-tight text-white/90 mr-2 hidden lg:inline">AI CodeCompiler | DSA Lab</span>
+    <header className="flex h-12 md:h-11 items-center gap-1.5 border-b border-panel-border bg-background text-foreground px-2 sm:px-3 overflow-x-auto scrollbar-none z-20 shrink-0">
+      <SidebarTrigger className="h-8 w-8 text-muted-foreground hover:bg-accent" />
+      <div className="h-4 w-px bg-border mx-1 hidden md:block" />
+      <span className="text-xs font-bold tracking-tight text-foreground/80 mr-2 hidden lg:inline">AI CodeCompiler | DSA Lab</span>
       
       {/* Back button — hidden on small mobile to save space if needed, but keeping for now */}
       <Button 
@@ -1195,16 +1195,16 @@ const ProblemWorkspace = () => {
           else if (key?.startsWith('leetcode')) navigate('/leetcode150');
           else navigate(-1);
         }} 
-        className="h-8 md:h-7 gap-1 text-[11px] md:text-xs shrink-0 text-white hover:bg-white/10"
+        className="h-8 md:h-7 gap-1 text-[11px] md:text-xs shrink-0 text-muted-foreground hover:text-foreground hover:bg-accent"
       >
         <ArrowLeft className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Back</span>
       </Button>
 
-      <div className="h-4 w-px bg-white/20 hidden sm:block shrink-0" />
+      <div className="h-4 w-px bg-border hidden sm:block shrink-0" />
       
       <div className="flex items-center gap-1.5 min-w-0">
-        <span className="text-sm font-semibold text-white truncate max-w-[120px] xs:max-w-[150px] sm:max-w-[280px] tracking-tight">{roadmapProblem?.title || 'Problem'}</span>
-        <Badge variant="outline" className={`text-[9px] md:text-[10px] font-medium shrink-0 px-1.5 py-0 hidden xs:flex border-white/20 text-white ${getDifficultyBg(roadmapProblem?.difficulty || 'Medium')}`}>
+        <span className="text-sm font-semibold text-foreground truncate max-w-[120px] xs:max-w-[150px] sm:max-w-[280px] tracking-tight">{roadmapProblem?.title || 'Problem'}</span>
+        <Badge variant="outline" className={`text-[9px] md:text-[10px] font-medium shrink-0 px-1.5 py-0 hidden xs:flex border-panel-border ${getDifficultyBg(roadmapProblem?.difficulty || 'Medium')}`}>
           {roadmapProblem?.difficulty || 'Medium'}
         </Badge>
       </div>
@@ -1215,18 +1215,18 @@ const ProblemWorkspace = () => {
         
         {/* Desktop-only action buttons */}
         <div className="hidden md:flex items-center gap-1.5">
-          <Button variant="ghost" size="sm" onClick={() => setFocusMode(!focusMode)} className={`h-7 w-7 p-0 text-white hover:bg-white/10 ${focusMode ? 'bg-white/20' : ''}`} title="Focus Mode">
+          <Button variant="ghost" size="sm" onClick={() => setFocusMode(!focusMode)} className={`h-7 w-7 p-0 ${focusMode ? 'text-foreground bg-accent' : 'text-muted-foreground'}`} title="Focus Mode">
             {focusMode ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
           </Button>
-          <Button onClick={handleRun} disabled={isRunning || isRunningTests} size="sm" variant="outline" className="h-7 gap-1.5 text-xs font-medium bg-white/10 border-white/20 text-white hover:bg-white/20">
+          <Button onClick={handleRun} disabled={isRunning || isRunningTests} size="sm" variant="outline" className="h-7 gap-1.5 text-xs font-medium border-panel-border">
             {isRunning ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
             Run
           </Button>
-          <Button onClick={handleRunTests} disabled={isRunning || isRunningTests || detail.testCases.length === 0} size="sm" variant="secondary" className="h-7 gap-1.5 text-xs font-medium bg-white/10 border-white/20 text-white hover:bg-white/20">
+          <Button onClick={handleRunTests} disabled={isRunning || isRunningTests || detail.testCases.length === 0} size="sm" variant="secondary" className="h-7 gap-1.5 text-xs font-medium bg-secondary/50 border-panel-border">
             {isRunningTests ? <Loader2 className="h-3 w-3 animate-spin" /> : <FlaskConical className="h-3 w-3" />}
             Test
           </Button>
-          <Button onClick={handleSubmitCode} disabled={isRunning || isRunningTests || detail.testCases.length === 0} size="sm" className="h-7 gap-1.5 text-xs font-semibold bg-emerald-500 hover:bg-emerald-600 text-white">
+          <Button onClick={handleSubmitCode} disabled={isRunning || isRunningTests || detail.testCases.length === 0} size="sm" className="h-7 gap-1.5 text-xs font-semibold bg-success hover:bg-success/90 text-success-foreground">
             {isRunningTests ? <Loader2 className="h-3 w-3 animate-spin" /> : <Code2 className="h-3 w-3" />}
             Submit
           </Button>
