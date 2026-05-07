@@ -1350,11 +1350,11 @@ const ProblemWorkspace = () => {
     </header>
 
     {/* Main layout: responsive columns */}
-    <div className="flex flex-1 overflow-hidden flex-col md:flex-row pb-16 md:pb-0">
+    <div className="flex flex-1 overflow-hidden flex-col md:flex-row pb-32 md:pb-0">
       {/* MOBILE CONTENT: Tab-based view */}
       <div className="md:hidden flex-1 flex flex-col overflow-hidden relative">
         {mobileTab === 'problem' && (
-          <ScrollArea className="flex-1 bg-background pb-20">
+          <ScrollArea className="flex-1 bg-background pb-32">
             <div className="p-4 space-y-5">
               <div>
                 <h2 className="text-xl font-bold text-foreground leading-tight">{roadmapProblem?.title}</h2>
@@ -1458,7 +1458,7 @@ const ProblemWorkspace = () => {
                  <span className="text-[10px] font-mono font-bold text-muted-foreground">JAVA</span>
               </div>
             </div>
-            <div className="flex-1 relative pb-20">
+            <div className="flex-1 relative pb-32">
               {APPROACHES.map(approach => (
                 <div 
                   key={approach.key} 
@@ -1570,7 +1570,7 @@ const ProblemWorkspace = () => {
               )}
               {bottomTab === 'analysis' && (
                 <ScrollArea className="h-full">
-                  <div className="p-4 space-y-4 pb-20">
+                  <div className="p-4 space-y-4 pb-36">
                     {isAnalyzing ? (
                       <div className="flex flex-col items-center justify-center py-12 gap-3">
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -1656,7 +1656,7 @@ const ProblemWorkspace = () => {
         )}
 
         {/* WORKSPACE MOBILE BOTTOM NAV - IDE Mode Selector (Fixed ABOVE global nav) */}
-        <nav className="fixed bottom-16 left-0 right-0 h-16 bg-card/95 backdrop-blur-xl border-t border-border z-[100] flex items-center justify-around px-2 pb-safe shadow-[0_-8px_20px_rgba(0,0,0,0.15)]">
+        <nav className="fixed bottom-16 left-0 right-0 h-16 bg-card/95 backdrop-blur-xl border-t border-border z-[100] flex items-center justify-around px-2 shadow-[0_-8px_20px_rgba(0,0,0,0.15)]">
           <button 
             onClick={() => setMobileTab('problem')} 
             className={`flex flex-col items-center justify-center gap-1 flex-1 h-full transition-all duration-300 ${mobileTab === 'problem' ? 'text-primary' : 'text-muted-foreground'}`}
