@@ -39,6 +39,7 @@ import { LEETCODE_TOP150_ROADMAP } from '@/lib/leetcode-top150-data';
 import { getProblemDetail, PROBLEM_DETAILS, type ProblemDetail } from '@/lib/striver-problem-details';
 import { executeJavaCode, stopExecution, type ExecutionStatus as ExecStatusType } from '@/lib/executor';
 import ReactMarkdown from 'react-markdown';
+import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 
 
 interface EnhancedDetail extends ProblemDetail {
@@ -1177,6 +1178,8 @@ const ProblemWorkspace = () => {
       )}
       {/* Header — refined LeetCode-style top bar */}
       <header className="flex h-11 items-center gap-2 border-b border-panel-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 px-3 overflow-x-auto scrollbar-none">
+        <SidebarTrigger className="-ml-1.5 h-8 w-8" />
+        <div className="h-4 w-px bg-border mx-0.5 md:hidden" />
         <Button 
           variant="ghost" 
           size="sm" 

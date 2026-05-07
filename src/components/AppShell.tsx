@@ -10,7 +10,7 @@ import {
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
   SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
-  SidebarProvider, useSidebar,
+  SidebarProvider, SidebarTrigger, useSidebar,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -206,6 +206,8 @@ function Topbar({ title, subtitle, actions }: { title?: string; subtitle?: strin
 
   return (
     <header className="sticky top-0 z-30 h-14 flex items-center gap-3 px-4 border-b border-border glass">
+      <SidebarTrigger className="-ml-1" />
+      <div className="h-4 w-px bg-border mx-1 md:hidden" />
       {(title || subtitle) && (
         <div className="min-w-0 flex-1">
           {title && <div className="text-[13px] font-semibold tracking-tight truncate leading-none">{title}</div>}
