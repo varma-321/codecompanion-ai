@@ -1158,7 +1158,7 @@ const ProblemWorkspace = () => {
   ];
 
   return (
-    <div className="flex h-screen flex-col bg-background">
+    <div className="flex h-full flex-col bg-background">
       {contestMode && (
         <div className="bg-warning/10 border-b border-warning/20 px-4 py-1.5 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -1180,8 +1180,6 @@ const ProblemWorkspace = () => {
 
     {/* Header - refined LeetCode-style top bar */}
     <header className="flex h-12 md:h-11 items-center gap-1.5 border-b border-panel-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 px-2 sm:px-3 overflow-x-auto scrollbar-none z-20">
-      <SidebarTrigger className="-ml-1.5 h-8 w-8" />
-      <div className="h-4 w-px bg-border mx-0.5 md:hidden shrink-0" />
       
       {/* Back button — hidden on small mobile to save space if needed, but keeping for now */}
       <Button 
@@ -1451,15 +1449,15 @@ const ProblemWorkspace = () => {
 
         {mobileTab === 'results' && (
           <div className="flex-1 flex flex-col overflow-hidden bg-background">
-            <div className="flex items-center border-b border-panel-border bg-card/60 px-2 h-9 overflow-x-auto scrollbar-none shrink-0">
+            <div className="flex items-center gap-1 border-b border-panel-border bg-card/60 px-2 h-11 overflow-x-auto scrollbar-none shrink-0 no-scrollbar">
               {tabItems.map(tab => (
                 <button
                   key={tab.key}
                   onClick={() => setBottomTab(tab.key)}
-                  className={`relative px-3 h-9 text-[10px] font-bold transition-colors whitespace-nowrap shrink-0 ${
+                  className={`relative px-4 h-8 rounded-full text-[11px] font-bold transition-all whitespace-nowrap shrink-0 ${
                     bottomTab === tab.key
-                      ? 'text-foreground after:absolute after:left-1 after:right-1 after:bottom-0 after:h-0.5 after:bg-foreground after:rounded-full'
-                      : 'text-muted-foreground'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:bg-secondary/80'
                   }`}
                 >
                   {tab.label}
@@ -1623,44 +1621,47 @@ const ProblemWorkspace = () => {
           </div>
         )}
 
-        {/* WORKSPACE MOBILE BOTTOM NAV */}
-        <nav className="fixed bottom-0 left-0 right-0 h-16 bg-card/95 backdrop-blur-xl border-t border-border z-30 flex items-center justify-around px-2 pb-safe">
+        {/* WORKSPACE MOBILE BOTTOM NAV - IDE Mode Selector */}
+        <nav className="fixed bottom-0 left-0 right-0 h-16 bg-card/95 backdrop-blur-xl border-t border-border z-40 flex items-center justify-around px-2 pb-safe shadow-[0_-4px_12px_rgba(0,0,0,0.1)]">
           <button 
             onClick={() => setMobileTab('problem')} 
-            className={`flex flex-col items-center gap-1 flex-1 transition-all ${mobileTab === 'problem' ? 'text-primary' : 'text-muted-foreground'}`}
+            className={`flex flex-col items-center justify-center gap-1 flex-1 h-full transition-all duration-300 ${mobileTab === 'problem' ? 'text-primary' : 'text-muted-foreground'}`}
           >
-            <div className={`p-1.5 rounded-xl ${mobileTab === 'problem' ? 'bg-primary/10' : ''}`}>
+            <div className={`p-1.5 rounded-xl transition-colors ${mobileTab === 'problem' ? 'bg-primary/15' : ''}`}>
               <FileText className={`h-5 w-5 ${mobileTab === 'problem' ? 'stroke-[2.5px]' : ''}`} />
             </div>
-            <span className="text-[9px] font-bold uppercase tracking-wider">Problem</span>
+            <span className={`text-[10px] font-bold uppercase tracking-wider ${mobileTab === 'problem' ? 'opacity-100' : 'opacity-60'}`}>Problem</span>
           </button>
+          
           <button 
             onClick={() => setMobileTab('editor')} 
-            className={`flex flex-col items-center gap-1 flex-1 transition-all ${mobileTab === 'editor' ? 'text-primary' : 'text-muted-foreground'}`}
+            className={`flex flex-col items-center justify-center gap-1 flex-1 h-full transition-all duration-300 ${mobileTab === 'editor' ? 'text-primary' : 'text-muted-foreground'}`}
           >
-            <div className={`p-1.5 rounded-xl ${mobileTab === 'editor' ? 'bg-primary/10' : ''}`}>
+            <div className={`p-1.5 rounded-xl transition-colors ${mobileTab === 'editor' ? 'bg-primary/15' : ''}`}>
               <Code2 className={`h-5 w-5 ${mobileTab === 'editor' ? 'stroke-[2.5px]' : ''}`} />
             </div>
-            <span className="text-[9px] font-bold uppercase tracking-wider">Code</span>
+            <span className={`text-[10px] font-bold uppercase tracking-wider ${mobileTab === 'editor' ? 'opacity-100' : 'opacity-60'}`}>Code</span>
           </button>
+          
           <button 
             onClick={() => setMobileTab('results')} 
-            className={`flex flex-col items-center gap-1 flex-1 transition-all ${mobileTab === 'results' ? 'text-primary' : 'text-muted-foreground'}`}
+            className={`flex flex-col items-center justify-center gap-1 flex-1 h-full transition-all duration-300 ${mobileTab === 'results' ? 'text-primary' : 'text-muted-foreground'}`}
           >
-            <div className={`p-1.5 rounded-xl ${mobileTab === 'results' ? 'bg-primary/10' : ''}`}>
+            <div className={`p-1.5 rounded-xl transition-colors ${mobileTab === 'results' ? 'bg-primary/15' : ''}`}>
               <FlaskConical className={`h-5 w-5 ${mobileTab === 'results' ? 'stroke-[2.5px]' : ''}`} />
             </div>
-            <span className="text-[9px] font-bold uppercase tracking-wider">Results</span>
+            <span className={`text-[10px] font-bold uppercase tracking-wider ${mobileTab === 'results' ? 'opacity-100' : 'opacity-60'}`}>Results</span>
           </button>
+          
           {!contestMode && !generatorMode && (
             <button 
               onClick={() => setMobileTab('ai')} 
-              className={`flex flex-col items-center gap-1 flex-1 transition-all ${mobileTab === 'ai' ? 'text-primary' : 'text-muted-foreground'}`}
+              className={`flex flex-col items-center justify-center gap-1 flex-1 h-full transition-all duration-300 ${mobileTab === 'ai' ? 'text-primary' : 'text-muted-foreground'}`}
             >
-              <div className={`p-1.5 rounded-xl ${mobileTab === 'ai' ? 'bg-primary/10' : ''}`}>
+              <div className={`p-1.5 rounded-xl transition-colors ${mobileTab === 'ai' ? 'bg-primary/15' : ''}`}>
                 <Bot className={`h-5 w-5 ${mobileTab === 'ai' ? 'stroke-[2.5px]' : ''}`} />
               </div>
-              <span className="text-[9px] font-bold uppercase tracking-wider">AI Chat</span>
+              <span className={`text-[10px] font-bold uppercase tracking-wider ${mobileTab === 'ai' ? 'opacity-100' : 'opacity-60'}`}>AI Tutor</span>
             </button>
           )}
         </nav>
@@ -1781,7 +1782,7 @@ const ProblemWorkspace = () => {
         )}
 
         {/* Center: Code Editor + Bottom */}
-        <div className="flex flex-1 flex-col overflow-hidden">
+        <div className="hidden md:flex flex-1 flex-col overflow-hidden">
           {!showDescription && (
             <Button variant="ghost" size="sm" onClick={() => setShowDescription(true)} className="absolute z-10 left-1 top-14 h-6 text-[10px]">
               📄 Show

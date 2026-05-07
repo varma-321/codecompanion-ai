@@ -62,7 +62,7 @@ const shell = (element: ReactNode, title?: string, subtitle?: string) => (
     {element}
   </AppShell>
 );
-const bareShell = (element: ReactNode) => <AppShell bare>{element}</AppShell>;
+const bareShell = (element: ReactNode) => <AppShell bare hideMobileNav>{element}</AppShell>;
 
 const ProblemWorkspaceLoader = () => {
   const { key } = useParams();
