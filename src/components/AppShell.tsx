@@ -248,13 +248,23 @@ function Topbar({ title, subtitle, actions }: { title?: string; subtitle?: strin
 }
 
 export default function AppShell({ children, title, subtitle, actions, bare = false }: AppShellProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const mobileNavItems = [
+    { title: 'Home', url: '/', icon: Home },
+    { title: 'Modules', url: '/modules', icon: LayoutGrid },
+    { title: 'Search', url: '/search', icon: Search },
+    { title: 'Profile', url: '/profile', icon: User },
+  ];
+
   return (
     <SidebarProvider defaultOpen={false}>
-      <div className="min-h-screen flex w-full bg-background overflow-hidden">
+      <div className="min-h-screen flex w-full bg-background overflow-hidden relative">
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0 bg-background/50">
           {!bare && <Topbar title={title} subtitle={subtitle} actions={actions} />}
-          <main className="app-shell-main flex-1 min-w-0 overflow-auto relative">
+          <main className="app-shell-main flex-1 min-w-0 overflow-auto relative pb-16 md:pb-0">
             {bare ? (
               <div className="h-full w-full animate-in-up">
                 {children}
@@ -266,6 +276,27 @@ export default function AppShell({ children, title, subtitle, actions, bare = fa
             )}
           </main>
         </div>
+
+        {/* Mobile Bottom Navigation */}
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-card/80 backdrop-blur-xl border-t border-border z-50 flex items-center justify-around px-4 pb-safe">
+          {mobileNavItems.map((item) => {
+            const isActive = location.pathname === item.url || (item.url !== '/' && location.pathname.startsWith(item.url));
+            return (
+              <button
+                key={item.url}
+                onClick={() => navigate(item.url)}
+                className={`flex flex-col items-center gap-1 transition-all duration-200 ${
+                  isActive ? 'text-primary' : 'text-muted-foreground'
+                }`}
+              >
+                <div className={`p-1.5 rounded-xl transition-colors ${isActive ? 'bg-primary/10' : ''}`}>
+                  <item.icon className={`h-5 w-5 ${isActive ? 'stroke-[2.5px]' : 'stroke-[2px]'}`} />
+                </div>
+                <span className="text-[10px] font-medium tracking-tight">{item.title}</span>
+              </button>
+            );
+          })}
+        </nav>
       </div>
     </SidebarProvider>
   );

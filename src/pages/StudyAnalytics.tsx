@@ -135,19 +135,63 @@ const StudyAnalytics = () => {
               </div>
 
               {/* Activity chart */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-sm"><TrendingUp className="h-4 w-4" /> 14-Day Activity</CardTitle>
+              <Card className="border-border bg-card/50 backdrop-blur-sm overflow-hidden">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-sm">
+                      <div className="p-1 rounded-md bg-primary/10">
+                        <TrendingUp className="h-4 w-4 text-primary" />
+                      </div>
+                      Activity (Last 14 Days)
+                    </CardTitle>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-1.5">
+                        <div className="h-2 w-2 rounded-full bg-primary" />
+                        <span className="text-[10px] text-muted-foreground font-bold uppercase">Solves</span>
+                      </div>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-end gap-2 h-28">
-                    {stats.recentActivity.map((day, i) => (
-                      <div key={i} className="flex flex-1 flex-col items-center gap-1 group relative">
-                        <div className="w-full rounded-t bg-primary/70 hover:bg-primary transition-all min-h-[2px]" style={{ height: `${Math.max(2, (day.count / maxActivity) * 100)}%` }} />
-                        <span className="text-[8px] text-muted-foreground">{day.date.split(',')[0]}</span>
-                        <div className="hidden group-hover:block absolute -top-6 bg-popover border border-border rounded px-1.5 py-0.5 text-[9px] z-10">{day.count}</div>
-                      </div>
-                    ))}
+                  <div className="flex items-end gap-1.5 sm:gap-3 h-32 pt-6 px-1">
+                    {stats.recentActivity.map((day, i) => {
+                      const barHeight = Math.max(4, (day.count / maxActivity) * 100);
+                      return (
+                        <div key={i} className="flex-1 flex flex-col items-center gap-2 group h-full">
+                          <div className="relative w-full flex-1 flex flex-col justify-end">
+                            {/* Tooltip */}
+                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none z-20">
+                              <div className="bg-primary text-primary-foreground text-[10px] font-black px-2 py-1 rounded-lg shadow-xl whitespace-nowrap">
+                                {day.count} Solves
+                              </div>
+                              <div className="w-1.5 h-1.5 bg-primary rotate-45 mx-auto -mt-1" />
+                            </div>
+                            
+                            {/* Bar */}
+                            <div 
+                              className="w-full rounded-t-lg bg-gradient-to-t from-primary/40 to-primary hover:from-primary/60 hover:to-primary hover:shadow-[0_0_15px_rgba(var(--primary),0.4)] transition-all duration-300 relative group-hover:scale-x-105 origin-bottom"
+                              style={{ 
+                                height: `${barHeight}%`,
+                                transitionDelay: `${i * 30}ms`
+                              }}
+                            >
+                              {day.count > 0 && (
+                                <div className="absolute top-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-white/40" />
+                              )}
+                            </div>
+                          </div>
+                          
+                          <div className="flex flex-col items-center">
+                            <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-tighter">
+                              {day.date.split(',')[0]}
+                            </span>
+                            <span className="text-[7px] text-muted-foreground/30 font-medium">
+                              {day.date.split(' ')[2]}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>
@@ -157,14 +201,17 @@ const StudyAnalytics = () => {
                   <CardHeader><CardTitle className="text-sm">By Topic</CardTitle></CardHeader>
                   <CardContent className="space-y-2">
                     {Object.entries(stats.topicCounts).length === 0 ? (
-                      <p className="text-xs text-muted-foreground">No data yet</p>
+                      <p className="text-xs text-muted-foreground py-4 text-center">No problem data yet</p>
                     ) : Object.entries(stats.topicCounts).sort((a, b) => b[1] - a[1]).map(([topic, count]) => (
-                      <div key={topic} className="flex items-center gap-2">
-                        <span className="w-24 text-xs capitalize text-muted-foreground truncate">{topic}</span>
-                        <div className="flex-1 rounded-full bg-secondary h-2">
-                          <div className="h-2 rounded-full bg-primary/70 transition-all" style={{ width: `${(count / stats.totalProblems) * 100}%` }} />
+                      <div key={topic} className="flex items-center gap-3 group">
+                        <span className="w-24 text-[11px] font-bold capitalize text-muted-foreground truncate group-hover:text-primary transition-colors">{topic}</span>
+                        <div className="flex-1 rounded-full bg-secondary/30 h-2.5 overflow-hidden border border-white/5">
+                          <div 
+                            className="h-full rounded-full bg-gradient-to-r from-primary/60 to-primary transition-all duration-500" 
+                            style={{ width: `${stats.totalProblems ? (count / stats.totalProblems) * 100 : 0}%` }} 
+                          />
                         </div>
-                        <span className="text-xs font-bold w-6 text-right">{count}</span>
+                        <span className="text-[11px] font-black w-8 text-right text-foreground">{count}</span>
                       </div>
                     ))}
                   </CardContent>
@@ -174,18 +221,21 @@ const StudyAnalytics = () => {
                   <CardHeader><CardTitle className="text-sm">By Difficulty</CardTitle></CardHeader>
                   <CardContent className="space-y-3">
                     {[
-                      { name: 'easy', color: 'bg-emerald-500' },
-                      { name: 'medium', color: 'bg-amber-500' },
-                      { name: 'hard', color: 'bg-red-500' },
-                    ].map(({ name, color }) => {
+                      { name: 'easy', color: 'bg-emerald-500', from: 'from-emerald-500/60', to: 'to-emerald-500' },
+                      { name: 'medium', color: 'bg-amber-500', from: 'from-amber-500/60', to: 'to-amber-500' },
+                      { name: 'hard', color: 'bg-red-500', from: 'from-red-500/60', to: 'to-red-500' },
+                    ].map(({ name, color, from, to }) => {
                       const count = stats.difficultyCounts[name] || 0;
                       return (
-                        <div key={name} className="flex items-center gap-2">
-                          <span className="w-16 text-xs capitalize text-muted-foreground">{name}</span>
-                          <div className="flex-1 rounded-full bg-secondary h-2">
-                            <div className={`h-2 rounded-full ${color} transition-all`} style={{ width: `${stats.totalProblems ? (count / stats.totalProblems) * 100 : 0}%` }} />
+                        <div key={name} className="flex items-center gap-3 group">
+                          <span className="w-16 text-[11px] font-bold capitalize text-muted-foreground group-hover:text-foreground transition-colors">{name}</span>
+                          <div className="flex-1 rounded-full bg-secondary/30 h-2.5 overflow-hidden border border-white/5">
+                            <div 
+                              className={`h-full rounded-full bg-gradient-to-r ${from} ${to} transition-all duration-500 shadow-[0_0_8px_rgba(0,0,0,0.2)]`} 
+                              style={{ width: `${stats.totalProblems ? (count / stats.totalProblems) * 100 : 0}%` }} 
+                            />
                           </div>
-                          <span className="text-xs font-bold w-6 text-right">{count}</span>
+                          <span className="text-[11px] font-black w-8 text-right text-foreground">{count}</span>
                         </div>
                       );
                     })}

@@ -836,7 +836,7 @@ const AIChatPanel = ({
           in the upper "AI" dropdown in the workspace header. */}
 
 
-      <div className="p-3 bg-ide-sidebar border-t border-panel-border backdrop-blur-2xl">
+      <div className="p-3 bg-ide-sidebar border-t border-panel-border backdrop-blur-2xl pb-safe">
         <div className="relative group transition-all duration-300 focus-within:ring-2 focus-within:ring-primary/20 rounded-2xl overflow-hidden shadow-sm border border-white/5 inset-shadow-sm">
           <textarea
             ref={inputRef}

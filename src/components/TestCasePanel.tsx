@@ -218,48 +218,62 @@ const TestCasePanel = ({ testCases, testResults, onAdd, onUpdate, onDelete, onGe
       </ScrollArea>
 
       {/* Add new test case */}
-      <div className="border-t border-panel-border p-2 space-y-1">
-        <div className="flex items-center gap-1 mb-1">
-          <Variable className="h-3 w-3 text-primary" />
-          <span className="text-[10px] font-semibold text-muted-foreground">New Test Case</span>
-        </div>
-        {newVars.map((v, idx) => (
-          <div key={idx} className="flex gap-1 items-center">
-            <TypeSelect value={v.type} onChange={val => updateNewVar(idx, 'type', val)} />
-            <Input
-              value={v.name}
-              onChange={e => updateNewVar(idx, 'name', e.target.value)}
-              placeholder="var"
-              className="h-7 text-xs w-16 shrink-0 font-mono"
-            />
-            <span className="text-xs text-muted-foreground">=</span>
-            <Input
-              value={v.value}
-              onChange={e => updateNewVar(idx, 'value', e.target.value)}
-              placeholder="e.g. [2,7,11,15]"
-              className="h-7 text-xs flex-1 font-mono"
-            />
-            {newVars.length > 1 && (
-              <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => removeNewVar(idx)}>
-                <X className="h-3 w-3" />
-              </Button>
-            )}
+      <div className="border-t border-panel-border p-3 space-y-3 bg-card/50">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-lg bg-primary/10">
+            <Variable className="h-3.5 w-3.5 text-primary" />
           </div>
-        ))}
-        <div className="flex gap-1 items-center">
-          <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1" onClick={addNewVar}>
-            <Plus className="h-2.5 w-2.5" /> Variable
+          <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">New Test Case</span>
+        </div>
+        
+        <div className="space-y-2">
+          {newVars.map((v, idx) => (
+            <div key={idx} className="flex flex-col sm:flex-row gap-2 p-2 rounded-xl border border-panel-border/50 bg-background/50">
+              <div className="flex gap-2 flex-1">
+                <TypeSelect value={v.type} onChange={val => updateNewVar(idx, 'type', val)} />
+                <Input
+                  value={v.name}
+                  onChange={e => updateNewVar(idx, 'name', e.target.value)}
+                  placeholder="var name"
+                  className="h-8 text-xs w-20 shrink-0 font-mono bg-background"
+                />
+                <div className="hidden sm:flex items-center text-muted-foreground px-1">=</div>
+              </div>
+              <div className="flex gap-2 flex-[2]">
+                <Input
+                  value={v.value}
+                  onChange={e => updateNewVar(idx, 'value', e.target.value)}
+                  placeholder="value (e.g. [1, 2, 3])"
+                  className="h-8 text-xs flex-1 font-mono bg-background"
+                />
+                {newVars.length > 1 && (
+                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 rounded-lg hover:bg-destructive/10 hover:text-destructive" onClick={() => removeNewVar(idx)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-between gap-3 pt-1">
+          <Button variant="ghost" size="sm" className="h-8 text-[11px] font-bold gap-1.5 px-3 rounded-lg hover:bg-primary/5" onClick={addNewVar}>
+            <Plus className="h-3.5 w-3.5 text-primary" /> Add Variable
           </Button>
         </div>
-        <div className="flex gap-1">
-          <Input
-            value={newExpected}
-            onChange={e => setNewExpected(e.target.value)}
-            placeholder="Expected output e.g. [0,1]"
-            className="h-7 text-xs flex-1 font-mono"
-          />
-          <Button size="sm" onClick={handleAdd} className="h-7 px-3">
-            <Plus className="h-3 w-3 mr-1" /> Add
+
+        <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-panel-border/30">
+          <div className="flex flex-col gap-1.5 flex-1">
+            <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Expected Output</label>
+            <Input
+              value={newExpected}
+              onChange={e => setNewExpected(e.target.value)}
+              placeholder="e.g. 10 or [0, 1]"
+              className="h-9 text-xs font-mono bg-background border-primary/10 focus:border-primary/30"
+            />
+          </div>
+          <Button size="sm" onClick={handleAdd} className="h-9 sm:mt-auto px-6 font-bold bg-primary hover:bg-primary/90 rounded-lg shadow-sm">
+            <Plus className="h-4 w-4 mr-1.5" /> Create Case
           </Button>
         </div>
       </div>

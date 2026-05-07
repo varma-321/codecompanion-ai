@@ -62,8 +62,7 @@ const Dashboard = () => {
   const [bottomTab, setBottomTab] = useState<'console' | 'tests' | 'results' | 'notes' | 'solutions' | 'streak' | 'daily'>('console');
 
   // Mobile navigation state
-  const [showMobileExplorer, setShowMobileExplorer] = useState(false);
-  const [showMobileAI, setShowMobileAI] = useState(false);
+  const [mobileTab, setMobileTab] = useState<'explorer' | 'editor' | 'results' | 'ai'>('editor');
 
   // Execution analytics
   const [execTimeMs, setExecTimeMs] = useState<number | null>(null);
@@ -466,61 +465,170 @@ const Dashboard = () => {
         onAIToggle={setAiEnabled}
         isAutoSaving={isAutoSaving}
         codeIsDirty={codeIsDirty}
-        leftMobileActions={
-          <Button variant="ghost" size="icon" className="md:hidden h-8 w-8 text-muted-foreground" onClick={() => setShowMobileExplorer(true)}>
-            <FolderOpen className="h-4 w-4" />
-          </Button>
-        }
-        rightMobileActions={
-          aiEnabled ? (
-            <Button variant="ghost" size="icon" className="lg:hidden h-8 w-8 text-muted-foreground" onClick={() => setShowMobileAI(true)}>
-              <MessageSquare className="h-4 w-4" />
-            </Button>
-          ) : null
-        }
       />
 
-      {/* Mobile overlays are handled via Toolbar leftMobileActions / rightMobileActions */}
-      {showMobileExplorer && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 md:hidden" onClick={() => setShowMobileExplorer(false)} />
-      )}
-      <div className={`fixed inset-y-0 left-0 z-50 w-[280px] bg-background border-r shadow-2xl transition-transform duration-300 ease-in-out md:hidden flex flex-col ${showMobileExplorer ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="flex items-center justify-between p-4 border-b">
-          <span className="font-semibold text-sm">Explorer</span>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowMobileExplorer(false)}>
-            <Square className="h-4 w-4" />
-          </Button>
-        </div>
-        <div className="flex-1 overflow-hidden">
-          <ProblemExplorer
-            problems={problems}
-            activeProblemId={activeProblem?.id || null}
-            onSelect={(p) => { handleSelectProblem(p); setShowMobileExplorer(false); }}
-            onRefresh={refreshProblems}
-          />
-        </div>
-      </div>
+      <div className="flex flex-1 overflow-hidden flex-col md:flex-row pb-16 md:pb-0">
+        {/* MOBILE VIEW */}
+        <div className="md:hidden flex-1 flex flex-col overflow-hidden">
+          {mobileTab === 'explorer' && (
+            <div className="flex-1 flex flex-col overflow-hidden bg-background">
+              <div className="p-4 border-b border-border bg-card/50 flex items-center justify-between">
+                <span className="font-bold text-sm tracking-tight">Problem Explorer</span>
+                <Button variant="ghost" size="sm" onClick={refreshProblems} className="h-8 w-8 p-0">
+                   <Loader2 className={`h-4 w-4 ${isRunning ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <ProblemExplorer
+                  problems={problems}
+                  activeProblemId={activeProblem?.id || null}
+                  onSelect={(p) => { handleSelectProblem(p); setMobileTab('editor'); }}
+                  onRefresh={refreshProblems}
+                />
+              </div>
+            </div>
+          )}
 
-      {showMobileAI && aiEnabled && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 lg:hidden" onClick={() => setShowMobileAI(false)} />
-      )}
-      <div className={`fixed inset-y-0 right-0 z-50 w-[85vw] sm:w-[380px] bg-background border-l shadow-2xl transition-transform duration-300 ease-in-out lg:hidden flex flex-col ${showMobileAI ? 'translate-x-0' : 'translate-x-full'}`}>
-        <div className="flex items-center justify-between p-4 border-b">
-          <span className="font-semibold text-sm flex items-center gap-2"><MessageSquare className="h-4 w-4 text-primary" /> AI Assistant</span>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowMobileAI(false)}>
-            <Square className="h-4 w-4" />
-          </Button>
+          {mobileTab === 'editor' && (
+            <div className="flex-1 flex flex-col overflow-hidden p-2">
+              <div className={`overflow-hidden rounded-xl border border-border bg-card shadow-sm flex-1`}>
+                <CodeEditor code={code} onChange={setCode} />
+              </div>
+              <div className="flex items-center gap-2 mt-2 bg-card/80 backdrop-blur-sm px-2 py-2 rounded-xl border border-border">
+                <Button onClick={handleRun} disabled={isRunning || isRunningTests} size="sm" className="flex-1 h-10 gap-2 font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm">
+                  {isRunning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" fill="currentColor" />}
+                  Run
+                </Button>
+                <Button onClick={handleSave} disabled={isSaving} size="sm" variant="outline" className="flex-1 h-10 gap-2 font-bold border-primary/20 rounded-lg">
+                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  Save
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {mobileTab === 'results' && (
+            <div className="flex-1 flex flex-col overflow-hidden bg-background">
+              <div className="flex items-center border-b border-border bg-card/60 px-1 overflow-x-auto scrollbar-none shrink-0">
+                {(['console', 'tests', 'results', 'notes', 'solutions', 'streak', 'daily'] as const).map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setBottomTab(tab)}
+                    className={`px-4 py-3 text-[10px] font-bold tracking-wider uppercase transition-colors whitespace-nowrap relative ${
+                      bottomTab === tab
+                        ? 'text-primary after:absolute after:bottom-0 after:left-2 after:right-2 after:h-0.5 after:bg-primary after:rounded-full'
+                        : 'text-muted-foreground'
+                    }`}
+                  >
+                    {TAB_LABELS[tab] || tab}
+                  </button>
+                ))}
+              </div>
+              <div className="flex-1 overflow-hidden">
+                {bottomTab === 'console' && (
+                   <ConsolePanel
+                    entries={consoleEntries}
+                    isRunning={isRunning || isRunningTests}
+                    onClear={() => { setConsoleEntries([]); setWaitingForInput(false); stdinResolverRef.current = null; }}
+                    isCollapsed={false}
+                    onToggleCollapse={() => {}}
+                    isFullscreen={false}
+                    onToggleFullscreen={() => {}}
+                    waitingForInput={waitingForInput}
+                    onStdinSubmit={handleStdinSubmit}
+                  />
+                )}
+                {bottomTab === 'tests' && (
+                  <TestCasePanel
+                    testCases={testCases}
+                    testResults={testResults}
+                    onAdd={handleAddTestCase}
+                    onUpdate={handleUpdateTestCase}
+                    onDelete={handleDeleteTestCase}
+                    onGenerateAI={handleGenerateAITests}
+                    isGenerating={isGeneratingTests}
+                  />
+                )}
+                {bottomTab === 'results' && (
+                  <ScrollArea className="h-full">
+                    <div className="p-3 pb-20">
+                      {testResults.length > 0 ? (
+                        <TestResultsTable results={testResults} />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-xs text-muted-foreground py-20">
+                          Run tests to see results
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                )}
+                {bottomTab === 'notes' && (
+                  <div className="flex-1 overflow-hidden h-full">
+                    <NotesPanel notes={(activeProblem as any)?.notes || ''} onSave={handleSaveNotes} />
+                  </div>
+                )}
+                {bottomTab === 'solutions' && (
+                   <div className="h-full overflow-hidden">
+                      <SolutionComparison code={code} problemTitle={activeProblem?.title} />
+                   </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {mobileTab === 'ai' && (
+            <div className="flex-1 flex flex-col overflow-hidden bg-background">
+              <AIChatPanel 
+                code={code} 
+                problemId={activeProblem?.id || null} 
+                problemDescription={activeProblem?.description}
+                aiEnabled={aiEnabled} 
+              />
+            </div>
+          )}
+
+          {/* DASHBOARD MOBILE BOTTOM NAV */}
+          <nav className="fixed bottom-0 left-0 right-0 h-16 bg-card/95 backdrop-blur-xl border-t border-border z-30 flex items-center justify-around px-2 pb-safe">
+            <button 
+              onClick={() => setMobileTab('explorer')} 
+              className={`flex flex-col items-center gap-1 flex-1 transition-all ${mobileTab === 'explorer' ? 'text-primary' : 'text-muted-foreground'}`}
+            >
+              <div className={`p-1.5 rounded-xl ${mobileTab === 'explorer' ? 'bg-primary/10' : ''}`}>
+                <FolderOpen className={`h-5 w-5 ${mobileTab === 'explorer' ? 'stroke-[2.5px]' : ''}`} />
+              </div>
+              <span className="text-[9px] font-bold uppercase tracking-wider">Explorer</span>
+            </button>
+            <button 
+              onClick={() => setMobileTab('editor')} 
+              className={`flex flex-col items-center gap-1 flex-1 transition-all ${mobileTab === 'editor' ? 'text-primary' : 'text-muted-foreground'}`}
+            >
+              <div className={`p-1.5 rounded-xl ${mobileTab === 'editor' ? 'bg-primary/10' : ''}`}>
+                <Code2 className={`h-5 w-5 ${mobileTab === 'editor' ? 'stroke-[2.5px]' : ''}`} />
+              </div>
+              <span className="text-[9px] font-bold uppercase tracking-wider">Code</span>
+            </button>
+            <button 
+              onClick={() => setMobileTab('results')} 
+              className={`flex flex-col items-center gap-1 flex-1 transition-all ${mobileTab === 'results' ? 'text-primary' : 'text-muted-foreground'}`}
+            >
+              <div className={`p-1.5 rounded-xl ${mobileTab === 'results' ? 'bg-primary/10' : ''}`}>
+                <FlaskConical className={`h-5 w-5 ${mobileTab === 'results' ? 'stroke-[2.5px]' : ''}`} />
+              </div>
+              <span className="text-[9px] font-bold uppercase tracking-wider">Output</span>
+            </button>
+            <button 
+              onClick={() => setMobileTab('ai')} 
+              className={`flex flex-col items-center gap-1 flex-1 transition-all ${mobileTab === 'ai' ? 'text-primary' : 'text-muted-foreground'}`}
+            >
+              <div className={`p-1.5 rounded-xl ${mobileTab === 'ai' ? 'bg-primary/10' : ''}`}>
+                <MessageSquare className={`h-5 w-5 ${mobileTab === 'ai' ? 'stroke-[2.5px]' : ''}`} />
+              </div>
+              <span className="text-[9px] font-bold uppercase tracking-wider">AI Chat</span>
+            </button>
+          </nav>
         </div>
-        <div className="flex-1 overflow-hidden">
-          <AIChatPanel 
-            code={code} 
-            problemId={activeProblem?.id || null} 
-            problemDescription={activeProblem?.description}
-            aiEnabled={aiEnabled} 
-          />
-        </div>
-      </div>
-      <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
+
+        {/* DESKTOP VIEW */}
         {/* Left: Problem Explorer */}
         <div className="hidden md:block w-56 shrink-0 border-r border-border">
           <ProblemExplorer
@@ -532,7 +640,7 @@ const Dashboard = () => {
         </div>
 
         {/* Center: Editor + Bottom Panels */}
-        <div className="flex flex-1 flex-col overflow-hidden p-2 sm:p-4 bg-background/50 animate-in-up">
+        <div className="hidden md:flex flex-1 flex-col overflow-hidden p-2 sm:p-4 bg-background/50 animate-in-up">
           <div className={`overflow-hidden rounded-xl border border-border bg-card shadow-sm mb-2 sm:mb-4 ${consoleFullscreen ? 'hidden' : 'flex-1'}`}>
             <CodeEditor code={code} onChange={setCode} />
           </div>

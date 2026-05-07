@@ -194,39 +194,43 @@ const ConsolePanel = ({
 
           {/* Interactive stdin input bar */}
           {waitingForInput && (
-            <div className="border-t border-yellow-500/20 bg-yellow-500/5 px-3 py-2 flex items-center gap-2">
-              <span className="text-yellow-400 font-mono text-xs shrink-0 select-none">›</span>
-              <input
-                ref={inputRef}
-                type="text"
-                value={stdinValue}
-                onChange={e => setStdinValue(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Enter value then 'Add Line' (or Enter)  |  Click 'Run Now' only when ALL lines are added"
-                className="flex-1 bg-transparent font-mono text-xs text-foreground placeholder:text-muted-foreground/40 outline-none border-none focus:ring-0"
-                autoComplete="off"
-                spellCheck={false}
-              />
-              <button
-                onClick={() => submitStdin('button')}
-                className="shrink-0 flex items-center gap-1 text-[10px] text-yellow-400 hover:text-yellow-300 transition-colors px-1.5 py-0.5 rounded border border-yellow-500/30 hover:border-yellow-400/50"
-              >
-                <Send className="h-3 w-3" />
-                Add Line
-              </button>
-              <button
-                onClick={() => {
-                  if (stdinValue.trim() !== '') {
-                    submitStdin('run-now-auto');
-                  }
-                  setTimeout(() => onStdinSubmit?.(''), 50);
-                }}
-                className="shrink-0 flex items-center gap-1 text-[10px] font-semibold text-emerald-400 hover:text-emerald-300 transition-colors px-2 py-0.5 rounded border border-emerald-500/30 hover:border-emerald-400/50 bg-emerald-500/10"
-                title="Finish input and run code (will include current text)"
-              >
-                <Play className="h-3 w-3" />
-                Run Now
-              </button>
+            <div className="border-t border-yellow-500/20 bg-yellow-500/5 px-2 sm:px-3 py-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <span className="text-yellow-400 font-mono text-xs shrink-0 select-none">›</span>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={stdinValue}
+                  onChange={e => setStdinValue(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Enter value..."
+                  className="flex-1 bg-transparent font-mono text-xs text-foreground placeholder:text-muted-foreground/40 outline-none border-none focus:ring-0 min-w-0"
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              </div>
+              <div className="flex items-center gap-1.5 justify-end">
+                <button
+                  onClick={() => submitStdin('button')}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 text-[10px] font-bold text-yellow-400 hover:text-yellow-300 transition-colors px-3 py-2 sm:py-1 rounded-lg border border-yellow-500/30 hover:border-yellow-400/50 bg-yellow-500/5"
+                >
+                  <Send className="h-3 w-3" />
+                  Add Line
+                </button>
+                <button
+                  onClick={() => {
+                    if (stdinValue.trim() !== '') {
+                      submitStdin('run-now-auto');
+                    }
+                    setTimeout(() => onStdinSubmit?.(''), 50);
+                  }}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 text-[10px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors px-3 py-2 sm:py-1 rounded-lg border border-emerald-500/30 hover:border-emerald-400/50 bg-emerald-500/10"
+                  title="Finish input and run code (will include current text)"
+                >
+                  <Play className="h-3 w-3" />
+                  Run Now
+                </button>
+              </div>
             </div>
           )}
         </>
