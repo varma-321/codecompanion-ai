@@ -1177,11 +1177,8 @@ const ProblemWorkspace = () => {
           <div className="text-[10px] text-primary/80 font-mono">GEN_ID: {genId}</div>
         </div>
       )}
-        <ExecutionStatus status={execStatus} />
-      </div>
-    </header>
 
-    {/* Header — refined LeetCode-style top bar */}
+    {/* Header - refined LeetCode-style top bar */}
     <header className="flex h-12 md:h-11 items-center gap-1.5 border-b border-panel-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 px-2 sm:px-3 overflow-x-auto scrollbar-none z-20">
       <SidebarTrigger className="-ml-1.5 h-8 w-8" />
       <div className="h-4 w-px bg-border mx-0.5 md:hidden shrink-0" />
@@ -1214,6 +1211,7 @@ const ProblemWorkspace = () => {
 
       <div className="ml-auto flex items-center gap-1 md:gap-1.5 shrink-0">
         <div className="hidden md:block"><ProblemTimer problemId={key || null} onTimeUpdate={setTimeSpent} /></div>
+        <ExecutionStatus status={execStatus} />
         
         {/* Desktop-only action buttons */}
         <div className="hidden md:flex items-center gap-1.5">
