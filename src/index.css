@@ -256,13 +256,6 @@
   .animate-stagger > *:nth-child(8) { animation-delay: 0.30s; }
   .animate-stagger > *:nth-child(n+9) { animation-delay: 0.34s; }
 
-  .app-shell-main > .min-h-screen,
-  .app-shell-main > .h-screen,
-  .app-shell-main > .flex.h-screen {
-    min-height: 100%;
-    height: auto;
-    background: transparent;
-  }
 
   .app-shell-main > .min-h-screen > .max-w-2xl,
   .app-shell-main > .min-h-screen > .max-w-4xl,
