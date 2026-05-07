@@ -1201,8 +1201,8 @@ const ProblemWorkspace = () => {
       <div className="h-4 w-px bg-border hidden sm:block shrink-0" />
       
       <div className="flex items-center gap-1.5 min-w-0">
-        <span className="text-sm font-semibold text-foreground truncate max-w-[120px] xs:max-w-[180px] sm:max-w-[280px] tracking-tight">{roadmapProblem?.title || 'Problem'}</span>
-        <Badge variant="outline" className={`text-[9px] md:text-[10px] font-medium shrink-0 px-1.5 py-0 ${getDifficultyBg(roadmapProblem?.difficulty || 'Medium')}`}>
+        <span className="text-sm font-semibold text-foreground truncate max-w-[120px] xs:max-w-[150px] sm:max-w-[280px] tracking-tight">{roadmapProblem?.title || 'Problem'}</span>
+        <Badge variant="outline" className={`text-[9px] md:text-[10px] font-medium shrink-0 px-1.5 py-0 hidden xs:flex ${getDifficultyBg(roadmapProblem?.difficulty || 'Medium')}`}>
           {roadmapProblem?.difficulty || 'Medium'}
         </Badge>
       </div>
@@ -1252,41 +1252,39 @@ const ProblemWorkspace = () => {
         </div>
 
         {!contestMode && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="sm" variant="ghost" className="h-8 md:h-7 gap-1 text-[11px] md:text-xs text-muted-foreground hover:text-foreground">
-                <Sparkles className="h-3.5 w-3.5" /> <span className="hidden sm:inline">AI</span> <ChevronDown className="h-3 w-3" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__dry_run__' }))}>
-                <Workflow className="h-3.5 w-3.5 mr-2" /> Logic Trace
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__hints__' }))}>
-                <Brain className="h-3.5 w-3.5 mr-2" /> Hints
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__optimal__' }))}>
-                <Trophy className="h-3.5 w-3.5 mr-2" /> Optimal
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__mistakes__' }))}>
-                <AlertTriangle className="h-3.5 w-3.5 mr-2" /> Find Bugs
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__patterns__' }))}>
-                <BookOpen className="h-3.5 w-3.5 mr-2" /> Patterns
-              </DropdownMenuItem>
-              <div className="h-px bg-border my-1" />
-              <DropdownMenuItem onClick={handleAnalyze} disabled={isAnalyzing || !code.trim()}>
-                <TrendingUp className="h-3.5 w-3.5 mr-2" /> Complexity Analysis
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__generate_tests__' }))}>
-                <FlaskConical className="h-3.5 w-3.5 mr-2" /> Generate Test Cases
-              </DropdownMenuItem>
-              <div className="h-px bg-border my-1" />
-              <DropdownMenuItem onClick={() => generateFullDetail(true)} className="text-destructive focus:text-destructive">
-                <RotateCcw className="h-3.5 w-3.5 mr-2" /> Fix/Regenerate Problem
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="hidden md:block">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="ghost" className="h-8 md:h-7 gap-1 text-[11px] md:text-xs text-muted-foreground hover:text-foreground">
+                  <Sparkles className="h-3.5 w-3.5" /> <span className="hidden sm:inline">AI</span> <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__dry_run__' }))}>
+                  <Workflow className="h-3.5 w-3.5 mr-2" /> Logic Trace
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__hints__' }))}>
+                  <Brain className="h-3.5 w-3.5 mr-2" /> Hints
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__optimal__' }))}>
+                  <Trophy className="h-3.5 w-3.5 mr-2" /> Optimal
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__mistakes__' }))}>
+                  <AlertTriangle className="h-3.5 w-3.5 mr-2" /> Find Bugs
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__patterns__' }))}>
+                  <BookOpen className="h-3.5 w-3.5 mr-2" /> Patterns
+                </DropdownMenuItem>
+                <div className="h-px bg-border my-1" />
+                <DropdownMenuItem onClick={handleAnalyze} disabled={isAnalyzing || !code.trim()}>
+                  <TrendingUp className="h-3.5 w-3.5 mr-2" /> Complexity Analysis
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__generate_tests__' }))}>
+                  <FlaskConical className="h-3.5 w-3.5 mr-2" /> Generate Test Cases
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         )}
 
         <DropdownMenu>
@@ -1309,18 +1307,44 @@ const ProblemWorkspace = () => {
               {focusMode ? <Eye className="h-3.5 w-3.5 mr-2" /> : <EyeOff className="h-3.5 w-3.5 mr-2" />}
               {focusMode ? 'Exit Focus' : 'Focus Mode'}
             </DropdownMenuItem>
+            
+            {/* AI Tools moved here for mobile cleanup */}
+            <div className="h-px bg-border my-1 md:hidden" />
+            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__dry_run__' }))} className="md:hidden">
+              <Workflow className="h-3.5 w-3.5 mr-2" /> Logic Trace
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__hints__' }))} className="md:hidden">
+              <Brain className="h-3.5 w-3.5 mr-2" /> Hints
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__optimal__' }))} className="md:hidden">
+              <Trophy className="h-3.5 w-3.5 mr-2" /> Optimal
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__mistakes__' }))} className="md:hidden">
+              <AlertTriangle className="h-3.5 w-3.5 mr-2" /> Find Bugs
+            </DropdownMenuItem>
+            <div className="h-px bg-border my-1 md:hidden" />
+            <DropdownMenuItem onClick={handleAnalyze} disabled={isAnalyzing || !code.trim()} className="md:hidden">
+              <TrendingUp className="h-3.5 w-3.5 mr-2" /> Complexity Analysis
+            </DropdownMenuItem>
+            
+            <div className="h-px bg-border my-1" />
+            <DropdownMenuItem onClick={() => generateFullDetail(true)} className="text-destructive focus:text-destructive">
+              <RotateCcw className="h-3.5 w-3.5 mr-2" /> Fix/Regenerate Problem
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        <ExecutionStatus status={execStatus} />
+        <div className="hidden xs:block">
+          <ExecutionStatus status={execStatus} />
+        </div>
       </div>
     </header>
 
     {/* Main layout: responsive columns */}
     <div className="flex flex-1 overflow-hidden flex-col md:flex-row pb-16 md:pb-0">
       {/* MOBILE CONTENT: Tab-based view */}
-      <div className="md:hidden flex-1 flex flex-col overflow-hidden">
+      <div className="md:hidden flex-1 flex flex-col overflow-hidden relative">
         {mobileTab === 'problem' && (
-          <ScrollArea className="flex-1 bg-background">
+          <ScrollArea className="flex-1 bg-background pb-20">
             <div className="p-4 space-y-5">
               <div>
                 <h2 className="text-xl font-bold text-foreground leading-tight">{roadmapProblem?.title}</h2>
@@ -1424,7 +1448,7 @@ const ProblemWorkspace = () => {
                  <span className="text-[10px] font-mono font-bold text-muted-foreground">JAVA</span>
               </div>
             </div>
-            <div className="flex-1 relative">
+            <div className="flex-1 relative pb-20">
               {APPROACHES.map(approach => (
                 <div 
                   key={approach.key} 
@@ -1464,7 +1488,7 @@ const ProblemWorkspace = () => {
                 </button>
               ))}
             </div>
-            <div className="flex-1 overflow-hidden relative">
+            <div className="flex-1 overflow-hidden relative pb-20">
               {bottomTab === 'description' && (
                 <TestCasePanel
                   testCases={detail.testCases.map((tc, i) => ({
@@ -1610,7 +1634,7 @@ const ProblemWorkspace = () => {
 
         {mobileTab === 'ai' && (
           <div className="flex-1 flex flex-col overflow-hidden bg-background">
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 overflow-hidden pb-20">
                <AIChatPanel 
                 code={code} 
                 problemId={key || null} 
@@ -1621,8 +1645,8 @@ const ProblemWorkspace = () => {
           </div>
         )}
 
-        {/* WORKSPACE MOBILE BOTTOM NAV - IDE Mode Selector */}
-        <nav className="fixed bottom-0 left-0 right-0 h-16 bg-card/95 backdrop-blur-xl border-t border-border z-40 flex items-center justify-around px-2 pb-safe shadow-[0_-4px_12px_rgba(0,0,0,0.1)]">
+        {/* WORKSPACE MOBILE BOTTOM NAV - IDE Mode Selector (Fixed) */}
+        <nav className="fixed bottom-0 left-0 right-0 h-16 bg-card/95 backdrop-blur-xl border-t border-border z-[100] flex items-center justify-around px-2 pb-safe shadow-[0_-8px_20px_rgba(0,0,0,0.15)]">
           <button 
             onClick={() => setMobileTab('problem')} 
             className={`flex flex-col items-center justify-center gap-1 flex-1 h-full transition-all duration-300 ${mobileTab === 'problem' ? 'text-primary' : 'text-muted-foreground'}`}
