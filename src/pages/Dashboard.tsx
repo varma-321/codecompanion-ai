@@ -1,9 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
-import { Play, Brain, Loader2, FlaskConical, Square, FolderOpen, MessageSquare } from 'lucide-react';
+import { Play, Brain, Loader2, FlaskConical, Square, FolderOpen, MessageSquare, Save, Code2 } from 'lucide-react';
 import { useAutosave } from '@/hooks/use-autosave';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import ProblemExplorer from '@/components/ProblemExplorer';
 import CodeEditor from '@/components/CodeEditor';
 import AIChatPanel from '@/components/AIChatPanel';
