@@ -362,9 +362,7 @@ const ProblemWorkspace = () => {
     
     if (force) {
       setGenerationCount(prev => prev + 1);
-      // Immediately clear the tabs to force a fresh signature update
-      const loadingPlaceholder = '// 🤖 AI is re-generating the official problem signature...\npublic void solve() {\n    \n}';
-      setCodes({ brute: loadingPlaceholder, better: loadingPlaceholder, optimal: loadingPlaceholder });
+      // We no longer clear the codes here, as the user has a separate refresh button for the function signature.
     }
 
     if (isValid(cached) && !force) {
@@ -540,9 +538,11 @@ const ProblemWorkspace = () => {
         setDetail(enhanced);
         if (generated.starterCode) {
           setCodes(prev => {
-            const newBrute = (force || isPlaceholder(prev.brute)) ? generated.starterCode : prev.brute;
-            const newBetter = (force || isPlaceholder(prev.better)) ? generated.starterCode : prev.better;
-            const newOptimal = (force || isPlaceholder(prev.optimal)) ? generated.starterCode : prev.optimal;
+            // Only update the editor if this is an initial load (not force) and the current code is a placeholder.
+            // If it's a force-regeneration, we leave the editor exactly as it is.
+            const newBrute = (!force && isPlaceholder(prev.brute)) ? generated.starterCode : prev.brute;
+            const newBetter = (!force && isPlaceholder(prev.better)) ? generated.starterCode : prev.better;
+            const newOptimal = (!force && isPlaceholder(prev.optimal)) ? generated.starterCode : prev.optimal;
             
             if (newBrute !== prev.brute || newBetter !== prev.better || newOptimal !== prev.optimal) {
                toast.success('🚀 AI has updated the problem signature across all tabs!');
@@ -634,7 +634,7 @@ const ProblemWorkspace = () => {
       if (mod) {
         if (e.key === 'Enter') { e.preventDefault(); handleRun(); }
         if (e.key === 's') { e.preventDefault(); /* autosave handles this */ toast.success('Auto-saved'); }
-        if (e.shiftKey && e.key === 'E') { e.preventDefault(); /* AI explain */ }
+        if (e.shiftKey && e.key === 'E') { e.preventDefault(); window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__analyze__' })); }
         if (e.shiftKey && e.key === 'T') { e.preventDefault(); handleRunTests(); }
         if (e.shiftKey && e.key === 'H') { e.preventDefault(); setShowDescription(p => !p); }
         if (e.key === 'k') { e.preventDefault(); setShowShortcuts(p => !p); }
@@ -1384,7 +1384,12 @@ const ProblemWorkspace = () => {
             <SheetTitle className="text-sm">AI Assistant</SheetTitle>
           </SheetHeader>
           <div className="h-[calc(100%-60px)] overflow-hidden">
-            <AIChatPanel code={code} problemId={key || null} aiEnabled={true} />
+            <AIChatPanel 
+              code={code} 
+              problemId={key || null} 
+              problemDescription={detail.description}
+              aiEnabled={true} 
+            />
           </div>
         </SheetContent>
       </Sheet>
@@ -1775,7 +1780,12 @@ const ProblemWorkspace = () => {
         {/* Right: AI Assistant */}
         {!focusMode && !contestMode && !generatorMode && (
           <div className="hidden lg:block w-[320px] xl:w-[360px] shrink-0 border-l border-panel-border overflow-hidden">
-            <AIChatPanel code={code} problemId={key || null} aiEnabled={true} />
+            <AIChatPanel 
+              code={code} 
+              problemId={key || null} 
+              problemDescription={detail.description}
+              aiEnabled={true} 
+            />
           </div>
         )}
         {(contestMode || generatorMode) && (

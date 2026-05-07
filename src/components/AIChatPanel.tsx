@@ -245,6 +245,7 @@ MessageBubble.displayName = "MessageBubble";
 interface AIChatPanelProps {
   code: string;
   problemId: string | null;
+  problemDescription?: string;
   aiEnabled?: boolean;
 }
 
@@ -258,6 +259,7 @@ interface AIChatPanelProps {
 const AIChatPanel = ({
   code,
   problemId,
+  problemDescription,
   aiEnabled = true,
 }: AIChatPanelProps) => {
   const [backendOnline, setBackendOnline] = useState(true);
@@ -274,6 +276,12 @@ const AIChatPanel = ({
   const [isTutorMode, setIsTutorMode] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const codeRef = useRef(code);
+
+  // Sync ref with prop
+  useEffect(() => {
+    codeRef.current = code;
+  }, [code]);
 
   // Initialize and filter voices for EXACT selection (English Male/Female only)
   useEffect(() => {
@@ -335,7 +343,7 @@ const AIChatPanel = ({
     };
     window.addEventListener("trigger-explain", handleExplain);
     return () => window.removeEventListener("trigger-explain", handleExplain);
-  }, [code, backendOnline, problemId]);
+  }, [backendOnline, problemId, problemDescription]); // Removed code from dependencies
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -437,41 +445,47 @@ const AIChatPanel = ({
     if (!customPrompt) setInput("");
     setIsLoading(true);
 
-    // Build a compact transcript of the recent conversation so follow-up
-    // questions ("now give me the code", etc.) stay grounded in prior context.
-    const buildHistory = (limit = 8) => {
-      const recent = messages.slice(-limit);
-      if (recent.length === 0) return "";
-      const lines = recent.map(
-        (m) => `${m.role === "user" ? "USER" : m.role === "assistant" ? "AI" : "SYSTEM"}: ${m.content.slice(0, 1200)}`,
-      );
-      return `\n\n=== Recent conversation (most recent last) ===\n${lines.join("\n\n")}\n=== End conversation ===`;
+    const buildHistoryForAPI = () => {
+      return messages.map(m => ({ 
+        role: m.role === 'system' ? 'system' : m.role === 'assistant' ? 'assistant' : 'user', 
+        content: m.content 
+      }));
     };
+
+    const history = buildHistoryForAPI();
+
+    const tutorInstructions = isTutorMode
+      ? "TUTOR MODE ACTIVE: Do NOT provide full code solutions or direct answers. Instead, use the Socratic method: ask guiding questions, point out logic gaps, and nudge the user toward the answer. NEVER provide a complete Java code block."
+      : "NORMAL MODE: You are a helpful expert mentor. Always provide clear examples with CORRECT, functional Java code blocks when explaining or suggesting solutions.";
+
+    const contextPrefix = `[CONTEXT: Problem: ${problemId || 'Unknown'}, Description: ${problemDescription || 'Available in history'}]\n[RULES: ${tutorInstructions}]\n\n`;
+
+    const currentCode = codeRef.current;
+
+    const finalPrompt = (currentCode || problemDescription)
+      ? `${contextPrefix}USER_REQUEST: ${text}\n\n[CURRENT_CODE_BELOW]\n\`\`\`java\n${currentCode || '// No code provided'}\n\`\`\``
+      : `${contextPrefix}USER_REQUEST: ${text}`;
 
     try {
       if (text === "__analyze__") {
         addMessage("user", "🔍 Run Deep Java Analysis");
-        const result = await analyzeCode(code, problemId);
+        const result = await analyzeCode(currentCode, problemId);
         addMessage("assistant", result.summary);
       } else if (text === "__dry_run__") {
-        // LOGIC TRACE: explain the user's CURRENT code line-by-line, marking
-        // which steps are correct and which contain errors. Not a brute/optimal
-        // suggestion — purely an explanation of what the user wrote.
         addMessage("user", "⚙️ Logic Trace — explain my code step by step");
         const prompt =
-          `LOGIC TRACE MODE.\n` +
-          `Walk through the Java code below line-by-line / block-by-block.\n` +
+          `${contextPrefix}\n` +
+          `LOGIC TRACE MODE.\n\n` +
+          `[JAVA CODE TO TRACE]\n\`\`\`java\n${currentCode || '// No code provided'}\n\`\`\`\n\n` +
+          `Walk through the Java code above line-by-line / block-by-block.\n` +
           `For each meaningful step:\n` +
           `  • State exactly what that line/block does.\n` +
           `  • Mark it ✅ Correct, ⚠️ Suspicious, or ❌ Error and explain why.\n` +
           `  • Show how key variables change (use a small markdown table when useful).\n` +
-          `Do NOT rewrite the code. Do NOT propose a brute/better/optimal solution.\n` +
-          `Focus only on explaining and validating the user's own code.\n` +
-          `If the code is empty, say so and ask the user to write some code first.`;
-        const result = await aiChat(code, prompt, problemId);
+          `Focus only on explaining and validating the user's own code.`;
+        const result = await aiChat(currentCode, prompt, problemId, history, problemDescription);
         addMessage("assistant", result);
       } else if (text === "__hints__") {
-        // HINTS: give exactly ONE hint per click, up to 4 total.
         if (hintLevel >= 4) {
           addMessage("user", "💡 Hint");
           addMessage(
@@ -482,13 +496,15 @@ const AIChatPanel = ({
           const nextLevel = hintLevel + 1;
           addMessage("user", `💡 Hint ${nextLevel} of 4`);
           const prompt =
-            `HINT MODE — Give ONLY hint #${nextLevel} of 4 (progressive).\n` +
+            `${contextPrefix}\n` +
+            `HINT MODE — Give ONLY hint #${nextLevel} of 4 (progressive).\n\n` +
+            `[JAVA CODE CONTEXT]\n\`\`\`java\n${currentCode || '// No code provided'}\n\`\`\`\n\n` +
             `Hint 1 = nudge about the data structure / pattern to consider.\n` +
             `Hint 2 = describe the high-level approach in 2–3 sentences (no code).\n` +
             `Hint 3 = outline the algorithm steps as a short bullet list (no code).\n` +
             `Hint 4 = pseudocode-level outline (still no full Java solution).\n` +
             `Return ONLY hint ${nextLevel}. Do not include other hints. Keep it short and focused.`;
-          const hint = await aiChat(code, prompt, problemId);
+          const hint = await aiChat(currentCode, prompt, problemId, history, problemDescription);
           addMessage(
             "assistant",
             `### 💡 Hint ${nextLevel} of 4\n\n${hint}\n\n_${4 - nextLevel} hint${4 - nextLevel === 1 ? "" : "s"} remaining._`,
@@ -496,11 +512,11 @@ const AIChatPanel = ({
           setHintLevel(nextLevel);
         }
       } else if (text === "__optimal__" || text === "__solution_optimal__") {
-        // OPTIMAL: give the optimal APPROACH NAME + LOGIC ONLY, no code.
-        // Follow-up "give me the code" in chat will use the conversation history.
         addMessage("user", "🏆 Optimal Approach");
         const prompt =
-          `OPTIMAL APPROACH MODE — DO NOT WRITE ANY CODE.\n` +
+          `${contextPrefix}\n` +
+          `OPTIMAL APPROACH MODE.\n\n` +
+          `[JAVA CODE CONTEXT]\n\`\`\`java\n${currentCode || '// No code provided'}\n\`\`\`\n\n` +
           `Respond in this exact structure:\n` +
           `### 🏆 Optimal Approach: <name of the approach / algorithm>\n` +
           `**Time:** O(...)  •  **Space:** O(...)\n\n` +
@@ -508,50 +524,42 @@ const AIChatPanel = ({
           `**Logic / intuition:**\n` +
           `- step-by-step bullet list explaining the algorithm in plain English.\n\n` +
           `**Key data structures:** comma-separated list.\n\n` +
-          `Do NOT include any Java code, pseudocode blocks, or code fences. ` +
-          `If the user later asks for the code in chat, you will provide it then.`;
-        const result = await aiChat(code, prompt, problemId);
+          `IMPORTANT: If NOT in tutor mode, you MUST include a complete code block at the end. If IN tutor mode, do NOT include any code.`;
+        const result = await aiChat(currentCode, prompt, problemId, history, problemDescription);
         addMessage("assistant", result);
       } else if (text === "__mistakes__") {
-        // FIND BUGS: report bugs only, no full corrected code.
         addMessage("user", "🐛 Find Bugs");
         const prompt =
-          `BUG-FINDING MODE.\n` +
-          `Review the Java code below and report ONLY the bugs / issues you find.\n` +
+          `${contextPrefix}\n` +
+          `BUG-FINDING MODE.\n\n` +
+          `[JAVA CODE TO REVIEW]\n\`\`\`java\n${currentCode || '// No code provided'}\n\`\`\`\n\n` +
+          `Review the Java code above and report ONLY the bugs / issues you find.\n` +
           `For each bug, output:\n` +
           `  • **Location:** line number or method name + the offending snippet (≤ 1 line).\n` +
           `  • **Type:** compile error / runtime error / logic bug / edge-case miss / performance.\n` +
           `  • **Why it's wrong:** 1–2 sentences.\n` +
-          `  • **How to fix (described in words):** short description, NO code block.\n\n` +
+          `  • **How to fix (described in words):** short description.\n\n` +
           `Strict rules:\n` +
-          `  - Do NOT output the corrected full code.\n` +
-          `  - Do NOT output method-level rewrites.\n` +
-          `  - At most 1-line code snippets when quoting the bug.\n` +
-          `If the user asks for the fixed code in a follow-up message, you may provide it then.`;
-        const result = await aiChat(code, prompt, problemId);
+          `  - If NOT in tutor mode, you MAY provide a 2-3 line code fix for each bug.\n` +
+          `  - If IN tutor mode, do NOT provide any code fixes.`;
+        const result = await aiChat(currentCode, prompt, problemId, history, problemDescription);
         addMessage("assistant", result);
       } else if (text === "__patterns__") {
-        // PATTERNS: list applicable patterns + identify the pattern in user's code + verdict.
         addMessage("user", "📚 Patterns");
         const prompt =
-          `PATTERN ANALYSIS MODE.\n` +
+          `${contextPrefix}\n` +
+          `PATTERN ANALYSIS MODE.\n\n` +
+          `[JAVA CODE CONTEXT]\n\`\`\`java\n${currentCode || '// No code provided'}\n\`\`\`\n\n` +
           `Respond in this exact structure (markdown):\n\n` +
           `### 📚 Patterns Applicable to This Problem\n` +
-          `Bullet list of every relevant DSA pattern (e.g. Two Pointers, Sliding Window, Hash Map, ` +
-          `Binary Search, BFS/DFS, DP, Greedy, Backtracking, Heap, Union-Find, Monotonic Stack, etc.). ` +
-          `For each: 1-line reason it could apply.\n\n` +
+          `Bullet list of every relevant DSA pattern.\n\n` +
           `### 🔍 Pattern Detected in Your Code\n` +
-          `If the user has written code, name the pattern they're currently using. ` +
-          `If the editor is empty or no clear pattern, say so.\n\n` +
+          `Name the pattern the user is currently using.\n\n` +
           `### ✅ Is It Optimal?\n` +
-          `Compare the user's pattern to the best applicable pattern and give a clear verdict ` +
-          `(Optimal / Sub-optimal / Brute-force) with a 1–2 sentence justification. ` +
-          `If sub-optimal, name the better pattern — but do NOT write code.`;
-        const result = await aiChat(code, prompt, problemId);
+          `Compare and give a verdict (Optimal / Sub-optimal / Brute-force).`;
+        const result = await aiChat(currentCode, prompt, problemId, history, problemDescription);
         addMessage("assistant", result);
       } else if (text === "__generate_tests__" || text === "__testcases__") {
-        // Test-case generation is handled by the workspace (auto-adds to the
-        // Tests tab). We just acknowledge here.
         addMessage("user", "🧪 Generate Test Cases");
         addMessage(
           "assistant",
@@ -559,16 +567,7 @@ const AIChatPanel = ({
         );
       } else {
         addMessage("user", text);
-        const history = messages.map(m => ({ 
-          role: m.role === 'system' ? 'system' : m.role === 'assistant' ? 'assistant' : 'user', 
-          content: m.content 
-        }));
-        
-        const tutorPrefix = isTutorMode
-          ? `(TUTOR MODE: Do NOT give direct code or answers. Ask guiding questions, point out logic gaps, and encourage the user to find the solution. Use Socratic method.)\n`
-          : "";
-        
-        const response = await aiChat(code, text, problemId, history);
+        const response = await aiChat(currentCode, finalPrompt, problemId, history, problemDescription);
         addMessage("assistant", response);
       }
 

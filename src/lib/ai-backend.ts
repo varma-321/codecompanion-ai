@@ -123,14 +123,15 @@ export async function analyzeComplexityAdvanced(code: string, problemId?: string
   return data.radar || JSON.stringify(data);
 }
 
-export async function chat(code: string, userMessage: string, problemId?: string | null, history: any[] = []): Promise<string> {
+export async function chat(code: string, userMessage: string, problemId?: string | null, history: any[] = [], problemDescription?: string): Promise<string> {
   try {
     const { data, error } = await supabase.functions.invoke('agent-chat', {
       body: { 
         message: userMessage, 
         code, 
         problemId, 
-        history 
+        history,
+        problemDescription
       }
     });
 
@@ -170,13 +171,13 @@ export async function generateTestCases(
   return data.testCases || [];
 }
 
-export async function detectPatterns(code: string, problemId?: string | null): Promise<string> {
-  const data = await postAPI('/api/patterns', { code, problemId });
+export async function detectPatterns(code: string, problemId?: string | null, problemDescription?: string): Promise<string> {
+  const data = await postAPI('/api/patterns', { code, problemId, problemDescription });
   return data.patterns || data.response || JSON.stringify(data);
 }
 
-export async function detectMistakes(code: string, problemId?: string | null): Promise<string> {
-  const data = await postAPI('/api/mistakes', { code, problemId });
+export async function detectMistakes(code: string, problemId?: string | null, problemDescription?: string): Promise<string> {
+  const data = await postAPI('/api/mistakes', { code, problemId, problemDescription });
   return data.mistakes || data.response || JSON.stringify(data);
 }
 
@@ -195,8 +196,8 @@ export async function getJavaInterviewQuestions(code: string, problemId?: string
   return data.questions || JSON.stringify(data);
 }
 
-export async function getApproach(code: string, problemId?: string | null): Promise<string> {
-  const data = await postAPI('/api/approach', { code, problemId });
+export async function getApproach(code: string, problemId?: string | null, problemDescription?: string): Promise<string> {
+  const data = await postAPI('/api/approach', { code, problemId, problemDescription });
   return data.approach || JSON.stringify(data);
 }
 

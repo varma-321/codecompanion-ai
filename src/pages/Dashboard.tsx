@@ -512,7 +512,12 @@ const Dashboard = () => {
           </Button>
         </div>
         <div className="flex-1 overflow-hidden">
-          <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
+          <AIChatPanel 
+            code={code} 
+            problemId={activeProblem?.id || null} 
+            problemDescription={activeProblem?.description}
+            aiEnabled={aiEnabled} 
+          />
         </div>
       </div>
       <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
@@ -676,7 +681,12 @@ const Dashboard = () => {
         {/* Right: AI Panel (Globally visible) */}
         {aiEnabled && (
           <div className="hidden lg:block w-[320px] xl:w-[380px] shrink-0 border-l border-border bg-card overflow-hidden surface-elevated rounded-l-2xl my-4 mr-4 animate-in-up">
-            <AIChatPanel code={code} problemId={activeProblem?.id || null} aiEnabled={aiEnabled} />
+            <AIChatPanel 
+              code={code} 
+              problemId={activeProblem?.id || null} 
+              problemDescription={activeProblem?.description}
+              aiEnabled={aiEnabled} 
+            />
           </div>
         )}
       </div>

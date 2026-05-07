@@ -76,11 +76,20 @@ serve(async (req) => {
       content: systemPrompt || "You are an elite Java DSA Architect and Mentor. Provide clean, professional, and efficient Java-centric solutions. Always prioritize modern Java (JDK 17+) idioms."
     });
     
-    // 2. Code Context (if provided)
-    if (code) {
+    // 2. Context (Code + Problem Description)
+    if (code || problemDescription) {
+      let context = "";
+      if (problemDescription) {
+        context += `PROBLEM DESCRIPTION:\n${problemDescription}\n\n`;
+      }
+      if (code) {
+        context += `CURRENT USER CODE:\n\`\`\`java\n${code}\n\`\`\`\n`;
+      }
+      context += `Problem ID: ${problemId || 'unknown'}`;
+      
       messages.push({
         role: 'system',
-        content: `CURRENT USER CODE:\n\`\`\`java\n${code}\n\`\`\`\nProblem ID: ${problemId || 'unknown'}`
+        content: context
       });
     }
     
