@@ -6,8 +6,10 @@ import {
   Code2, GitCompare, Cloud, Keyboard, Sparkles, AlertTriangle, Zap, TrendingUp, 
   Trophy, Eye, EyeOff, BarChart3, ChevronDown, ChevronUp, MessageSquare, 
   FileText, Bot, Square, Workflow, Shield, Lightbulb, Github, BookOpen, RotateCcw,
-  ExternalLink
+  ExternalLink, Search, AlertCircle, Target, History, Settings, Maximize2, Minimize2,
+  MoreHorizontal, Info
 } from 'lucide-react';
+import { API_BASE_URL } from '@/lib/api';
 import { getGitHubSettings, pushFileToGitHub } from '@/lib/github';
 import { CONTEST_PROBLEMS } from '../lib/contest-problems-data';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -36,11 +38,8 @@ import { NEETCODE_ROADMAP } from '@/lib/neetcode-roadmap-data';
 import { LEETCODE_TOP150_ROADMAP } from '@/lib/leetcode-top150-data';
 import { getProblemDetail, PROBLEM_DETAILS, type ProblemDetail } from '@/lib/striver-problem-details';
 import { executeJavaCode, stopExecution, type ExecutionStatus as ExecStatusType } from '@/lib/executor';
-import { API_BASE_URL } from '@/lib/api';
 import ReactMarkdown from 'react-markdown';
 
-// Build a lookup for all problems across all modules
-const ALL_ROADMAPS = [...STRIVER_ROADMAP, ...NEETCODE_ROADMAP, ...LEETCODE_TOP150_ROADMAP];
 
 interface EnhancedDetail extends ProblemDetail {
   constraints?: string[];
@@ -74,12 +73,18 @@ const ProblemWorkspace = () => {
   const navigate = useNavigate();
   const { authUser, profile, isAdmin } = useUser();
 
+  const allRoadmaps = useMemo(() => [
+    ...(STRIVER_ROADMAP || []), 
+    ...(NEETCODE_ROADMAP || []), 
+    ...(LEETCODE_TOP150_ROADMAP || [])
+  ], []);
+
   // Find the problem from any roadmap OR contest problems OR generated
   const roadmapProblem = useMemo(() => {
     if (!key) return null;
     
     // Check roadmap sheets first
-    for (const topic of ALL_ROADMAPS) {
+    for (const topic of allRoadmaps) {
       if (!topic?.problems) continue;
       const found = topic.problems.find(p => p.key === key);
       if (found) return { ...found, topic: topic.name };
@@ -141,6 +146,7 @@ const ProblemWorkspace = () => {
     better: detail.starterCode,
     optimal: detail.starterCode,
   });
+  const [generationCount, setGenerationCount] = useState(0);
   // Track whether codes have been loaded from DB to prevent generateFullDetail from overwriting
   const codesLoadedFromDb = useRef(false);
   // Track whether we are in the middle of loading codes for a new problem
@@ -197,13 +203,22 @@ const ProblemWorkspace = () => {
   useEffect(() => {
     if (!key) return;
     codesKeyRef.current = key;
-    const placeholder = detail.starterCode || '';
+    
+    // STEP 1: Calculate the fresh initial detail for the NEW key immediately.
+    // This prevents using stale detail.starterCode from the previous problem.
+    const initialDetail = getProblemDetail(key, roadmapProblem?.title || 'Problem', roadmapProblem?.difficulty || 'Medium');
+    const placeholder = initialDetail.starterCode || '';
+
+    // STEP 2: Synchronously reset all problem-specific state
+    setDetail(initialDetail);
     setCodes({ brute: placeholder, better: placeholder, optimal: placeholder });
     setIsCodeLoading(true);
     setConsoleEntries([]);
     setTestResults([]);
     setExecStatus('ready');
     setBottomTab('description');
+    setGenerationCount(0);
+    
     // Immediately reset the autosave baseline so the 2s debounce doesn't
     // fire with stale code after navigation.
     wsResetSaved(placeholder);
@@ -293,23 +308,72 @@ const ProblemWorkspace = () => {
     wsResetSaved(codes[activeApproach]);
   }, [activeApproach, wsResetSaved]);
 
+  const regenerateActiveTab = async () => {
+    if (!key) return;
+    
+    // 1. Show immediate feedback
+    const loadingPlaceholder = `// 🤖 AI is re-generating the official problem signature for the ${activeApproach} tab...\npublic void solve() {\n    \n}`;
+    setCodes(prev => ({ ...prev, [activeApproach]: loadingPlaceholder }));
+    setGenerationCount(prev => prev + 1);
+    
+    setIsGenerating(true);
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/generate-problem-detail`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          key, 
+          title: roadmapProblem?.title, 
+          difficulty: roadmapProblem?.difficulty,
+          force: true 
+        }),
+      });
+      
+      if (response.ok) {
+        const generated = await response.json();
+        if (generated.starterCode) {
+          setCodes(prev => ({ ...prev, [activeApproach]: generated.starterCode }));
+          // Also update the global detail so subsequent tab resets use the new one
+          setDetail(prev => ({ ...prev, starterCode: generated.starterCode }));
+          toast.success(`🚀 Signature regenerated for ${activeApproach}!`);
+        } else {
+          toast.error('AI returned an empty signature.');
+        }
+      } else {
+        toast.error('AI regeneration failed.');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to connect to AI.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   // Fetch full problem details from Java Spring Boot Backend
   const generateFullDetail = useCallback(async (force = false) => {
     if (!roadmapProblem || !key || (hasHardcodedDetail && !force)) return;
     const cached = getCachedDetail(key);
     const isValid = (d: any) => d && Array.isArray(d.testCases) && d.testCases.length >= 1 && d.testCases.every((tc: any) => tc.expected && String(tc.expected).trim() !== '');
 
+    const isPlaceholder = (c: string) => !c || c.trim().length < 50 || c.includes('// 🤖 AI is generating') || c.includes('public void solve()') || c.includes('public int search');
+    
+    if (force) {
+      setGenerationCount(prev => prev + 1);
+      // Immediately clear the tabs to force a fresh signature update
+      const loadingPlaceholder = '// 🤖 AI is re-generating the official problem signature...\npublic void solve() {\n    \n}';
+      setCodes({ brute: loadingPlaceholder, better: loadingPlaceholder, optimal: loadingPlaceholder });
+    }
+
     if (isValid(cached) && !force) {
       setDetail(cached!);
       if (!codesLoadedFromDb.current && cached!.starterCode) {
-        setCodes(prev => {
-          const starter = cached!.starterCode;
-          return {
-            brute: prev.brute === detail.starterCode ? starter : prev.brute,
-            better: prev.better === detail.starterCode ? starter : prev.better,
-            optimal: prev.optimal === detail.starterCode ? starter : prev.optimal,
-          };
-        });
+        setCodes(prev => ({
+          brute: isPlaceholder(prev.brute) ? cached!.starterCode : prev.brute,
+          better: isPlaceholder(prev.better) ? cached!.starterCode : prev.better,
+          optimal: isPlaceholder(prev.optimal) ? cached!.starterCode : prev.optimal,
+        }));
       }
       return;
     }
@@ -345,6 +409,13 @@ const ProblemWorkspace = () => {
           };
           setCachedDetail(key, enhanced);
           setDetail(enhanced);
+          if (!codesLoadedFromDb.current) {
+            setCodes(prev => ({
+              brute: isPlaceholder(prev.brute) ? enhanced.starterCode : prev.brute,
+              better: isPlaceholder(prev.better) ? enhanced.starterCode : prev.better,
+              optimal: isPlaceholder(prev.optimal) ? enhanced.starterCode : prev.optimal,
+            }));
+          }
           setIsGenerating(false);
           return;
         }
@@ -374,6 +445,13 @@ const ProblemWorkspace = () => {
           };
           setCachedDetail(key, enhanced);
           setDetail(enhanced);
+          if (!codesLoadedFromDb.current || force) {
+            setCodes(prev => ({
+              brute: (force || isPlaceholder(prev.brute)) ? enhanced.starterCode : prev.brute,
+              better: (force || isPlaceholder(prev.better)) ? enhanced.starterCode : prev.better,
+              optimal: (force || isPlaceholder(prev.optimal)) ? enhanced.starterCode : prev.optimal,
+            }));
+          }
           setIsGenerating(false);
           return;
         }
@@ -461,12 +539,12 @@ const ProblemWorkspace = () => {
         setDetail(enhanced);
         if (generated.starterCode) {
           setCodes(prev => {
-            const isPlaceholder = (c: string) => !c || c.trim().length < 50 || c.includes('// 🤖 AI is generating') || c.includes('public void solve()');
-            const newBrute = isPlaceholder(prev.brute) ? generated.starterCode : prev.brute;
-            const newBetter = isPlaceholder(prev.better) ? generated.starterCode : prev.better;
-            const newOptimal = isPlaceholder(prev.optimal) ? generated.starterCode : prev.optimal;
-            if (newBrute !== prev.brute) {
-               toast.success('🚀 AI has generated the official problem signature!');
+            const newBrute = (force || isPlaceholder(prev.brute)) ? generated.starterCode : prev.brute;
+            const newBetter = (force || isPlaceholder(prev.better)) ? generated.starterCode : prev.better;
+            const newOptimal = (force || isPlaceholder(prev.optimal)) ? generated.starterCode : prev.optimal;
+            
+            if (newBrute !== prev.brute || newBetter !== prev.better || newOptimal !== prev.optimal) {
+               toast.success('🚀 AI has updated the problem signature across all tabs!');
             }
             return { brute: newBrute, better: newBetter, optimal: newOptimal };
           });
@@ -528,7 +606,8 @@ const ProblemWorkspace = () => {
         if (savedCode) {
           try { localStorage.setItem(`workspace-code-${authUser?.id || 'anon'}-${saveKey}`, savedCode); } catch {}
         }
-        loaded[approach] = savedCode || detail.starterCode;
+        const freshPlaceholder = getProblemDetail(loadKey, roadmapProblem?.title || 'Problem', roadmapProblem?.difficulty || 'Medium').starterCode;
+      loaded[approach] = savedCode || freshPlaceholder;
       }
 
       // Discard if user navigated away while we were fetching
@@ -536,7 +615,7 @@ const ProblemWorkspace = () => {
 
       codesLoadedFromDb.current = anyFromDb;
       setCodes({ brute: loaded.brute, better: loaded.better, optimal: loaded.optimal });
-      wsResetSaved(loaded[activeApproach] || detail.starterCode);
+      wsResetSaved(loaded[activeApproach] || getProblemDetail(loadKey, '', '').starterCode);
       setIsCodeLoading(false);
     };
 
@@ -1098,7 +1177,19 @@ const ProblemWorkspace = () => {
       )}
       {/* Header — refined LeetCode-style top bar */}
       <header className="flex h-11 items-center gap-2 border-b border-panel-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 px-3 overflow-x-auto scrollbar-none">
-        <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="h-7 gap-1.5 text-xs shrink-0 -ml-1">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => {
+            if (contestMode) navigate('/contest');
+            else if (generatorMode) navigate('/generator');
+            else if (key?.startsWith('arr-') || key?.startsWith('striver') || key?.startsWith('basics-') || key?.startsWith('recursion-') || key?.startsWith('sorting-') || key?.startsWith('bs-') || key?.startsWith('strings-')) navigate('/striver');
+            else if (key?.startsWith('neetcode')) navigate('/neetcode');
+            else if (key?.startsWith('leetcode')) navigate('/leetcode150');
+            else navigate(-1);
+          }} 
+          className="h-7 gap-1.5 text-xs shrink-0 -ml-1"
+        >
           <ArrowLeft className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Back</span>
         </Button>
         <div className="h-4 w-px bg-border hidden sm:block" />
@@ -1186,6 +1277,10 @@ const ProblemWorkspace = () => {
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('trigger-explain', { detail: '__generate_tests__' }))}>
                   <FlaskConical className="h-3.5 w-3.5 mr-2" /> Generate Test Cases
+                </DropdownMenuItem>
+                <div className="h-px bg-border my-1" />
+                <DropdownMenuItem onClick={() => generateFullDetail(true)} className="text-destructive focus:text-destructive">
+                  <RotateCcw className="h-3.5 w-3.5 mr-2" /> Fix/Regenerate Problem
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -1322,7 +1417,7 @@ const ProblemWorkspace = () => {
           </DropdownMenuItem>
           <div className="h-px bg-panel-border my-1" />
           <DropdownMenuItem onClick={() => generateFullDetail(true)} className="text-destructive focus:text-destructive">
-            <RotateCcw className="h-3.5 w-3.5 mr-2" /> Fix Bad Problem Data
+            <RotateCcw className="h-3.5 w-3.5 mr-2" /> Fix/Regenerate Problem
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -1481,7 +1576,18 @@ const ProblemWorkspace = () => {
                 </button>
               ))}
             </div>
-            <span className="ml-auto text-[11px] text-muted-foreground tracking-tight font-mono">Java</span>
+            <div className="ml-auto flex items-center gap-2">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-6 w-6 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-full transition-all"
+                title={`Regenerate ${activeApproach} signature`}
+                onClick={regenerateActiveTab}
+              >
+                <RotateCcw className="h-3 w-3" />
+              </Button>
+              <span className="text-[11px] text-muted-foreground tracking-tight font-mono">Java</span>
+            </div>
           </div>
 
           <div className="flex-1 overflow-hidden relative">
@@ -1497,6 +1603,7 @@ const ProblemWorkspace = () => {
                 }}
               >
                 <CodeEditor 
+                  key={`${key}-${approach.key}-${generationCount}`}
                   code={codes[approach.key]} 
                   onChange={(val) => setCodes(prev => ({ ...prev, [approach.key]: val }))} 
                 />
@@ -1703,7 +1810,7 @@ const ProblemWorkspace = () => {
         onTryAgain={() => setShowCelebration(false)}
         onNextProblem={() => {
           // Find next problem in the same topic
-          for (const topic of ALL_ROADMAPS) {
+          for (const topic of allRoadmaps) {
             const idx = topic.problems.findIndex(p => p.key === key);
             if (idx >= 0 && idx < topic.problems.length - 1) {
               navigate(`/problem/${topic.problems[idx + 1].key}`);

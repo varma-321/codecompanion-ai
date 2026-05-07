@@ -40,12 +40,7 @@ const Toolbar = ({
           {leftMobileActions}
         </div>
         <span className="text-sm font-semibold tracking-tight text-foreground mr-1 hidden sm:inline">DSA Lab</span>
-        <div className="h-4 w-px bg-border hidden sm:block" />
 
-        <Button variant="ghost" size="sm" onClick={() => navigate('/modules')} className="h-8 gap-1 sm:gap-1.5 text-xs font-medium shrink-0">
-          <BookOpen className="h-3.5 w-3.5" />
-          <span className="hidden xs:inline">Modules</span>
-        </Button>
 
 
         <Button onClick={onSave} disabled={isSaving} size="sm" variant="outline" className="h-8 gap-1 sm:gap-1.5 text-xs font-medium shrink-0 rounded-lg">

@@ -4,6 +4,7 @@ import Login from './Login';
 import Dashboard from './Dashboard';
 import GuestDashboard from './GuestDashboard';
 import useNotificationReminders from '@/components/NotificationManager';
+import AppShell from '@/components/AppShell';
 
 const Index = () => {
   const { authUser, loading, isGuest, userStatus } = useUser();
@@ -102,7 +103,11 @@ const Index = () => {
     );
   }
 
-  return <Dashboard />;
+  return (
+    <AppShell bare>
+      <Dashboard />
+    </AppShell>
+  );
 };
 
 export default Index;

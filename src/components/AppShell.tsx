@@ -10,7 +10,7 @@ import {
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
   SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
-  SidebarProvider, SidebarTrigger, useSidebar,
+  SidebarProvider, useSidebar,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -92,7 +92,7 @@ const NAV_GROUPS: NavGroup[] = [
 ];
 
 function AppSidebar() {
-  const { state } = useSidebar();
+  const { state, toggleSidebar } = useSidebar();
   const collapsed = state === 'collapsed';
   const location = useLocation();
   const navigate = useNavigate();
@@ -124,15 +124,15 @@ function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="border-b border-sidebar-border h-14 flex flex-row items-center px-3">
         <button
-          onClick={() => navigate('/')}
-          className="flex items-center gap-2.5 group"
-          aria-label="Home"
+          onClick={toggleSidebar}
+          className="flex items-center gap-2.5 group w-full"
+          aria-label="Toggle Sidebar"
         >
-          <div className="h-8 w-8 rounded-lg bg-foreground text-background flex items-center justify-center shrink-0 shadow-xs">
+          <div className="h-8 w-8 rounded-lg bg-foreground text-background flex items-center justify-center shrink-0 shadow-xs transition-transform active:scale-95">
             <Code2 className="h-4 w-4" strokeWidth={2.5} />
           </div>
-          {!collapsed && (
-            <div className="text-left">
+          {state !== 'collapsed' && (
+            <div className="text-left animate-in fade-in slide-in-from-left-1 duration-200">
               <div className="text-sm font-semibold tracking-tight leading-none">DSA Lab</div>
               <div className="text-[10px] text-muted-foreground leading-none mt-1">Practice Studio</div>
             </div>
@@ -206,8 +206,6 @@ function Topbar({ title, subtitle, actions }: { title?: string; subtitle?: strin
 
   return (
     <header className="sticky top-0 z-30 h-14 flex items-center gap-3 px-4 border-b border-border glass">
-      <SidebarTrigger className="h-8 w-8 -ml-1" />
-      <div className="h-5 w-px bg-border" />
       {(title || subtitle) && (
         <div className="min-w-0 flex-1">
           {title && <div className="text-[13px] font-semibold tracking-tight truncate leading-none">{title}</div>}
@@ -249,7 +247,7 @@ function Topbar({ title, subtitle, actions }: { title?: string; subtitle?: strin
 
 export default function AppShell({ children, title, subtitle, actions, bare = false }: AppShellProps) {
   return (
-    <SidebarProvider defaultOpen>
+    <SidebarProvider defaultOpen={false}>
       <div className="min-h-screen flex w-full bg-background overflow-hidden">
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0 bg-background/50">

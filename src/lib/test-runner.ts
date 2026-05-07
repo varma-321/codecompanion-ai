@@ -637,7 +637,8 @@ export function buildTestWrapper(
 
     if (resultType === 'void') {
       const firstParam = methodSig.params[0];
-      const mutatedPrint = firstParam ? buildValuePrint(normalizeNodeType(firstParam.type, userCode, className), firstParam.name) : 'System.out.println("void");';
+      const isMutationType = firstParam && (firstParam.type.includes('[]') || firstParam.type.includes('<') || isLinkedListType(firstParam.type) || isTreeType(firstParam.type));
+      const mutatedPrint = isMutationType ? buildValuePrint(normalizeNodeType(firstParam.type, userCode, className), firstParam.name) : '';
       callCode = `            ${caller}(${args});\n            ${mutatedPrint}`;
     } else {
       callCode = `            ${resultType} result = ${caller}(${args});\n            ${printStmt}`;

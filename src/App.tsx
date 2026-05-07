@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useParams } from "react-router-dom";
 import type { ReactNode } from "react";
 import { UserProvider } from "@/lib/user-context";
 import { ThemeProvider } from "@/lib/theme-context";
@@ -64,6 +64,11 @@ const shell = (element: ReactNode, title?: string, subtitle?: string) => (
 );
 const bareShell = (element: ReactNode) => <AppShell bare>{element}</AppShell>;
 
+const ProblemWorkspaceLoader = () => {
+  const { key } = useParams();
+  return bareShell(<ProblemWorkspace key={key} />);
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <UserProvider>
@@ -114,7 +119,7 @@ const App = () => (
                 path="/leaderboard"
                 element={<Leaderboard />}
               />
-              <Route path="/problem/:key" element={<ProblemWorkspace />} />
+              <Route path="/problem/:key" element={<ProblemWorkspaceLoader />} />
               <Route
                 path="/analytics"
                 element={shell(
