@@ -281,7 +281,14 @@ export default function AppShell({ children, title, subtitle, actions, bare = fa
         {!hideMobileNav && (
           <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-card/80 backdrop-blur-xl border-t border-border z-50 flex items-center justify-around px-4 pb-safe">
             {mobileNavItems.map((item) => {
-              const isActive = location.pathname === item.url || (item.url !== '/' && location.pathname.startsWith(item.url));
+              const isActive = location.pathname === item.url || 
+                (item.url !== '/' && location.pathname.startsWith(item.url)) ||
+                (item.url === '/modules' && (
+                  location.pathname.startsWith('/striver') || 
+                  location.pathname.startsWith('/neetcode') || 
+                  location.pathname.startsWith('/leetcode150') ||
+                  location.pathname.startsWith('/problem/')
+                ));
               return (
                 <button
                   key={item.url}

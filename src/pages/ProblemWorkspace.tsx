@@ -334,16 +334,24 @@ const ProblemWorkspace = () => {
       
       if (response.ok) {
         const generated = await response.json();
-        if (generated.starterCode) {
+        
+        if (generated.error) {
+          toast.error(`AI Error: ${generated.error}`);
+          // Revert to a basic signature if AI fails, so user isn't stuck with the placeholder
+          const fallback = `class Solution {\n    public void solve() {\n        // Your code here\n    }\n}`;
+          setCodes(prev => ({ ...prev, [activeApproach]: fallback }));
+        } else if (generated.starterCode) {
           setCodes(prev => ({ ...prev, [activeApproach]: generated.starterCode }));
           // Also update the global detail so subsequent tab resets use the new one
           setDetail(prev => ({ ...prev, starterCode: generated.starterCode }));
           toast.success(`🚀 Signature regenerated for ${activeApproach}!`);
         } else {
           toast.error('AI returned an empty signature.');
+          const fallback = `class Solution {\n    public void solve() {\n        // Your code here\n    }\n}`;
+          setCodes(prev => ({ ...prev, [activeApproach]: fallback }));
         }
       } else {
-        toast.error('AI regeneration failed.');
+        toast.error('AI regeneration failed (Server Error).');
       }
     } catch (err) {
       console.error(err);
@@ -1179,7 +1187,7 @@ const ProblemWorkspace = () => {
       )}
 
     <header className="flex h-12 md:h-11 items-center gap-1.5 border-b border-panel-border bg-background text-foreground px-2 sm:px-3 overflow-x-auto scrollbar-none z-20 shrink-0">
-      <SidebarTrigger className="h-8 w-8 text-muted-foreground hover:bg-accent" />
+      <SidebarTrigger className="h-8 w-8 text-muted-foreground hover:bg-accent hidden md:flex" />
       <div className="h-4 w-px bg-border mx-1 hidden md:block" />
       <span className="text-xs font-bold tracking-tight text-foreground/80 mr-2 hidden lg:inline">AI CodeCompiler | DSA Lab</span>
       
@@ -1490,7 +1498,7 @@ const ProblemWorkspace = () => {
                 </button>
               ))}
             </div>
-            <div className="flex-1 overflow-hidden relative pb-20">
+            <div className="flex-1 overflow-hidden pb-40">
               {bottomTab === 'description' && (
                 <TestCasePanel
                   testCases={detail.testCases.map((tc, i) => ({
@@ -1636,7 +1644,7 @@ const ProblemWorkspace = () => {
 
         {mobileTab === 'ai' && (
           <div className="flex-1 flex flex-col overflow-hidden bg-background">
-            <div className="flex-1 overflow-hidden pb-20">
+            <div className="flex-1 overflow-hidden pb-40">
                <AIChatPanel 
                 code={code} 
                 problemId={key || null} 
@@ -1647,8 +1655,8 @@ const ProblemWorkspace = () => {
           </div>
         )}
 
-        {/* WORKSPACE MOBILE BOTTOM NAV - IDE Mode Selector (Fixed) */}
-        <nav className="fixed bottom-0 left-0 right-0 h-16 bg-card/95 backdrop-blur-xl border-t border-border z-[100] flex items-center justify-around px-2 pb-safe shadow-[0_-8px_20px_rgba(0,0,0,0.15)]">
+        {/* WORKSPACE MOBILE BOTTOM NAV - IDE Mode Selector (Fixed ABOVE global nav) */}
+        <nav className="fixed bottom-16 left-0 right-0 h-16 bg-card/95 backdrop-blur-xl border-t border-border z-[100] flex items-center justify-around px-2 pb-safe shadow-[0_-8px_20px_rgba(0,0,0,0.15)]">
           <button 
             onClick={() => setMobileTab('problem')} 
             className={`flex flex-col items-center justify-center gap-1 flex-1 h-full transition-all duration-300 ${mobileTab === 'problem' ? 'text-primary' : 'text-muted-foreground'}`}
