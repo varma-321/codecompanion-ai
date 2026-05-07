@@ -234,13 +234,17 @@ const ProblemWorkspace = () => {
       : customMode
       ? `custom_${customId || 'anon'}_`
       : '';
+    
+    // Construct the correct key. The 'approach' arg should be just 'brute', 'better', or 'optimal'.
     const saveKey = `${prefix}${key}__${approach}`;
+    
     try {
       const { error } = await supabase.from('user_code_saves').upsert({
         user_id: authUser.id,
         problem_key: saveKey,
         code: val,
         language: 'java',
+        updated_at: new Date().toISOString(),
       } as any, { onConflict: 'user_id,problem_key' });
       if (error) console.error('Autosave DB error:', error);
     } catch (e) {
@@ -248,18 +252,21 @@ const ProblemWorkspace = () => {
     }
   }, [authUser, key, contestMode, contestId, generatorMode, genId, customMode, customId]);
 
-  const bruteAutosave = useAutosave(codes.brute, (val, approachKey) => autosaveWorkspaceCode(approachKey || '', val), {
-    delay: 200,
+  const bruteAutosave = useAutosave(codes.brute, () => autosaveWorkspaceCode('brute', codes.brute), {
+    delay: 1000,
+    maxDelay: 2000, // Ensure save at least every 2s even if typing
     enabled: !!key && !!authUser && !isCodeLoading,
     key: `${key}__brute`,
   });
-  const betterAutosave = useAutosave(codes.better, (val, approachKey) => autosaveWorkspaceCode(approachKey || '', val), {
-    delay: 200,
+  const betterAutosave = useAutosave(codes.better, () => autosaveWorkspaceCode('better', codes.better), {
+    delay: 1000,
+    maxDelay: 2000,
     enabled: !!key && !!authUser && !isCodeLoading,
     key: `${key}__better`,
   });
-  const optimalAutosave = useAutosave(codes.optimal, (val, approachKey) => autosaveWorkspaceCode(approachKey || '', val), {
-    delay: 200,
+  const optimalAutosave = useAutosave(codes.optimal, () => autosaveWorkspaceCode('optimal', codes.optimal), {
+    delay: 1000,
+    maxDelay: 2000,
     enabled: !!key && !!authUser && !isCodeLoading,
     key: `${key}__optimal`,
   });

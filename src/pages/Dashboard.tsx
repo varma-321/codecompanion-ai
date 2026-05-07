@@ -113,7 +113,8 @@ const Dashboard = () => {
   }, [userId]);
 
   const { isDirty: codeIsDirty, isSaving: isAutoSaving, lastSaved, resetSavedValue, triggerSave } = useAutosave(code, autosaveCode, {
-    delay: 200,
+    delay: 1000,
+    maxDelay: 2000,
     enabled: !!activeProblem && !!userId,
     key: activeProblem?.id,
   });

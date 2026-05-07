@@ -18,7 +18,8 @@ const NotesPanel = ({ notes, onSave }: NotesPanelProps) => {
   }, [notes]);
 
   const { isDirty: dirty, isSaving: saving, triggerSave, resetSavedValue } = useAutosave(value, onSave, {
-    delay: 1500,
+    delay: 1000,
+    maxDelay: 2000,
     enabled: true,
   });
 

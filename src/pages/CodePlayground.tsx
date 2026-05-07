@@ -123,13 +123,67 @@ public class Main {
 
 const CodePlayground = () => {
   const navigate = useNavigate();
-  const { profile } = useUser();
+  const { authUser, profile } = useUser();
   const [code, setCode] = useState(TEMPLATES['Hello World']);
   const [output, setOutput] = useState<string[]>([]);
   const [running, setRunning] = useState(false);
   const [execTime, setExecTime] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
   const [isPushing, setIsPushing] = useState(false);
+  const [isCodeLoading, setIsCodeLoading] = useState(true);
+
+  // Autosave logic
+  const autosaveCode = useCallback(async (val: string) => {
+    if (!authUser) return;
+    try {
+      await supabase.from('user_code_saves').upsert({
+        user_id: authUser.id,
+        problem_key: 'playground',
+        code: val,
+        language: 'java',
+        updated_at: new Date().toISOString(),
+      } as any, { onConflict: 'user_id,problem_key' });
+    } catch (e) {
+      console.error('Playground autosave failed:', e);
+    }
+  }, [authUser]);
+
+  const { isSaving: isAutoSaving, isDirty: codeIsDirty, resetSavedValue } = useAutosave(code, autosaveCode, {
+    delay: 1000,
+    maxDelay: 2000,
+    enabled: !!authUser && !isCodeLoading,
+    key: 'playground',
+  });
+
+  // Load saved code on mount
+  useEffect(() => {
+    if (!authUser) {
+      setIsCodeLoading(false);
+      return;
+    }
+    
+    const loadSaved = async () => {
+      try {
+        const { data } = await supabase
+          .from('user_code_saves')
+          .select('code')
+          .eq('user_id', authUser.id)
+          .eq('problem_key', 'playground')
+          .maybeSingle();
+        
+        if (data && (data as any).code) {
+          setCode((data as any).code);
+          resetSavedValue((data as any).code);
+        }
+      } catch (e) {
+        console.error('Failed to load playground code:', e);
+      } finally {
+        setIsCodeLoading(false);
+      }
+    };
+    
+    loadSaved();
+  }, [authUser]);
 
   const handleRun = async () => {
     if (running) return;
@@ -229,6 +283,20 @@ const CodePlayground = () => {
         </div>
 
         <div className="ml-auto flex items-center gap-1 sm:gap-1.5 shrink-0">
+          {isAutoSaving ? (
+            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+              <Loader2 className="h-3 w-3 animate-spin" /> Saving
+            </span>
+          ) : codeIsDirty ? (
+            <span className="text-[10px] text-warning flex items-center gap-1">
+              <div className="h-1.5 w-1.5 rounded-full bg-warning" /> Unsaved
+            </span>
+          ) : (
+            <span className="text-[10px] text-emerald-500 flex items-center gap-1">
+              <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Saved
+            </span>
+          )}
+          <div className="h-4 w-px bg-border hidden sm:block" />
           {execTime !== null && <span className="text-[10px] text-muted-foreground hidden sm:inline">{execTime}ms</span>}
           <Button size="sm" variant="ghost" onClick={handleCopy} className="h-7 w-7 p-0" title="Copy Code">
             {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
