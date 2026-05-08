@@ -260,17 +260,17 @@ export default function AppShell({ children, title, subtitle, actions, bare = fa
 
   return (
     <SidebarProvider defaultOpen={false}>
-      <div className="h-screen flex w-full bg-background overflow-hidden relative">
+      <div className="h-screen h-[100dvh] flex w-full bg-background overflow-hidden relative">
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0 bg-background/50">
           {!bare && <Topbar title={title} subtitle={subtitle} actions={actions} />}
-          <main className={`app-shell-main flex-1 min-w-0 relative ${!hideMobileNav ? 'pb-16 md:pb-0' : 'pb-0'} ${bare ? 'overflow-hidden' : 'overflow-auto'}`}>
+          <main className={`app-shell-main flex-1 min-w-0 relative ${!hideMobileNav ? ((location.pathname === '/' || location.pathname.startsWith('/problem/')) ? 'pb-[112px] md:pb-0' : 'pb-[56px] md:pb-0') : 'pb-0'} ${bare ? 'overflow-hidden' : 'overflow-auto'}`}>
             {bare ? (
-              <div className="h-full w-full animate-in-up">
+              <div className="h-full w-full">
                 {children}
               </div>
             ) : (
-              <div className="max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 animate-in-up">
+              <div className="max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8">
                 {children}
               </div>
             )}
@@ -279,7 +279,10 @@ export default function AppShell({ children, title, subtitle, actions, bare = fa
 
         {/* Mobile Bottom Navigation */}
         {!hideMobileNav && (
-          <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-card/80 backdrop-blur-xl border-t border-border z-50 flex items-center justify-around px-4 pb-safe">
+          <nav 
+            className="md:hidden fixed left-0 right-0 bg-card border-t border-border z-[1000] flex items-center justify-around px-4"
+            style={{ bottom: '0px', height: '56px' }}
+          >
             {mobileNavItems.map((item) => {
               const isActive = location.pathname === item.url || 
                 (item.url !== '/' && location.pathname.startsWith(item.url)) ||

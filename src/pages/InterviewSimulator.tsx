@@ -249,7 +249,7 @@ const InterviewSimulator = () => {
   if (!authUser) return <div className="flex h-screen items-center justify-center bg-background"><p className="text-foreground">Please log in</p></div>;
 
   return (
-    <div className="h-screen bg-background flex flex-col">
+    <div className="h-full bg-background flex flex-col">
       <div className="flex items-center gap-1 sm:gap-3 border-b border-panel-border bg-ide-toolbar px-3 sm:px-4 py-2 shrink-0">
         <Button variant="ghost" size="sm" onClick={() => navigate('/modules')} className="h-7 gap-1.5 text-xs font-medium rounded-lg">
           <ArrowLeft className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Back</span>
@@ -267,7 +267,7 @@ const InterviewSimulator = () => {
 
       <div className="flex-1 overflow-auto">
         {phase === 'setup' && (
-          <div className="max-w-5xl mx-auto p-4 sm:p-8 space-y-8 animate-in-up">
+          <div className="max-w-7xl mx-auto p-4 sm:p-8 space-y-8 animate-in-up">
             <div className="text-center sm:text-left space-y-2">
               <h1 className="text-3xl sm:text-4xl font-black text-foreground tracking-tight">Mock Interview</h1>
               <p className="text-sm text-muted-foreground max-w-md leading-relaxed">Simulate real technical interviews with AI-generated feedback and peer lobbies.</p>
@@ -555,7 +555,7 @@ const InterviewSimulator = () => {
         )}
 
         {phase === 'review' && (
-          <div className="max-w-4xl mx-auto p-4 sm:p-10 space-y-6 animate-in-up">
+          <div className="max-w-7xl mx-auto p-4 sm:p-10 space-y-6 animate-in-up">
             <div className="text-center space-y-4">
                <div className="h-20 w-20 rounded-3xl bg-primary/10 text-primary mx-auto flex items-center justify-center rotate-6 border-2 border-primary/20 shadow-2xl">
                   <Sparkles className="h-10 w-10" />

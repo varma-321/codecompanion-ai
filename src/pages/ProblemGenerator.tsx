@@ -156,7 +156,7 @@ const ProblemGenerator = () => {
   const difficultyColor = (d: string) => d === 'easy' ? 'text-success border-success/30' : d === 'medium' ? 'text-warning border-warning/30' : 'text-destructive border-destructive/30';
 
   return (
-    <div className="flex h-screen flex-col bg-background">
+    <div className="flex h-full flex-col bg-background">
       <div className="flex items-center gap-1 sm:gap-3 border-b border-panel-border bg-ide-toolbar px-3 sm:px-4 py-2 shrink-0">
         <Button variant="ghost" size="sm" onClick={() => navigate('/modules')} className="h-7 gap-1.5 text-xs font-medium rounded-lg">
           <ArrowLeft className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Back</span>
@@ -285,7 +285,7 @@ const ProblemGenerator = () => {
 
         {/* Problem display */}
         <ScrollArea className="flex-1">
-          <div className="mx-auto max-w-3xl p-6">
+          <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
             {!problem && !isGenerating && (
               <div className="flex flex-col items-center justify-center gap-4 py-20">
                 <Wand2 className="h-16 w-16 text-muted-foreground/20" />

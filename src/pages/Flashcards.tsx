@@ -115,7 +115,7 @@ const Flashcards = () => {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-background">
+    <div className="h-full flex flex-col bg-background">
       <div className="border-b border-panel-border bg-ide-toolbar px-4 py-2 flex items-center gap-3 shrink-0">
         <Button variant="ghost" size="sm" onClick={() => navigate('/modules')} className="h-7 gap-1 text-xs">
           <ArrowLeft className="h-3 w-3" /> <span className="hidden sm:inline">Back</span>
@@ -129,7 +129,7 @@ const Flashcards = () => {
       </div>
 
       <div className="flex-1 overflow-auto">
-        <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-5">
+        <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-5">
         {/* Controls */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <Select value={category} onValueChange={v => { setCategory(v); setIndex(0); setFlipped(false); setKnownSet(new Set()); setUnknownSet(new Set()); }}>

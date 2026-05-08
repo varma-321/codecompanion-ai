@@ -46,7 +46,7 @@ const BigOVisualizer = () => {
   const chartHeight = 280;
 
   return (
-    <div className="flex h-screen flex-col bg-background">
+    <div className="flex h-full flex-col bg-background">
       <div className="flex items-center gap-2 sm:gap-3 border-b border-border bg-card px-3 sm:px-5 py-3">
         <Button variant="ghost" size="sm" onClick={() => navigate('/modules')} className="h-8 gap-1.5 text-xs font-medium rounded-lg shrink-0">
           <ArrowLeft className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Back</span>
@@ -57,7 +57,7 @@ const BigOVisualizer = () => {
       </div>
 
       <div className="flex-1 overflow-auto">
-        <div className="max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-6">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-6">
           {/* Interactive Chart */}
           <Card className="border-border rounded-3xl overflow-hidden shadow-sm">
             <CardHeader className="pb-2 bg-secondary/5 border-b border-border/50">

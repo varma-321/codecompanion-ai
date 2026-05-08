@@ -152,7 +152,7 @@ const CheatSheet = () => {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-background">
+    <div className="h-full flex flex-col bg-background">
       <div className="border-b border-panel-border bg-ide-toolbar px-4 py-2 flex items-center gap-3 shrink-0">
         <Button variant="ghost" size="sm" onClick={() => navigate('/modules')} className="h-7 gap-1 text-xs">
           <ArrowLeft className="h-3 w-3" /> <span className="hidden sm:inline">Back</span>
@@ -163,7 +163,7 @@ const CheatSheet = () => {
       </div>
 
       <div className="flex-1 overflow-auto p-4 sm:p-6">
-        <div className="max-w-5xl mx-auto space-y-4">
+        <div className="max-w-7xl mx-auto space-y-4">
         <div className="flex flex-col gap-3">
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

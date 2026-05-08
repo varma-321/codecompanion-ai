@@ -105,7 +105,7 @@ const LearningMode = () => {
   };
 
   return (
-    <div className="flex h-screen flex-col bg-background">
+    <div className="flex h-full flex-col bg-background">
       {/* Header */}
       <div className="flex items-center gap-3 border-b border-panel-border bg-ide-toolbar px-4 py-2">
         <Button variant="ghost" size="sm" onClick={() => navigate('/')} className="h-7 gap-1 text-xs">
@@ -186,7 +186,7 @@ const LearningMode = () => {
                <ArrowLeft className="h-3 w-3" /> Change Topic
              </Button>
           )}
-          <div className="mx-auto max-w-4xl p-6">
+          <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
             {!selectedAlgorithm && !isLoading && (
               <div className="flex h-full flex-col items-center justify-center gap-4 py-20">
                 <BookOpen className="h-16 w-16 text-muted-foreground/20" />
@@ -268,7 +268,7 @@ const LearningMode = () => {
 
                 {activeStep === 'quiz' && (
                   <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500 py-10">
-                     <div className="max-w-xl mx-auto space-y-6">
+                     <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-6">
                         <div className="text-center space-y-2">
                            <h3 className="text-xl font-bold">Quick Concept Check</h3>
                            <p className="text-xs text-muted-foreground">Finish strong! Answer these questions to complete the lesson.</p>

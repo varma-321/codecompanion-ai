@@ -450,7 +450,7 @@ const Dashboard = () => {
   const codeIsMainStyle = isMainClassStyle(code);
 
   return (
-    <div className="flex h-screen flex-col bg-background">
+    <div className="flex h-full flex-col bg-background">
       <Toolbar
         onRun={handleRun}
         onSave={handleSave}
@@ -469,7 +469,7 @@ const Dashboard = () => {
         codeIsDirty={codeIsDirty}
       />
 
-      <div className="flex flex-1 overflow-hidden flex-col md:flex-row pb-16 md:pb-0">
+      <div className="flex flex-1 overflow-hidden flex-col md:flex-row pb-0 md:pb-0">
         {/* MOBILE VIEW */}
         <div className="md:hidden flex-1 flex flex-col overflow-hidden">
           {mobileTab === 'explorer' && (
@@ -553,7 +553,7 @@ const Dashboard = () => {
                 )}
                 {bottomTab === 'results' && (
                   <ScrollArea className="h-full">
-                    <div className="p-3 pb-20">
+                    <div className="p-3 pb-4">
                       {testResults.length > 0 ? (
                         <TestResultsTable results={testResults} />
                       ) : (
@@ -590,42 +590,45 @@ const Dashboard = () => {
           )}
 
           {/* DASHBOARD MOBILE BOTTOM NAV */}
-          <nav className="fixed bottom-16 left-0 right-0 h-16 bg-card/95 backdrop-blur-xl border-t border-border z-30 flex items-center justify-around px-2 shadow-[0_-8px_20px_rgba(0,0,0,0.15)]">
+          <nav 
+            className="fixed left-0 right-0 bg-card border-t border-border z-[100] flex items-center justify-around px-2"
+            style={{ bottom: '56px', height: '56px' }}
+          >
             <button 
               onClick={() => setMobileTab('explorer')} 
-              className={`flex flex-col items-center gap-1 flex-1 transition-all ${mobileTab === 'explorer' ? 'text-primary' : 'text-muted-foreground'}`}
+              className={`flex flex-col items-center justify-center gap-1 flex-1 h-full transition-all duration-300 ${mobileTab === 'explorer' ? 'text-primary' : 'text-muted-foreground'}`}
             >
-              <div className={`p-1.5 rounded-xl ${mobileTab === 'explorer' ? 'bg-primary/10' : ''}`}>
+              <div className={`p-1.5 rounded-xl transition-colors ${mobileTab === 'explorer' ? 'bg-primary/15' : ''}`}>
                 <FolderOpen className={`h-5 w-5 ${mobileTab === 'explorer' ? 'stroke-[2.5px]' : ''}`} />
               </div>
-              <span className="text-[9px] font-bold uppercase tracking-wider">Files</span>
+              <span className={`text-[10px] font-bold uppercase tracking-wider ${mobileTab === 'explorer' ? 'opacity-100' : 'opacity-60'}`}>Files</span>
             </button>
             <button 
               onClick={() => setMobileTab('editor')} 
-              className={`flex flex-col items-center gap-1 flex-1 transition-all ${mobileTab === 'editor' ? 'text-primary' : 'text-muted-foreground'}`}
+              className={`flex flex-col items-center justify-center gap-1 flex-1 h-full transition-all duration-300 ${mobileTab === 'editor' ? 'text-primary' : 'text-muted-foreground'}`}
             >
-              <div className={`p-1.5 rounded-xl ${mobileTab === 'editor' ? 'bg-primary/10' : ''}`}>
+              <div className={`p-1.5 rounded-xl transition-colors ${mobileTab === 'editor' ? 'bg-primary/15' : ''}`}>
                 <Code2 className={`h-5 w-5 ${mobileTab === 'editor' ? 'stroke-[2.5px]' : ''}`} />
               </div>
-              <span className="text-[9px] font-bold uppercase tracking-wider">Code</span>
+              <span className={`text-[10px] font-bold uppercase tracking-wider ${mobileTab === 'editor' ? 'opacity-100' : 'opacity-60'}`}>Code</span>
             </button>
             <button 
               onClick={() => setMobileTab('results')} 
-              className={`flex flex-col items-center gap-1 flex-1 transition-all ${mobileTab === 'results' ? 'text-primary' : 'text-muted-foreground'}`}
+              className={`flex flex-col items-center justify-center gap-1 flex-1 h-full transition-all duration-300 ${mobileTab === 'results' ? 'text-primary' : 'text-muted-foreground'}`}
             >
-              <div className={`p-1.5 rounded-xl ${mobileTab === 'results' ? 'bg-primary/10' : ''}`}>
+              <div className={`p-1.5 rounded-xl transition-colors ${mobileTab === 'results' ? 'bg-primary/15' : ''}`}>
                 <FlaskConical className={`h-5 w-5 ${mobileTab === 'results' ? 'stroke-[2.5px]' : ''}`} />
               </div>
-              <span className="text-[9px] font-bold uppercase tracking-wider">Console</span>
+              <span className={`text-[10px] font-bold uppercase tracking-wider ${mobileTab === 'results' ? 'opacity-100' : 'opacity-60'}`}>Console</span>
             </button>
             <button 
               onClick={() => setMobileTab('ai')} 
-              className={`flex flex-col items-center gap-1 flex-1 transition-all ${mobileTab === 'ai' ? 'text-primary' : 'text-muted-foreground'}`}
+              className={`flex flex-col items-center justify-center gap-1 flex-1 h-full transition-all duration-300 ${mobileTab === 'ai' ? 'text-primary' : 'text-muted-foreground'}`}
             >
-              <div className={`p-1.5 rounded-xl ${mobileTab === 'ai' ? 'bg-primary/10' : ''}`}>
+              <div className={`p-1.5 rounded-xl transition-colors ${mobileTab === 'ai' ? 'bg-primary/15' : ''}`}>
                 <MessageSquare className={`h-5 w-5 ${mobileTab === 'ai' ? 'stroke-[2.5px]' : ''}`} />
               </div>
-              <span className="text-[9px] font-bold uppercase tracking-wider">AI Tutor</span>
+              <span className={`text-[10px] font-bold uppercase tracking-wider ${mobileTab === 'ai' ? 'opacity-100' : 'opacity-60'}`}>AI Tutor</span>
             </button>
           </nav>
         </div>
