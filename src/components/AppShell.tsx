@@ -264,7 +264,7 @@ export default function AppShell({ children, title, subtitle, actions, bare = fa
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0 bg-background/50">
           {!bare && <Topbar title={title} subtitle={subtitle} actions={actions} />}
-          <main className={`app-shell-main flex-1 min-w-0 relative ${bare ? 'pb-0 overflow-hidden' : 'pb-16 md:pb-0 overflow-auto'}`}>
+          <main className={`app-shell-main flex-1 min-w-0 relative ${!hideMobileNav ? 'pb-16 md:pb-0' : 'pb-0'} ${bare ? 'overflow-hidden' : 'overflow-auto'}`}>
             {bare ? (
               <div className="h-full w-full animate-in-up">
                 {children}

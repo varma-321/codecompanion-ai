@@ -590,7 +590,7 @@ const Dashboard = () => {
           )}
 
           {/* DASHBOARD MOBILE BOTTOM NAV */}
-          <nav className="fixed bottom-0 left-0 right-0 h-16 bg-card/95 backdrop-blur-xl border-t border-border z-30 flex items-center justify-around px-2 pb-safe">
+          <nav className="fixed bottom-16 left-0 right-0 h-16 bg-card/95 backdrop-blur-xl border-t border-border z-30 flex items-center justify-around px-2 shadow-[0_-8px_20px_rgba(0,0,0,0.15)]">
             <button 
               onClick={() => setMobileTab('explorer')} 
               className={`flex flex-col items-center gap-1 flex-1 transition-all ${mobileTab === 'explorer' ? 'text-primary' : 'text-muted-foreground'}`}

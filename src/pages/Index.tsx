@@ -104,7 +104,7 @@ const Index = () => {
   }
 
   return (
-    <AppShell bare hideMobileNav>
+    <AppShell bare>
       <Dashboard />
     </AppShell>
   );

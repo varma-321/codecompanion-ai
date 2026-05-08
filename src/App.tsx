@@ -66,7 +66,7 @@ const bareShell = (element: ReactNode, hideMobileNav = false) => <AppShell bare 
 
 const ProblemWorkspaceLoader = () => {
   const { key } = useParams();
-  return bareShell(<ProblemWorkspace key={key} />, true);
+  return bareShell(<ProblemWorkspace key={key} />);
 };
 
 const App = () => (
@@ -134,7 +134,7 @@ const App = () => (
               />
               <Route
                 path="/interview"
-                element={bareShell(<InterviewSimulator />, true)}
+                element={bareShell(<InterviewSimulator />)}
               />
               <Route
                 path="/create"
@@ -194,7 +194,7 @@ const App = () => (
               />
               <Route
                 path="/playground"
-                element={bareShell(<CodePlayground />, true)}
+                element={bareShell(<CodePlayground />)}
               />
               <Route
                 path="/export"
@@ -307,7 +307,7 @@ const App = () => (
                 )}
               />
               <Route path="/admin/agent" element={<AdminAgentDashboard />} />
-              <Route path="/quick-practice" element={bareShell(<QuickPractice />, true)} />
+              <Route path="/quick-practice" element={bareShell(<QuickPractice />)} />
               <Route path="/mailbox" element={shell(<Mailbox />, "Mailbox", "Your reports, messages and support tickets")} />
 
               <Route path="/lobby/:code" element={<Lobby />} />
