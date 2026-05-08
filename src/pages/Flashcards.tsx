@@ -50,6 +50,12 @@ const FLASHCARDS: Flashcard[] = [
 
 const categories = ['All', ...Array.from(new Set(FLASHCARDS.map(f => f.category)))];
 
+const diffColor: Record<string, string> = {
+  'Easy': 'text-emerald-500 border-emerald-500/20 bg-emerald-500/5',
+  'Medium': 'text-amber-500 border-amber-500/20 bg-amber-500/5',
+  'Hard': 'text-rose-500 border-rose-500/20 bg-rose-500/5',
+};
+
 const Flashcards = () => {
   const navigate = useNavigate();
   const [category, setCategory] = useState('All');
@@ -109,95 +115,106 @@ const Flashcards = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="border-b border-panel-border bg-ide-toolbar px-4 py-2 flex items-center gap-3">
+    <div className="h-screen flex flex-col bg-background">
+      <div className="border-b border-panel-border bg-ide-toolbar px-4 py-2 flex items-center gap-3 shrink-0">
         <Button variant="ghost" size="sm" onClick={() => navigate('/modules')} className="h-7 gap-1 text-xs">
-          <ArrowLeft className="h-3 w-3" /> Back
+          <ArrowLeft className="h-3 w-3" /> <span className="hidden sm:inline">Back</span>
         </Button>
-        <span className="font-bold text-foreground">🃏 DSA Flashcards</span>
-        <Badge variant="outline" className="text-[10px]">{filtered.length} cards</Badge>
-        <div className="ml-auto flex items-center gap-2 text-[10px] text-muted-foreground">
+        <span className="font-bold text-foreground text-sm sm:text-base whitespace-nowrap">🃏 DSA Flashcards</span>
+        <Badge variant="outline" className="text-[10px] hidden xs:inline-flex">{filtered.length}</Badge>
+        <div className="ml-auto hidden md:flex items-center gap-2 text-[10px] text-muted-foreground">
           <Keyboard className="h-3 w-3" />
           <span>← → navigate · Space flip · 1 know · 2 don't</span>
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto p-6 space-y-5">
+      <div className="flex-1 overflow-auto">
+        <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-5">
         {/* Controls */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <Select value={category} onValueChange={v => { setCategory(v); setIndex(0); setFlipped(false); setKnownSet(new Set()); setUnknownSet(new Set()); }}>
-            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-40"><SelectValue /></SelectTrigger>
             <SelectContent>
               {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Button variant="outline" size="sm" onClick={handleShuffle} className="gap-1"><Shuffle className="h-3 w-3" /> Shuffle</Button>
-          <span className="text-sm text-muted-foreground ml-auto">{Math.min(index + 1, filtered.length)} / {filtered.length}</span>
+          <div className="flex items-center justify-between sm:justify-start gap-3 flex-1">
+            <Button variant="outline" size="sm" onClick={handleShuffle} className="gap-1 flex-1 sm:flex-none h-9 sm:h-8"><Shuffle className="h-3 w-3" /> Shuffle</Button>
+            <span className="text-sm text-muted-foreground tabular-nums whitespace-nowrap">{Math.min(index + 1, filtered.length)} / {filtered.length}</span>
+          </div>
         </div>
 
         {/* Progress */}
-        <div className="space-y-1">
-          <div className="flex justify-between text-[10px] text-muted-foreground">
-            <span className="text-emerald-500">✓ Know: {knownSet.size}</span>
-            <span>Progress: {Math.round(progress)}%</span>
-            <span className="text-red-500">✗ Review: {unknownSet.size}</span>
+        <div className="space-y-1.5">
+          <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider">
+            <span className="text-emerald-500">Know: {knownSet.size}</span>
+            <span className="text-muted-foreground">Progress: {Math.round(progress)}%</span>
+            <span className="text-red-500">Review: {unknownSet.size}</span>
           </div>
-          <Progress value={progress} className="h-1.5" />
+          <Progress value={progress} className="h-2 rounded-full" />
         </div>
 
         {/* Card */}
         {current ? (
-          <div onClick={() => setFlipped(!flipped)} style={{ cursor: 'pointer', perspective: '1000px' }}>
-            <Card className={`min-h-[280px] transition-all duration-500 ${flipped ? 'bg-primary/5 border-primary/20' : 'hover:shadow-md'}`}>
-              <CardContent className="pt-6 flex flex-col items-center justify-center min-h-[280px] text-center px-8">
-                <div className="flex gap-2 mb-4">
-                  <Badge variant="outline" className="text-[10px]">{current.category}</Badge>
-                  <Badge variant="outline" className={`text-[10px] ${diffColor[current.difficulty] || ''}`}>{current.difficulty}</Badge>
+          <div onClick={() => setFlipped(!flipped)} className="touch-none select-none" style={{ perspective: '1000px' }}>
+            <Card className={`min-h-[300px] sm:min-h-[280px] transition-all duration-500 border-2 ${flipped ? 'bg-primary/5 border-primary/30' : 'hover:shadow-lg border-border/50'}`}>
+              <CardContent className="pt-6 flex flex-col items-center justify-center min-h-[300px] sm:min-h-[280px] text-center px-4 sm:px-8">
+                <div className="flex gap-2 mb-6">
+                  <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-tighter">{current.category}</Badge>
+                  <Badge variant="outline" className={`text-[10px] font-bold uppercase ${diffColor[current.difficulty] || ''}`}>{current.difficulty}</Badge>
                 </div>
                 {!flipped ? (
-                  <>
-                    <p className="text-lg font-semibold text-foreground mb-4 leading-relaxed">{current.front}</p>
-                    <p className="text-xs text-muted-foreground animate-pulse">Click or press Space to reveal</p>
-                  </>
+                  <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300">
+                    <p className="text-lg sm:text-xl font-bold text-foreground leading-tight">{current.front}</p>
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary text-[10px] font-bold text-muted-foreground">
+                      <RotateCcw className="h-3 w-3" /> Tap to reveal
+                    </div>
+                  </div>
                 ) : (
-                  <>
-                    <p className="text-xs text-muted-foreground mb-2">Answer:</p>
-                    <p className="text-foreground whitespace-pre-line leading-relaxed text-sm">{current.back}</p>
-                  </>
+                  <div className="space-y-3 animate-in fade-in zoom-in-95 duration-300">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60">Key Concept</p>
+                    <p className="text-foreground whitespace-pre-line leading-relaxed text-sm sm:text-base font-medium">{current.back}</p>
+                  </div>
                 )}
               </CardContent>
             </Card>
           </div>
         ) : (
-          <p className="text-center text-muted-foreground py-10">No cards in this category</p>
+          <Card className="border-dashed py-20 text-center">
+            <CardContent>
+              <ThumbsUp className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
+              <p className="text-muted-foreground font-medium">No cards in this category</p>
+            </CardContent>
+          </Card>
         )}
 
         {/* Actions */}
-        <div className="flex items-center justify-center gap-3">
-          <Button variant="outline" size="sm" onClick={goPrev} disabled={index === 0}>
-            <ChevronLeft className="h-4 w-4" />
+        <div className="flex items-center justify-center gap-2 sm:gap-4">
+          <Button variant="outline" size="icon" onClick={goPrev} disabled={index === 0} className="h-10 w-10 sm:h-9 sm:w-9 rounded-xl">
+            <ChevronLeft className="h-5 w-5" />
           </Button>
           
-          {flipped && (
-            <>
-              <Button variant="outline" size="sm" onClick={markUnknown} className="gap-1 text-red-500 border-red-500/30 hover:bg-red-500/10">
-                <ThumbsDown className="h-3.5 w-3.5" /> Don't Know
+          <div className="flex-1 flex gap-2 max-w-xs">
+            {flipped ? (
+              <>
+                <Button variant="outline" size="sm" onClick={markUnknown} className="flex-1 h-10 sm:h-9 gap-1.5 text-xs font-bold text-red-500 border-red-500/20 bg-red-500/5 hover:bg-red-500/10 rounded-xl">
+                  <ThumbsDown className="h-3.5 w-3.5" /> <span className="xs:inline hidden">Review</span>
+                </Button>
+                <Button variant="outline" size="sm" onClick={markKnown} className="flex-1 h-10 sm:h-9 gap-1.5 text-xs font-bold text-emerald-500 border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 rounded-xl">
+                  <ThumbsUp className="h-3.5 w-3.5" /> <span className="xs:inline hidden">Know</span>
+                </Button>
+              </>
+            ) : (
+              <Button variant="primary" size="sm" onClick={() => setFlipped(true)} className="flex-1 h-10 sm:h-9 gap-2 font-bold rounded-xl shadow-lg shadow-primary/20">
+                <RotateCcw className="h-4 w-4" /> Flip Card
               </Button>
-              <Button variant="outline" size="sm" onClick={markKnown} className="gap-1 text-emerald-500 border-emerald-500/30 hover:bg-emerald-500/10">
-                <ThumbsUp className="h-3.5 w-3.5" /> Know It
-              </Button>
-            </>
-          )}
+            )}
+          </div>
 
-          {!flipped && (
-            <Button variant="outline" size="sm" onClick={() => setFlipped(true)}>
-              <RotateCcw className="h-4 w-4" />
-            </Button>
-          )}
-
-          <Button variant="outline" size="sm" onClick={goNext} disabled={index >= filtered.length - 1}>
-            <ChevronRight className="h-4 w-4" />
+          <Button variant="outline" size="icon" onClick={goNext} disabled={index >= filtered.length - 1} className="h-10 w-10 sm:h-9 sm:w-9 rounded-xl">
+            <ChevronRight className="h-5 w-5" />
           </Button>
+          </div>
         </div>
       </div>
     </div>

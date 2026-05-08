@@ -157,19 +157,18 @@ const ProblemGenerator = () => {
 
   return (
     <div className="flex h-screen flex-col bg-background">
-      <div className="flex items-center gap-3 border-b border-panel-border bg-ide-toolbar px-4 py-2">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/')} className="h-7 gap-1 text-xs">
-          <ArrowLeft className="h-3 w-3" /> Back to IDE
+      <div className="flex items-center gap-1 sm:gap-3 border-b border-panel-border bg-ide-toolbar px-3 sm:px-4 py-2 shrink-0">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/modules')} className="h-7 gap-1.5 text-xs font-medium rounded-lg">
+          <ArrowLeft className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Back</span>
         </Button>
-        <div className="flex items-center gap-2">
-          <Wand2 className="h-4 w-4 text-primary" />
-          <span className="text-sm font-bold">Problem Generator</span>
-        </div>
+        <div className="h-4 w-px bg-border shrink-0" />
+        <Wand2 className="h-4 w-4 text-primary shrink-0" />
+        <span className="text-sm font-bold truncate">Problem Generator</span>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden flex-col lg:flex-row">
         {/* Controls sidebar */}
-        <div className="w-80 shrink-0 border-r border-panel-border flex flex-col bg-ide-sidebar">
+        <div className="w-full lg:w-80 shrink-0 border-b lg:border-b-0 lg:border-r border-panel-border flex flex-col bg-ide-sidebar max-h-[350px] lg:max-h-none">
           <div className="flex border-b border-panel-border">
             <button 
               onClick={() => setActiveTab('generate')}

@@ -138,78 +138,87 @@ const SpacedRepetition = () => {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-3">
-            <Card>
+          {/* Stats */}
+          <div className="grid grid-cols-1 xs:grid-cols-3 gap-3">
+            <Card className="bg-destructive/5 border-destructive/10">
               <CardContent className="p-3 text-center">
-                <div className="text-2xl font-bold text-destructive">{dueItems.length}</div>
-                <div className="text-[10px] text-muted-foreground">Due Now</div>
+                <div className="text-2xl font-bold text-destructive tabular-nums">{dueItems.length}</div>
+                <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Due Now</div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="bg-primary/5 border-primary/10">
               <CardContent className="p-3 text-center">
-                <div className="text-2xl font-bold text-primary">{upcomingItems.length}</div>
-                <div className="text-[10px] text-muted-foreground">Upcoming</div>
+                <div className="text-2xl font-bold text-primary tabular-nums">{upcomingItems.length}</div>
+                <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Upcoming</div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="bg-success/5 border-success/10">
               <CardContent className="p-3 text-center">
-                <div className="text-2xl font-bold text-success">{dueItems.length + upcomingItems.length}</div>
-                <div className="text-[10px] text-muted-foreground">In Rotation</div>
+                <div className="text-2xl font-bold text-success tabular-nums">{dueItems.length + upcomingItems.length}</div>
+                <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Rotation</div>
               </CardContent>
             </Card>
           </div>
 
           {/* Due Reviews */}
           {dueItems.length > 0 && (
-            <div>
-              <h2 className="text-sm font-bold text-foreground mb-2 flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 text-destructive" /> Due for Review
+            <div className="space-y-3">
+              <h2 className="text-xs font-black uppercase tracking-[0.2em] text-destructive flex items-center gap-2 px-1">
+                <AlertCircle className="h-4 w-4" /> Due for Review
               </h2>
-              <div className="space-y-1">
+              <div className="space-y-2">
                 {dueItems.map((item, idx) => {
                   const p = problem(item.problem_key);
                   if (!p) return null;
                   const isReviewing = reviewingIdx === idx;
 
                   return (
-                    <Card key={item.problem_key} className={isReviewing ? 'border-primary/30' : ''}>
-                      <CardContent className="p-3">
-                        <div className="flex items-center gap-3">
-                          <RotateCcw className="h-4 w-4 text-warning shrink-0" />
-                          <button
-                            onClick={() => navigate(`/problem/${item.problem_key}`)}
-                            className="flex-1 text-left text-xs font-medium hover:text-primary transition-colors"
-                          >
-                            {p.title}
-                          </button>
-                          <Badge variant="outline" className={`text-[9px] ${getDifficultyBg(p.difficulty)}`}>
-                            {p.difficulty}
-                          </Badge>
-                          <Button size="sm" variant="outline" className="h-6 text-[10px]" onClick={() => setReviewingIdx(isReviewing ? null : idx)}>
-                            Review
-                          </Button>
+                    <Card key={item.problem_key} className={`transition-all border-2 ${isReviewing ? 'border-primary shadow-lg' : 'hover:border-primary/20 border-border/50'}`}>
+                      <CardContent className="p-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                          <div className="flex items-start gap-3 flex-1 min-w-0">
+                            <RotateCcw className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+                            <div className="min-w-0 flex-1">
+                              <button
+                                onClick={() => navigate(`/problem/${item.problem_key}`)}
+                                className="text-sm font-bold hover:text-primary transition-colors leading-tight block mb-1"
+                              >
+                                {p.title}
+                              </button>
+                              <Badge variant="outline" className={`text-[9px] font-black uppercase tracking-tighter ${getDifficultyBg(p.difficulty)}`}>
+                                {p.difficulty}
+                              </Badge>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 sm:ml-auto">
+                            <Button size="sm" variant="outline" className="h-8 text-[10px] font-black uppercase tracking-widest flex-1 sm:flex-none px-4 rounded-full" onClick={() => setReviewingIdx(isReviewing ? null : idx)}>
+                              {isReviewing ? 'Cancel' : 'Review'}
+                            </Button>
+                          </div>
                         </div>
 
                         {isReviewing && (
-                          <div className="mt-3 pt-3 border-t border-panel-border">
-                            <p className="text-[10px] text-muted-foreground mb-2">How well did you remember this?</p>
-                            <div className="flex gap-1">
-                              {[
-                                { q: 1, label: 'Forgot', cls: 'bg-destructive/10 hover:bg-destructive/20 text-destructive' },
-                                { q: 3, label: 'Hard', cls: 'bg-warning/10 hover:bg-warning/20 text-warning' },
-                                { q: 4, label: 'Good', cls: 'bg-primary/10 hover:bg-primary/20 text-primary' },
-                                { q: 5, label: 'Easy', cls: 'bg-success/10 hover:bg-success/20 text-success' },
-                              ].map(btn => (
-                                <Button
-                                  key={btn.q}
-                                  variant="ghost"
-                                  size="sm"
-                                  className={`flex-1 h-7 text-[10px] font-semibold ${btn.cls}`}
-                                  onClick={() => handleReview(item, btn.q)}
-                                >
-                                  {btn.label}
-                                </Button>
-                              ))}
+                          <div className="mt-4 pt-4 border-t border-panel-border animate-in slide-in-from-top-2 duration-200">
+                            <div className="text-center space-y-4">
+                              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Rate your recall</p>
+                              <div className="grid grid-cols-2 xs:grid-cols-4 gap-2">
+                                {[
+                                  { q: 1, label: 'Forgot', cls: 'bg-destructive/10 hover:bg-destructive text-destructive hover:text-white border-destructive/20' },
+                                  { q: 3, label: 'Hard', cls: 'bg-warning/10 hover:bg-warning text-warning hover:text-white border-warning/20' },
+                                  { q: 4, label: 'Good', cls: 'bg-primary/10 hover:bg-primary text-primary hover:text-white border-primary/20' },
+                                  { q: 5, label: 'Easy', cls: 'bg-success/10 hover:bg-success text-success hover:text-white border-success/20' },
+                                ].map(btn => (
+                                  <Button
+                                    key={btn.q}
+                                    variant="ghost"
+                                    size="sm"
+                                    className={`h-10 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${btn.cls}`}
+                                    onClick={() => handleReview(item, btn.q)}
+                                  >
+                                    {btn.label}
+                                  </Button>
+                                ))}
+                              </div>
                             </div>
                           </div>
                         )}

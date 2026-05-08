@@ -100,52 +100,59 @@ const Compan = () => {
     <div className="min-h-screen bg-background">
       <div className="border-b border-panel-border bg-ide-toolbar px-4 py-2 flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={() => navigate('/modules')} className="h-7 gap-1 text-xs">
-          <ArrowLeft className="h-3 w-3" /> Back
+          <ArrowLeft className="h-3 w-3" /> <span className="hidden sm:inline">Back</span>
         </Button>
-        <Building2 className="h-4 w-4 text-primary" />
-        <span className="font-bold text-foreground">Company-Wise Problems</span>
+        <Building2 className="h-4 w-4 text-primary shrink-0" />
+        <span className="font-bold text-foreground text-sm truncate">Company Problems</span>
       </div>
 
-      <div className="max-w-5xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="space-y-3">
-          <div className="relative">
+      <div className="max-w-5xl mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6 overflow-hidden">
+        <div className="space-y-3 flex flex-col h-[350px] lg:h-[700px]">
+          <div className="relative shrink-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input className="pl-9" placeholder="Search company..." value={search} onChange={e => setSearch(e.target.value)} />
+            <Input className="pl-9 h-10 rounded-xl" placeholder="Search company..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <ScrollArea className="h-[600px]">
-            <div className="space-y-1">
+          <ScrollArea className="flex-1 border border-panel-border rounded-xl bg-card/50">
+            <div className="p-1 space-y-1">
               {filteredCompanies.map(c => (
                 <button key={c} onClick={() => setSelected(c)}
-                  className={`w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-center justify-between transition-colors ${selected === c ? 'bg-primary/10 text-primary border border-primary/20' : 'hover:bg-secondary/50 text-foreground'}`}>
-                  <span className="font-medium">{c}</span>
-                  <Badge variant="outline" className="text-[10px]">{COMPANY_TAGS[c].length}</Badge>
+                  className={`w-full text-left px-3 py-3 rounded-lg text-[13px] flex items-center justify-between transition-all ${selected === c ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' : 'hover:bg-secondary/50 text-foreground'}`}>
+                  <span className="font-bold">{c}</span>
+                  <Badge variant={selected === c ? 'secondary' : 'outline'} className="text-[10px] font-bold">{COMPANY_TAGS[c].length}</Badge>
                 </button>
               ))}
             </div>
           </ScrollArea>
         </div>
 
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 overflow-auto">
           {!selected ? (
-            <div className="flex items-center justify-center h-[400px] text-muted-foreground">
-              <p>Select a company to see frequently asked problems</p>
-            </div>
+            <Card className="border-dashed h-[300px] lg:h-[700px] flex flex-col items-center justify-center text-muted-foreground bg-secondary/5">
+              <Building2 className="h-12 w-12 opacity-10 mb-4" />
+              <p className="text-sm font-medium">Select a company to see top problems</p>
+            </Card>
           ) : (
-            <div className="space-y-3">
-              <h2 className="text-lg font-bold text-foreground">{selected} — Top Problems</h2>
-              <div className="space-y-2">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between px-1">
+                <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+                  <span className="p-1.5 rounded-lg bg-primary/10 text-primary">{selected[0]}</span>
+                  {selected}
+                </h2>
+                <Badge variant="secondary" className="font-bold">{matchedProblems.length} Problems</Badge>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {matchedProblems.map((p: any) => (
-                  <Card key={p.key} className="cursor-pointer hover:border-primary/30 transition-colors" onClick={() => navigate(`/problem/${p.key}`)}>
-                    <CardContent className="py-3 flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{p.title}</p>
-                        <p className="text-xs text-muted-foreground">{p.topic}</p>
+                  <Card key={p.key} className="cursor-pointer hover:border-primary/40 border-2 border-transparent transition-all bg-card/50 hover:bg-card" onClick={() => navigate(`/problem/${p.key}`)}>
+                    <CardContent className="p-4 flex items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-bold text-foreground truncate leading-tight">{p.title}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1 font-medium uppercase tracking-wider">{p.topic}</p>
                       </div>
-                      <Badge className={`text-[10px] ${getDifficultyBg(p.difficulty)}`}>{p.difficulty}</Badge>
+                      <Badge className={`text-[9px] font-black uppercase tracking-tighter shrink-0 ${getDifficultyBg(p.difficulty)}`}>{p.difficulty}</Badge>
                     </CardContent>
                   </Card>
                 ))}
-                {matchedProblems.length === 0 && <p className="text-muted-foreground text-sm">No matching problems found in current modules.</p>}
+                {matchedProblems.length === 0 && <p className="text-muted-foreground text-sm col-span-full text-center py-10 border-dashed border rounded-xl">No matching problems found in current modules.</p>}
               </div>
             </div>
           )}

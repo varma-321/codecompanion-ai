@@ -163,38 +163,40 @@ const ContestMode = () => {
   const remaining = Math.max(0, timeLimit * 60 - elapsed);
 
   return (
-    <div className="flex h-screen flex-col bg-background">
-      <div className="flex items-center gap-3 border-b border-panel-border bg-ide-toolbar px-4 py-2">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/')} className="h-7 gap-1 text-xs">
-          <ArrowLeft className="h-3 w-3" /> Back
+    <div className="h-screen bg-background flex flex-col">
+      <div className="flex items-center gap-1 sm:gap-3 border-b border-panel-border bg-ide-toolbar px-3 sm:px-4 py-2 shrink-0">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/modules')} className="h-7 gap-1.5 text-xs font-medium rounded-lg">
+          <ArrowLeft className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Back</span>
         </Button>
-        <div className="flex items-center gap-2">
-          <Timer className="h-4 w-4 text-primary" />
-          <span className="text-sm font-bold">Contest Mode</span>
-        </div>
+        <div className="h-4 w-px bg-border shrink-0" />
+        <Trophy className="h-4 w-4 text-primary shrink-0" />
+        <span className="text-sm font-bold truncate">Contest Mode</span>
         {state === 'running' && (
-          <Badge variant={remaining < 60 ? 'destructive' : 'secondary'} className="ml-auto font-mono text-xs">
-            ⏱ {formatTime(remaining)}
-          </Badge>
+          <div className={`ml-auto px-3 py-1 rounded-full font-mono text-xs font-bold flex items-center gap-2 ${remaining < 60 ? 'bg-destructive/10 text-destructive animate-pulse border border-destructive/20' : 'bg-secondary text-foreground'}`}>
+            <Clock className="h-3 w-3" /> {formatTime(remaining)}
+          </div>
         )}
       </div>
 
-      <div className="flex-1 overflow-auto">
-        <div className="max-w-2xl mx-auto p-6 space-y-6">
+      <div className="flex-1 overflow-auto p-4 sm:p-6">
+        <div className="max-w-2xl mx-auto space-y-6">
           {state === 'setup' && (
             <>
-              <div>
-                <h1 className="text-xl font-bold text-foreground">🏆 Start a Contest</h1>
-                <p className="text-sm text-muted-foreground mt-1">Test yourself under timed conditions</p>
+              <div className="text-center sm:text-left">
+                <h1 className="text-2xl font-black text-foreground tracking-tight flex items-center justify-center sm:justify-start gap-3">
+                   <div className="p-2 rounded-xl bg-warning/10 text-warning border border-warning/20">🏆</div>
+                   Contest Arena
+                </h1>
+                <p className="text-sm text-muted-foreground mt-2">Test your speed and accuracy under timed conditions</p>
               </div>
 
-              <Card>
-                <CardContent className="p-4 space-y-4">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <div>
-                      <label className="text-xs font-semibold text-muted-foreground">Difficulty</label>
+              <Card className="rounded-3xl border-2 border-primary/10 overflow-hidden bg-card/50 backdrop-blur-sm">
+                <CardContent className="p-6 space-y-6">
+                  <div className="grid grid-cols-1 xs:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Difficulty</label>
                       <Select value={difficulty} onValueChange={(v) => setDifficulty(v as Difficulty)}>
-                        <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="h-10 rounded-xl bg-secondary/50 border-transparent"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Mixed">Mixed</SelectItem>
                           <SelectItem value="Easy">Easy</SelectItem>
@@ -203,32 +205,32 @@ const ContestMode = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div>
-                      <label className="text-xs font-semibold text-muted-foreground">Problems</label>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Problem Count</label>
                       <Select value={String(problemCount)} onValueChange={(v) => setProblemCount(Number(v))}>
-                        <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="h-10 rounded-xl bg-secondary/50 border-transparent"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          {[3, 5, 7, 10].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                          {[3, 5, 7, 10].map(n => <SelectItem key={n} value={String(n)}>{n} Problems</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
-                    <div>
-                      <label className="text-xs font-semibold text-muted-foreground">Time (min)</label>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Time Limit</label>
                       <Select value={String(timeLimit)} onValueChange={(v) => setTimeLimit(Number(v))}>
-                        <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="h-10 rounded-xl bg-secondary/50 border-transparent"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          {[15, 30, 45, 60, 90].map(n => <SelectItem key={n} value={String(n)}>{n} min</SelectItem>)}
+                          {[15, 30, 45, 60, 90].map(n => <SelectItem key={n} value={String(n)}>{n} Minutes</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
-                    <div>
-                      <label className="text-xs font-semibold text-muted-foreground">Source</label>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Question Pool</label>
                       <Select value={questionSource} onValueChange={(v) => setQuestionSource(v as QuestionSource)}>
-                        <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="h-10 rounded-xl bg-secondary/50 border-transparent"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">All Problems</SelectItem>
                           <SelectItem value="solved" disabled={solvedKeys.size === 0}>
-                            Solved ({solvedKeys.size})
+                            Only Solved ({solvedKeys.size})
                           </SelectItem>
                         </SelectContent>
                       </Select>
@@ -236,15 +238,17 @@ const ContestMode = () => {
                   </div>
                   
                   {questionSource === 'solved' && solvedKeys.size === 0 && (
-                    <p className="text-xs text-warning">You haven't solved any problems yet. Solve problems in any module first.</p>
+                    <div className="p-3 rounded-xl bg-warning/5 border border-warning/10 text-[11px] text-warning flex items-center gap-2">
+                       <Zap className="h-4 w-4" /> You haven't solved any problems yet.
+                    </div>
                   )}
 
                   <Button 
-                    className="w-full gap-2" 
+                    className="w-full gap-2 h-12 text-sm font-black rounded-2xl shadow-xl shadow-primary/20" 
                     onClick={startContest}
                     disabled={questionSource === 'solved' && solvedKeys.size === 0}
                   >
-                    <Play className="h-4 w-4" /> Start Contest
+                    <Play className="h-4 w-4 fill-current" /> Start Competition
                   </Button>
                 </CardContent>
               </Card>

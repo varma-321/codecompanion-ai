@@ -107,64 +107,72 @@ const QuickPractice = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-lg space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-2">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/modules')} className="gap-2">
-            <ArrowLeft className="h-4 w-4" /> Exit
-          </Button>
-          <div className="flex items-center gap-2">
-            <Zap className="h-4 w-4 text-warning fill-warning" />
-            <span className="font-bold text-sm">Streak: {streak}</span>
-          </div>
-          <Badge variant="outline" className="gap-1.5 font-bold">
-            <Timer className={`h-3.5 w-3.5 ${timeLeft < 10 ? 'text-destructive animate-pulse' : 'text-primary'}`} />
-            {timeLeft}s
-          </Badge>
+    <div className="h-screen bg-background flex flex-col">
+      <div className="flex items-center gap-1 sm:gap-3 border-b border-panel-border bg-ide-toolbar px-3 sm:px-4 py-2 shrink-0">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/modules')} className="h-7 gap-1.5 text-xs font-medium rounded-lg">
+          <ArrowLeft className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Exit</span>
+        </Button>
+        <div className="h-4 w-px bg-border shrink-0" />
+        <Zap className="h-4 w-4 text-primary shrink-0" />
+        <span className="text-sm font-bold truncate">Quick Practice</span>
+        
+        <div className="ml-auto flex items-center gap-2 sm:gap-4 shrink-0">
+           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-warning/10 text-warning border border-warning/20">
+             <Zap className="h-3 w-3 fill-warning" />
+             <span className="text-[10px] font-black">{streak}</span>
+           </div>
+           <Badge variant="outline" className="gap-1.5 font-bold h-7 rounded-lg">
+             <Timer className={`h-3.5 w-3.5 ${timeLeft < 10 ? 'text-destructive animate-pulse' : 'text-primary'}`} />
+             <span className="tabular-nums">{timeLeft}s</span>
+           </Badge>
         </div>
+      </div>
 
-        {isGameOver ? (
-          <Card className="animate-in fade-in zoom-in duration-300">
-            <CardHeader className="text-center">
-              <div className="mx-auto bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mb-4">
-                <Trophy className="h-8 w-8 text-primary" />
-              </div>
-              <CardTitle>Session Complete!</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6 text-center">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 rounded-2xl bg-secondary/50">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Score</p>
-                  <p className="text-2xl font-black text-foreground">{score}</p>
-                </div>
-                <div className="p-4 rounded-2xl bg-secondary/50">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Accuracy</p>
-                  <p className="text-2xl font-black text-foreground">
-                    {Math.round((score / (MOCK_MCQS.length * 15)) * 100)}%
-                  </p>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <Button onClick={resetGame} className="w-full gap-2 h-12 text-md font-bold">
-                  <RefreshCw className="h-4 w-4" /> Try Again
-                </Button>
-                <Button variant="outline" onClick={() => navigate('/modules')} className="w-full h-12 text-md font-bold">
-                  Return to Modules
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <>
-            {/* Progress */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-[10px] font-bold uppercase text-muted-foreground tracking-widest px-1">
-                <span>Question {currentIdx + 1} of {MOCK_MCQS.length}</span>
-                <span>Score: {score}</span>
-              </div>
-              <Progress value={((currentIdx + 1) / MOCK_MCQS.length) * 100} className="h-2" />
+      <div className="flex-1 overflow-auto p-4 sm:p-6 flex flex-col items-center">
+        <div className="w-full max-w-lg space-y-6 flex-1">
+          {isGameOver ? (
+            <div className="flex flex-col items-center justify-center h-full space-y-6">
+              <Card className="w-full animate-in fade-in zoom-in duration-300 border-2 border-primary/20 bg-card/50 backdrop-blur-xl rounded-3xl">
+                <CardHeader className="text-center pb-2">
+                  <div className="mx-auto bg-primary/10 w-20 h-20 rounded-3xl flex items-center justify-center mb-4 rotate-6 shadow-xl shadow-primary/10">
+                    <Trophy className="h-10 w-10 text-primary" />
+                  </div>
+                  <CardTitle className="text-2xl font-black">Session Complete!</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-8 p-6 text-center">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-5 rounded-3xl bg-secondary/30 border border-border/50">
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-black mb-1">Total Score</p>
+                      <p className="text-3xl font-black text-foreground tracking-tighter">{score}</p>
+                    </div>
+                    <div className="p-5 rounded-3xl bg-secondary/30 border border-border/50">
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-black mb-1">Accuracy</p>
+                      <p className="text-3xl font-black text-foreground tracking-tighter">
+                        {Math.round((score / (MOCK_MCQS.length * 15)) * 100)}%
+                      </p>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <Button onClick={resetGame} className="w-full gap-2 h-14 text-md font-black rounded-2xl shadow-lg shadow-primary/20">
+                      <RefreshCw className="h-5 w-5" /> Try Again
+                    </Button>
+                    <Button variant="outline" onClick={() => navigate('/modules')} className="w-full h-14 text-md font-black rounded-2xl border-2">
+                      Return to Modules
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
+          ) : (
+            <>
+              {/* Progress */}
+              <div className="space-y-3 bg-secondary/20 p-4 rounded-3xl border border-border/50 backdrop-blur-sm">
+                <div className="flex justify-between text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em]">
+                  <span>Question {currentIdx + 1} / {MOCK_MCQS.length}</span>
+                  <span className="text-primary">Score: {score}</span>
+                </div>
+                <Progress value={((currentIdx + 1) / MOCK_MCQS.length) * 100} className="h-2 rounded-full" />
+              </div>
 
             {/* Question Card */}
             <Card className="border-none shadow-2xl bg-gradient-to-b from-card to-secondary/20">
@@ -225,6 +233,7 @@ const QuickPractice = () => {
             </div>
           </>
         )}
+        </div>
       </div>
     </div>
   );

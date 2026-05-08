@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, BookOpen, Loader2, Sparkles, CheckCircle2, Trophy, ArrowRight } from 'lucide-react';
+import { ArrowLeft, BookOpen, Loader2, Sparkles, CheckCircle2, Trophy, ArrowRight, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -109,62 +109,83 @@ const LearningMode = () => {
       {/* Header */}
       <div className="flex items-center gap-3 border-b border-panel-border bg-ide-toolbar px-4 py-2">
         <Button variant="ghost" size="sm" onClick={() => navigate('/')} className="h-7 gap-1 text-xs">
-          <ArrowLeft className="h-3 w-3" /> Back to IDE
+          <ArrowLeft className="h-3 w-3" /> <span className="hidden sm:inline">Back</span>
         </Button>
-        <div className="flex items-center gap-2">
-          <BookOpen className="h-4 w-4 text-primary" />
-          <span className="text-sm font-bold">Learning Mode</span>
+        <div className="flex items-center gap-2 min-w-0">
+          <BookOpen className="h-4 w-4 text-primary shrink-0" />
+          <span className="text-sm font-bold truncate">Learning Mode</span>
         </div>
         {selectedAlgorithm && (
-          <Badge variant="secondary" className="text-xs">{selectedAlgorithm}</Badge>
+          <Badge variant="secondary" className="text-[10px] hidden xs:inline-flex truncate">{selectedAlgorithm}</Badge>
         )}
-        <div className="ml-auto flex items-center gap-4">
-           <div className="w-32 h-1.5 bg-secondary rounded-full overflow-hidden hidden sm:block">
+        <div className="ml-auto flex items-center gap-3">
+           <div className="w-20 sm:w-32 h-1.5 bg-secondary rounded-full overflow-hidden hidden xs:block">
               <div className="h-full bg-primary transition-all duration-500" style={{ width: `${progress}%` }} />
            </div>
-           <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{progress}% Complete</span>
+           <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{progress}%</span>
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Topic sidebar */}
-        <div className="w-72 shrink-0 border-r border-panel-border overflow-auto bg-ide-sidebar">
-          <div className="p-3">
-            <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Topics</h3>
-            {TOPICS.map(topic => (
-              <div key={topic.name} className="mb-2">
-                <button
-                  onClick={() => setSelectedTopic(selectedTopic === topic.name ? null : topic.name)}
-                  className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                    selectedTopic === topic.name ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted'
-                  }`}
-                >
-                  <span>{topic.icon}</span>
-                  <span>{topic.name}</span>
-                </button>
-                {selectedTopic === topic.name && (
-                  <div className="ml-4 mt-1 space-y-0.5">
-                    {topic.algorithms.map(algo => (
-                      <button
-                        key={algo}
-                        onClick={() => handleLearn(algo)}
-                        className={`flex w-full items-center gap-2 rounded px-3 py-1.5 text-xs transition-colors ${
-                          selectedAlgorithm === algo ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                        }`}
-                      >
-                        <Sparkles className="h-3 w-3" />
-                        {algo}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Topic sidebar - hidden on small screens by default, but we'll use a simple CSS toggle approach for now or just stack it if small */}
+        <div className={`
+          ${selectedAlgorithm ? 'hidden lg:block' : 'block'} 
+          w-full lg:w-72 shrink-0 border-r border-panel-border overflow-auto bg-ide-sidebar transition-all
+        `}>
+          <div className="p-4 sm:p-5">
+            <div className="mb-6">
+              <h2 className="text-xl font-bold text-foreground">Topics</h2>
+              <p className="text-[11px] text-muted-foreground mt-1 uppercase tracking-widest font-bold">DSA Learning Paths</p>
+            </div>
+            <div className="space-y-1.5">
+              {TOPICS.map(topic => (
+                <div key={topic.name} className="space-y-1">
+                  <button
+                    onClick={() => setSelectedTopic(selectedTopic === topic.name ? null : topic.name)}
+                    className={`flex w-full items-center justify-between rounded-xl px-4 py-3 text-sm font-bold transition-all ${
+                      selectedTopic === topic.name ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' : 'text-foreground hover:bg-muted'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl">{topic.icon}</span>
+                      <span>{topic.name}</span>
+                    </div>
+                    <ChevronRight className={`h-4 w-4 transition-transform ${selectedTopic === topic.name ? 'rotate-90' : ''}`} />
+                  </button>
+                  {selectedTopic === topic.name && (
+                    <div className="ml-4 mt-2 space-y-1 animate-in slide-in-from-top-2 duration-200">
+                      {topic.algorithms.map(algo => (
+                        <button
+                          key={algo}
+                          onClick={() => handleLearn(algo)}
+                          className={`flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-xs font-bold transition-all ${
+                            selectedAlgorithm === algo ? 'bg-primary/10 text-primary border border-primary/20' : 'text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent'
+                          }`}
+                        >
+                          <Sparkles className={`h-3.5 w-3.5 ${selectedAlgorithm === algo ? 'text-primary' : 'text-muted-foreground/40'}`} />
+                          {algo}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
         {/* Content area */}
-        <ScrollArea className="flex-1" ref={scrollRef}>
+        <ScrollArea className={`flex-1 ${!selectedAlgorithm ? 'hidden lg:block' : 'block'}`} ref={scrollRef}>
+          {selectedAlgorithm && (
+             <Button 
+               variant="ghost" 
+               size="sm" 
+               onClick={() => { setSelectedAlgorithm(null); setExplanation(''); }} 
+               className="lg:hidden absolute top-4 left-4 z-20 h-8 gap-1.5 text-[10px] font-black uppercase bg-background/80 backdrop-blur border border-border rounded-full"
+             >
+               <ArrowLeft className="h-3 w-3" /> Change Topic
+             </Button>
+          )}
           <div className="mx-auto max-w-4xl p-6">
             {!selectedAlgorithm && !isLoading && (
               <div className="flex h-full flex-col items-center justify-center gap-4 py-20">

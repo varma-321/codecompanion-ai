@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Save, Eye, EyeOff, Loader2, Users, User, Play, Globe } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Save, Eye, EyeOff, Loader2, Users, User, Play, Globe, Code2, FileText, Settings2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -113,7 +113,6 @@ const CustomProblemCreator = () => {
   };
 
   const handlePractice = (p: any) => {
-    // Navigate to workspace with customMode=true
     const params = new URLSearchParams({
       title: p.title,
       difficulty: p.difficulty,
@@ -131,152 +130,195 @@ const CustomProblemCreator = () => {
   if (!authUser) return <div className="flex h-screen items-center justify-center bg-background"><p className="text-foreground">Please log in</p></div>;
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="border-b border-panel-border bg-ide-toolbar px-4 py-2 flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/modules')} className="h-7 gap-1 text-xs">
-          <ArrowLeft className="h-3 w-3" /> Back
+    <div className="h-screen bg-background flex flex-col">
+      <div className="flex items-center gap-1 sm:gap-3 border-b border-panel-border bg-ide-toolbar px-3 sm:px-4 py-2 shrink-0">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/modules')} className="h-7 gap-1.5 text-xs font-medium rounded-lg">
+          <ArrowLeft className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Back</span>
         </Button>
-        <Plus className="h-4 w-4 text-primary" />
-        <span className="font-bold text-foreground">Custom Problem Creator</span>
+        <div className="h-4 w-px bg-border shrink-0" />
+        <Plus className="h-4 w-4 text-primary shrink-0" />
+        <span className="text-sm font-bold truncate">Problem Creator</span>
+        <Badge variant="outline" className="ml-auto text-[10px] hidden xs:inline-flex">BETA</Badge>
       </div>
 
-      <div className="max-w-5xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Editor */}
-        <div className="lg:col-span-2 space-y-4">
-          <Card>
-            <CardHeader><CardTitle className="text-sm">{editingId ? 'Edit Problem' : 'Create New Problem'}</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <Input placeholder="Problem title" value={current.title} onChange={e => setCurrent(p => ({ ...p, title: e.target.value }))} />
-              <Textarea placeholder="Problem description (markdown supported)" rows={6} value={current.description} onChange={e => setCurrent(p => ({ ...p, description: e.target.value }))} />
-              <div className="flex gap-3">
-                <div className="flex-1">
-                  <label className="text-xs font-medium text-muted-foreground">Difficulty</label>
-                  <Select value={current.difficulty} onValueChange={v => setCurrent(p => ({ ...p, difficulty: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Easy">Easy</SelectItem>
-                      <SelectItem value="Medium">Medium</SelectItem>
-                      <SelectItem value="Hard">Hard</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-end gap-2 pb-1">
-                  <Switch checked={current.is_public} onCheckedChange={v => setCurrent(p => ({ ...p, is_public: v }))} id="public-toggle" />
-                  <Label htmlFor="public-toggle" className="text-xs">{current.is_public ? <><Eye className="h-3 w-3 inline" /> Public</> : <><EyeOff className="h-3 w-3 inline" /> Private</>}</Label>
-                </div>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground">Starter Code</label>
-                <Textarea className="font-mono text-xs" rows={8} value={current.starter_code} onChange={e => setCurrent(p => ({ ...p, starter_code: e.target.value }))} />
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-medium text-muted-foreground">Test Cases</label>
-                  <Button size="sm" variant="outline" onClick={addTestCase} className="h-6 text-xs gap-1"><Plus className="h-3 w-3" /> Add</Button>
-                </div>
-                {current.test_cases.map((tc, i) => (
-                  <div key={i} className="flex gap-2 items-start">
-                    <Input placeholder="Input" className="text-xs font-mono" value={tc.input} onChange={e => updateTestCase(i, 'input', e.target.value)} />
-                    <Input placeholder="Expected output" className="text-xs font-mono" value={tc.expected} onChange={e => updateTestCase(i, 'expected', e.target.value)} />
-                    <Button size="icon" variant="ghost" onClick={() => removeTestCase(i)} className="h-8 w-8 shrink-0">
-                      <Trash2 className="h-3 w-3 text-destructive" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex gap-2">
-                <Button onClick={handleSave} disabled={saving} className="gap-1">
-                  {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
-                  {editingId ? 'Update' : 'Create'} Problem
-                </Button>
-                {editingId && (
-                  <Button variant="outline" onClick={() => { setCurrent({ ...EMPTY_PROBLEM }); setEditingId(null); }}>Cancel</Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
+      <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
         {/* Sidebar: list */}
-        <div className="space-y-4">
-          <Card className="h-[640px] flex flex-col">
-            <CardHeader className="pb-0">
-              <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="mine" className="text-[10px] gap-1.5"><User className="h-3 w-3" /> My List</TabsTrigger>
-                  <TabsTrigger value="community" className="text-[10px] gap-1.5"><Globe className="h-3 w-3" /> Public</TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-hidden pt-4">
-              <ScrollArea className="h-full pr-4">
-                <Tabs value={activeTab}>
-                  <TabsContent value="mine" className="mt-0 space-y-2">
-                    {loading ? (
-                      <div className="flex flex-col items-center justify-center py-10 gap-2">
-                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                        <p className="text-[10px] text-muted-foreground">Loading your problems...</p>
-                      </div>
-                    ) : problems.length === 0 ? (
-                      <p className="text-xs text-muted-foreground text-center py-10">No custom problems yet</p>
-                    ) : (
-                      problems.map((p: any) => (
-                        <div key={p.id} className={`group relative p-3 rounded-xl border border-panel-border hover:border-primary/40 bg-card/50 transition-all ${editingId === p.id ? 'border-primary bg-primary/5 shadow-sm' : ''}`}>
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0" onClick={() => handleEdit(p)}>
-                              <h4 className="text-[13px] font-bold text-foreground truncate group-hover:text-primary transition-colors cursor-pointer">{p.title}</h4>
-                              <div className="flex items-center gap-1.5 mt-1">
-                                <Badge variant="outline" className="text-[9px] h-4">{p.difficulty}</Badge>
-                                {p.is_public && <Badge variant="secondary" className="text-[9px] h-4 text-primary">Public</Badge>}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Button size="icon" variant="ghost" className="h-7 w-7 text-primary hover:bg-primary/10" onClick={() => handlePractice(p)} title="Practice">
-                                <Play className="h-3.5 w-3.5" />
-                              </Button>
-                              <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(p.id)} title="Delete">
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
+        <div className="w-full lg:w-[350px] border-b lg:border-b-0 lg:border-r border-panel-border bg-ide-sidebar/40 flex flex-col max-h-[300px] lg:max-h-none">
+          <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="w-full flex flex-col h-full">
+            <div className="p-3 border-b border-panel-border bg-ide-toolbar/30">
+              <TabsList className="grid w-full grid-cols-2 rounded-xl bg-secondary/50 p-1">
+                <TabsTrigger value="mine" className="text-[10px] gap-2 font-bold rounded-lg data-[state=active]:bg-background"><User className="h-3.5 w-3.5" /> My Problems</TabsTrigger>
+                <TabsTrigger value="community" className="text-[10px] gap-2 font-bold rounded-lg data-[state=active]:bg-background"><Globe className="h-3.5 w-3.5" /> Community</TabsTrigger>
+              </TabsList>
+            </div>
+            <ScrollArea className="flex-1">
+              <div className="p-3">
+                <TabsContent value="mine" className="mt-0 space-y-2">
+                  {loading ? (
+                    <div className="flex flex-col items-center justify-center py-10 gap-2">
+                      <Loader2 className="h-5 w-5 animate-spin text-primary/40" />
+                      <p className="text-[10px] text-muted-foreground uppercase font-black">Loading...</p>
+                    </div>
+                  ) : problems.length === 0 ? (
+                    <div className="text-center py-10 px-6 border-2 border-dashed border-panel-border rounded-2xl bg-secondary/10">
+                       <Plus className="h-8 w-8 mx-auto text-muted-foreground/20 mb-3" />
+                       <p className="text-[11px] font-bold text-muted-foreground">Create your first custom challenge to see it here.</p>
+                    </div>
+                  ) : (
+                    problems.map((p: any) => (
+                      <div key={p.id} className={`group relative p-3 rounded-2xl border-2 transition-all cursor-pointer ${editingId === p.id ? 'border-primary bg-primary/5' : 'border-transparent bg-card/40 hover:border-primary/20'}`}>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0" onClick={() => handleEdit(p)}>
+                            <h4 className="text-[13px] font-black text-foreground truncate group-hover:text-primary transition-colors">{p.title}</h4>
+                            <div className="flex items-center gap-1.5 mt-1.5">
+                              <Badge variant="outline" className={`text-[9px] h-4 font-black ${p.difficulty === 'Easy' ? 'text-emerald-500' : p.difficulty === 'Medium' ? 'text-amber-500' : 'text-rose-500'}`}>{p.difficulty}</Badge>
+                              {p.is_public && <Badge className="text-[9px] h-4 bg-primary/10 text-primary border-0 font-black">Public</Badge>}
                             </div>
                           </div>
-                        </div>
-                      ))
-                    )}
-                  </TabsContent>
-                  
-                  <TabsContent value="community" className="mt-0 space-y-2">
-                    {loadingCommunity ? (
-                      <div className="flex flex-col items-center justify-center py-10 gap-2">
-                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                        <p className="text-[10px] text-muted-foreground">Loading community...</p>
-                      </div>
-                    ) : communityProblems.length === 0 ? (
-                      <p className="text-xs text-muted-foreground text-center py-10">No public problems found</p>
-                    ) : (
-                      communityProblems.map((p: any) => (
-                        <div key={p.id} className="group relative p-3 rounded-xl border border-panel-border hover:border-primary/40 bg-card/50 transition-all shadow-sm">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                              <h4 className="text-[13px] font-bold text-foreground truncate">{p.title}</h4>
-                              <div className="flex items-center gap-1.5 mt-1">
-                                <Badge variant="outline" className="text-[9px] h-4">{p.difficulty}</Badge>
-                                <span className="text-[9px] text-muted-foreground">By User {p.user_id.slice(0, 4)}</span>
-                              </div>
-                            </div>
-                            <Button size="icon" variant="outline" className="h-8 w-8 text-primary border-primary/20 hover:bg-primary/10 shrink-0" onClick={() => handlePractice(p)} title="Practice">
-                              <Play className="h-3.5 w-3.5" />
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg text-primary hover:bg-primary/10" onClick={() => handlePractice(p)}>
+                              <Play className="h-4 w-4 fill-current" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg text-destructive hover:bg-destructive/10" onClick={() => handleDelete(p.id)}>
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </div>
-                      ))
-                    )}
-                  </TabsContent>
-                </Tabs>
-              </ScrollArea>
-            </CardContent>
-          </Card>
+                      </div>
+                    ))
+                  )}
+                </TabsContent>
+                
+                <TabsContent value="community" className="mt-0 space-y-2">
+                  {loadingCommunity ? (
+                    <div className="flex flex-col items-center justify-center py-10 gap-2">
+                      <Loader2 className="h-5 w-5 animate-spin text-primary/40" />
+                      <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Searching...</p>
+                    </div>
+                  ) : communityProblems.length === 0 ? (
+                    <p className="text-[11px] text-muted-foreground text-center py-10 font-bold">No public problems available yet</p>
+                  ) : (
+                    communityProblems.map((p: any) => (
+                      <div key={p.id} className="group p-3 rounded-2xl border-2 border-transparent bg-card/40 hover:border-primary/20 transition-all cursor-pointer">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-[13px] font-black text-foreground truncate group-hover:text-primary transition-colors">{p.title}</h4>
+                            <div className="flex items-center gap-1.5 mt-1.5">
+                              <Badge variant="outline" className="text-[9px] h-4 font-black">{p.difficulty}</Badge>
+                              <span className="text-[9px] text-muted-foreground font-mono">By {p.user_id.slice(0, 5)}</span>
+                            </div>
+                          </div>
+                          <Button size="icon" variant="outline" className="h-9 w-9 rounded-xl text-primary border-primary/20 hover:bg-primary/10 shrink-0" onClick={() => handlePractice(p)}>
+                            <Play className="h-4 w-4 fill-current" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </TabsContent>
+              </div>
+            </ScrollArea>
+          </Tabs>
+        </div>
+
+        {/* Editor */}
+        <div className="flex-1 overflow-auto bg-panel-sidebar/20">
+          <div className="max-w-4xl mx-auto p-4 sm:p-8 space-y-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                 <h2 className="text-2xl font-black tracking-tight">{editingId ? 'Refine Challenge' : 'New Challenge'}</h2>
+                 <p className="text-xs text-muted-foreground">Design a custom Java problem with automated test validation.</p>
+              </div>
+              <div className="flex gap-2">
+                 {editingId && (
+                    <Button variant="ghost" onClick={() => { setCurrent({ ...EMPTY_PROBLEM }); setEditingId(null); }} className="h-10 px-4 text-xs font-black rounded-xl">Cancel</Button>
+                 )}
+                 <Button onClick={handleSave} disabled={saving} className="h-10 px-6 gap-2 font-black rounded-xl shadow-lg shadow-primary/20">
+                   {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                   {editingId ? 'Update' : 'Save'} Challenge
+                 </Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6">
+              <Card className="rounded-3xl border-2 border-primary/5 bg-card/50 overflow-hidden">
+                <CardHeader className="border-b border-white/5 bg-white/5 py-3">
+                   <CardTitle className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                     <FileText className="h-4 w-4 text-primary" /> Core Details
+                   </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6 space-y-5">
+                  <div className="space-y-2">
+                     <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Title</Label>
+                     <Input placeholder="Enter a descriptive title..." className="h-12 rounded-xl bg-secondary/30 border-transparent text-sm font-bold" value={current.title} onChange={e => setCurrent(p => ({ ...p, title: e.target.value }))} />
+                  </div>
+                  <div className="space-y-2">
+                     <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Description</Label>
+                     <Textarea placeholder="Explain the problem constraints and objective (Markdown supported)..." className="min-h-[150px] rounded-2xl bg-secondary/30 border-transparent text-sm leading-relaxed" value={current.description} onChange={e => setCurrent(p => ({ ...p, description: e.target.value }))} />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Difficulty</Label>
+                      <Select value={current.difficulty} onValueChange={v => setCurrent(p => ({ ...p, difficulty: v }))}>
+                        <SelectTrigger className="h-11 rounded-xl bg-secondary/30 border-transparent"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Easy">Easy</SelectItem>
+                          <SelectItem value="Medium">Medium</SelectItem>
+                          <SelectItem value="Hard">Hard</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-end gap-3 pb-1">
+                      <div className="flex-1 flex items-center justify-between h-11 rounded-xl bg-secondary/30 px-4 border border-white/5">
+                        <Label htmlFor="public-toggle" className="text-[10px] font-black uppercase flex items-center gap-2">
+                           {current.is_public ? <Globe className="h-3.5 w-3.5 text-primary" /> : <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />}
+                           {current.is_public ? 'Public Challenge' : 'Private Save'}
+                        </Label>
+                        <Switch checked={current.is_public} onCheckedChange={v => setCurrent(p => ({ ...p, is_public: v }))} id="public-toggle" />
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-3xl border-2 border-primary/5 bg-card/50 overflow-hidden">
+                <CardHeader className="border-b border-white/5 bg-white/5 py-3">
+                   <CardTitle className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                     <Code2 className="h-4 w-4 text-primary" /> Java Starter Template
+                   </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <Textarea className="font-mono text-xs min-h-[250px] rounded-2xl bg-secondary/30 border-transparent" value={current.starter_code} onChange={e => setCurrent(p => ({ ...p, starter_code: e.target.value }))} />
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-3xl border-2 border-primary/5 bg-card/50 overflow-hidden">
+                <CardHeader className="border-b border-white/5 bg-white/5 py-3 flex flex-row items-center justify-between">
+                   <CardTitle className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                     <Settings2 className="h-4 w-4 text-primary" /> Automated Test Cases
+                   </CardTitle>
+                   <Button size="sm" variant="outline" onClick={addTestCase} className="h-7 text-[10px] gap-1.5 font-black border-primary/20 text-primary rounded-lg"><Plus className="h-3.5 w-3.5" /> Add New</Button>
+                </CardHeader>
+                <CardContent className="p-6 space-y-4">
+                  {current.test_cases.map((tc, i) => (
+                    <div key={i} className="flex flex-col sm:flex-row gap-3 items-start sm:items-center p-4 rounded-2xl bg-secondary/20 border border-white/5">
+                      <div className="flex-1 space-y-1.5 w-full">
+                         <Label className="text-[9px] font-black uppercase text-muted-foreground ml-1">Input</Label>
+                         <Input placeholder="Method arguments..." className="h-10 rounded-xl bg-secondary/50 border-transparent text-xs font-mono" value={tc.input} onChange={e => updateTestCase(i, 'input', e.target.value)} />
+                      </div>
+                      <div className="flex-1 space-y-1.5 w-full">
+                         <Label className="text-[9px] font-black uppercase text-muted-foreground ml-1">Expected Output</Label>
+                         <Input placeholder="Return value..." className="h-10 rounded-xl bg-secondary/50 border-transparent text-xs font-mono" value={tc.expected} onChange={e => updateTestCase(i, 'expected', e.target.value)} />
+                      </div>
+                      <Button size="icon" variant="ghost" onClick={() => removeTestCase(i)} className="h-10 w-10 shrink-0 self-end sm:self-center hover:bg-destructive/10 rounded-xl">
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </div>
       </div>
     </div>

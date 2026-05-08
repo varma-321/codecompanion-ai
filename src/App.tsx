@@ -62,11 +62,11 @@ const shell = (element: ReactNode, title?: string, subtitle?: string) => (
     {element}
   </AppShell>
 );
-const bareShell = (element: ReactNode) => <AppShell bare>{element}</AppShell>;
+const bareShell = (element: ReactNode, hideMobileNav = false) => <AppShell bare hideMobileNav={hideMobileNav}>{element}</AppShell>;
 
 const ProblemWorkspaceLoader = () => {
   const { key } = useParams();
-  return bareShell(<ProblemWorkspace key={key} />);
+  return bareShell(<ProblemWorkspace key={key} />, true);
 };
 
 const App = () => (
@@ -85,11 +85,7 @@ const App = () => (
               <Route path="/leetcode150" element={<LeetCodeTop150Roadmap />} />
               <Route
                 path="/contest"
-                element={shell(
-                  <ContestMode />,
-                  "Contest Mode",
-                  "Timed Java practice rounds",
-                )}
+                element={bareShell(<ContestMode />)}
               />
               <Route
                 path="/review"
@@ -101,19 +97,11 @@ const App = () => (
               />
               <Route
                 path="/spaced-repetition"
-                element={shell(
-                  <SpacedRepetition />,
-                  "Spaced Repetition",
-                  "Review problems at the right interval",
-                )}
+                element={bareShell(<SpacedRepetition />)}
               />
               <Route
                 path="/patterns"
-                element={shell(
-                  <PatternsLibrary />,
-                  "Patterns",
-                  "Reusable DSA pattern library",
-                )}
+                element={bareShell(<PatternsLibrary />)}
               />
               <Route
                 path="/leaderboard"
@@ -130,19 +118,11 @@ const App = () => (
               />
               <Route
                 path="/generate"
-                element={shell(
-                  <ProblemGenerator />,
-                  "Problem Generator",
-                  "Generate Java DSA drills",
-                )}
+                element={bareShell(<ProblemGenerator />)}
               />
               <Route
                 path="/generator"
-                element={shell(
-                  <ProblemGenerator />,
-                  "Problem Generator",
-                  "Generate Java DSA drills",
-                )}
+                element={bareShell(<ProblemGenerator />)}
               />
               <Route
                 path="/achievements"
@@ -154,27 +134,15 @@ const App = () => (
               />
               <Route
                 path="/interview"
-                element={shell(
-                  <InterviewSimulator />,
-                  "Interview Simulator",
-                  "Mock interview practice",
-                )}
+                element={bareShell(<InterviewSimulator />, true)}
               />
               <Route
                 path="/create"
-                element={shell(
-                  <CustomProblemCreator />,
-                  "Custom Problems",
-                  "Create and manage your own prompts",
-                )}
+                element={bareShell(<CustomProblemCreator />)}
               />
               <Route
                 path="/custom-problems"
-                element={shell(
-                  <CustomProblemCreator />,
-                  "Custom Problems",
-                  "Create and manage your own prompts",
-                )}
+                element={bareShell(<CustomProblemCreator />)}
               />
               <Route
                 path="/community"
@@ -186,11 +154,7 @@ const App = () => (
               />
               <Route
                 path="/flashcards"
-                element={shell(
-                  <Flashcards />,
-                  "Flashcards",
-                  "Recall algorithms and patterns",
-                )}
+                element={bareShell(<Flashcards />)}
               />
               <Route
                 path="/companies"
@@ -202,11 +166,7 @@ const App = () => (
               />
               <Route
                 path="/company-tags"
-                element={shell(
-                  <CompanyTags />,
-                  "Companies",
-                  "Practice by company tags",
-                )}
+                element={bareShell(<CompanyTags />)}
               />
               <Route
                 path="/goals"
@@ -230,19 +190,11 @@ const App = () => (
               />
               <Route
                 path="/cheatsheet"
-                element={shell(
-                  <CheatSheet />,
-                  "Cheat Sheet",
-                  "Quick Java DSA references",
-                )}
+                element={bareShell(<CheatSheet />)}
               />
               <Route
                 path="/playground"
-                element={shell(
-                  <CodePlayground />,
-                  "Code Playground",
-                  "Run Java experiments",
-                )}
+                element={bareShell(<CodePlayground />, true)}
               />
               <Route
                 path="/export"
@@ -254,11 +206,7 @@ const App = () => (
               />
               <Route
                 path="/learning"
-                element={shell(
-                  <LearningMode />,
-                  "Learning Mode",
-                  "Guided algorithm lessons",
-                )}
+                element={bareShell(<LearningMode />)}
               />
               <Route
                 path="/study-planner"
@@ -299,11 +247,7 @@ const App = () => (
               />
               <Route
                 path="/code-review"
-                element={shell(
-                  <CodeReview />,
-                  "Code Review",
-                  "AI-assisted Java review",
-                )}
+                element={bareShell(<CodeReview />)}
               />
               <Route
                 path="/discuss"
@@ -315,11 +259,7 @@ const App = () => (
               />
               <Route
                 path="/today-review"
-                element={shell(
-                  <TodayReview />,
-                  "Today’s Review",
-                  "Due problems and revisions",
-                )}
+                element={bareShell(<TodayReview />)}
               />
               <Route
                 path="/search"
@@ -339,11 +279,7 @@ const App = () => (
               />
               <Route
                 path="/bigo"
-                element={shell(
-                  <BigOVisualizer />,
-                  "Big-O Visualizer",
-                  "Explore complexity growth",
-                )}
+                element={bareShell(<BigOVisualizer />)}
               />
               <Route path="/profile" element={<UserProfile />} />
               <Route
@@ -371,7 +307,7 @@ const App = () => (
                 )}
               />
               <Route path="/admin/agent" element={<AdminAgentDashboard />} />
-              <Route path="/quick-practice" element={<QuickPractice />} />
+              <Route path="/quick-practice" element={bareShell(<QuickPractice />, true)} />
               <Route path="/mailbox" element={shell(<Mailbox />, "Mailbox", "Your reports, messages and support tickets")} />
 
               <Route path="/lobby/:code" element={<Lobby />} />

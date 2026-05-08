@@ -43,17 +43,29 @@ const ProgressExport = () => {
 
   // Activity heatmap - last 30 days
   const activityMap: Record<string, number> = {};
+  
+  const toDateKey = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
   progress.forEach(p => {
-    if (p.last_attempted) {
-      const date = new Date(p.last_attempted).toISOString().split('T')[0];
-      activityMap[date] = (activityMap[date] || 0) + 1;
+    const timestamp = p.solved_at || p.last_attempted;
+    if (timestamp) {
+      const key = toDateKey(timestamp);
+      activityMap[key] = (activityMap[key] || 0) + 1;
     }
   });
 
   const last30Days = Array.from({ length: 30 }, (_, i) => {
-    const d = new Date(); d.setDate(d.getDate() - (29 - i));
-    const key = d.toISOString().split('T')[0];
-    return { date: key, label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), count: activityMap[key] || 0 };
+    const d = new Date();
+    d.setDate(d.getDate() - (29 - i));
+    const key = toDateKey(d.toISOString());
+    return { 
+      date: key, 
+      label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), 
+      count: activityMap[key] || 0 
+    };
   });
   const maxActivity = Math.max(...last30Days.map(d => d.count), 1);
 
@@ -137,15 +149,16 @@ const ProgressExport = () => {
                 <Card>
                   <CardHeader><CardTitle className="text-sm flex items-center gap-2"><TrendingUp className="h-4 w-4" /> 30-Day Activity</CardTitle></CardHeader>
                   <CardContent>
-                    <div className="flex items-end gap-[3px] h-24">
+                    <div className="flex items-end gap-[2px] sm:gap-1 h-32 pt-10 px-2">
                       {last30Days.map((day, i) => (
-                        <div key={i} className="flex flex-1 flex-col items-center gap-0.5 group relative">
+                        <div key={i} className="flex-1 flex flex-col items-center gap-0.5 group relative h-full justify-end">
                           <div
-                            className="w-full rounded-t bg-primary/70 transition-all hover:bg-primary min-h-[2px]"
-                            style={{ height: `${Math.max(2, (day.count / maxActivity) * 100)}%` }}
+                            className={`w-full rounded-t-sm transition-all duration-300 ${day.count > 0 ? 'bg-primary shadow-[0_0_10px_rgba(var(--primary),0.3)]' : 'bg-secondary/30'}`}
+                            style={{ height: `${day.count > 0 ? Math.max(5, (day.count / maxActivity) * 100) : 4}%` }}
                           />
-                          <div className="hidden group-hover:block absolute -top-8 bg-popover border border-border rounded px-1.5 py-0.5 text-[9px] whitespace-nowrap z-10">
-                            {day.label}: {day.count}
+                          <div className="hidden group-hover:block absolute -top-10 left-1/2 -translate-x-1/2 bg-popover border border-border shadow-xl rounded-lg px-2 py-1 text-[10px] font-bold whitespace-nowrap z-30 animate-in zoom-in-95">
+                            <div className="text-primary">{day.label}</div>
+                            <div className="text-foreground">{day.count} {day.count === 1 ? 'Problem' : 'Problems'}</div>
                           </div>
                         </div>
                       ))}

@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Play, Timer, Loader2, CheckCircle2, Shuffle, Building2, BookOpen, History, Users, RefreshCw } from 'lucide-react';
+import { Play, Timer, Loader2, CheckCircle2, Shuffle, Building2, BookOpen, History, Users, RefreshCw, ArrowLeft, Terminal, Code2, Sparkles, Clock, Layout } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useUser } from '@/lib/user-context';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
@@ -31,7 +32,6 @@ type ModuleKey = keyof typeof MODULES | 'all';
 const ALL_ROADMAPS = [...STRIVER_ROADMAP, ...NEETCODE_ROADMAP, ...LEETCODE_TOP150_ROADMAP];
 const ALL_PROBLEMS = ALL_ROADMAPS.flatMap(t => t.problems.map(p => ({ ...p, topic: t.name })));
 
-// Title lookup for company matching
 const TITLE_LOOKUP = new Map<string, typeof ALL_PROBLEMS[0]>();
 ALL_PROBLEMS.forEach(p => {
   const normalized = p.title.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -48,7 +48,6 @@ function findBySlug(slug: string) {
   return null;
 }
 
-// Import company tags from CompanyTags (inline subset for lookup)
 const COMPANY_TAGS: Record<string, string[]> = {
   'Google': ['two-sum', 'median-two-sorted', 'merge-intervals', 'lru-cache', 'trapping-rain', 'longest-substring', 'course-schedule', 'number-of-islands', 'valid-parentheses', 'container-most-water', 'three-sum', 'group-anagrams', 'product-except-self', 'top-k-frequent', 'coin-change', 'climbing-stairs', 'maximum-subarray', 'best-time-buy-sell', 'binary-search', 'search-rotated', 'word-break', 'longest-increasing', 'edit-distance', 'rotate-image', 'spiral-matrix', 'longest-palindrome', 'decode-ways', 'unique-paths', 'jump-game', 'house-robber', 'word-search', 'subsets', 'permutations', 'combination-sum', 'find-median-stream', 'sliding-window-max', 'daily-temperatures', 'task-scheduler'],
   'Amazon': ['two-sum', 'add-two-numbers', 'lru-cache', 'merge-intervals', 'number-of-islands', 'word-break', 'product-except-self', 'merge-k-sorted', 'trapping-rain', 'longest-substring', 'valid-parentheses', 'three-sum', 'group-anagrams', 'top-k-frequent', 'coin-change', 'climbing-stairs', 'maximum-subarray', 'best-time-buy-sell', 'binary-search', 'search-rotated', 'reverse-linked-list', 'merge-two-sorted', 'longest-palindrome', 'decode-string', 'daily-temperatures', 'task-scheduler', 'subsets', 'permutations', 'combination-sum', 'word-search', 'jump-game', 'unique-paths', 'house-robber'],
@@ -84,16 +83,15 @@ const InterviewSimulator = () => {
   const [solvedKeys, setSolvedKeys] = useState<Set<string>>(new Set());
   const [roomCode, setRoomCode] = useState('');
   const [lobbyHistory, setLobbyHistory] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'problem' | 'code'>('problem');
   const timerRef = useRef<any>(null);
 
   useEffect(() => {
     if (!authUser) return;
     supabase.from('interview_results').select('*').eq('user_id', authUser.id).order('created_at', { ascending: false }).limit(10)
       .then(({ data }) => setHistory(data || []));
-    // Load solved keys
     supabase.from('user_problem_progress').select('problem_key').eq('user_id', authUser.id).eq('solved', true)
       .then(({ data }) => setSolvedKeys(new Set((data || []).map(d => d.problem_key))));
-    // Load lobby history: all lobbies user has participated in
     supabase.from('lobby_participants')
       .select('*, lobby:lobby_id(*)')
       .eq('user_id', authUser.id)
@@ -117,10 +115,8 @@ const InterviewSimulator = () => {
     return () => clearInterval(timerRef.current);
   }, [phase]);
 
-  // Build the problem pool based on source selection
   const problemPool = useMemo(() => {
     let pool: typeof ALL_PROBLEMS = [];
-
     if (source === 'solved') {
       pool = ALL_PROBLEMS.filter(p => solvedKeys.has(p.key));
     } else if (source === 'company') {
@@ -153,8 +149,6 @@ const InterviewSimulator = () => {
     if (problemPool.length === 0) return;
     const picked = problemPool[Math.floor(Math.random() * problemPool.length)];
     setLoading(true);
-    
-    // Use local data IMMEDIATELY — no waiting
     const detail = getProblemDetail(picked.key, picked.title, picked.difficulty);
     setProblem({ ...picked, detail });
     setCode(detail.starterCode);
@@ -163,7 +157,6 @@ const InterviewSimulator = () => {
     setPhase('coding');
     setLoading(false);
 
-    // Silently enhance with backend data in background (non-blocking)
     try {
       const { API_BASE_URL } = await import('@/lib/api');
       const resp = await fetch(`${API_BASE_URL}/api/problems/${picked.key}?title=${encodeURIComponent(picked.title)}`);
@@ -171,15 +164,9 @@ const InterviewSimulator = () => {
         const generated = await resp.json();
         if (generated?.description) {
           const isPlaceholder = (c: string) => !c || c.trim().length < 50 || c.includes('// 🤖 AI is generating') || c.includes('public void solve()');
-
           setProblem((prev: any) => {
             if (prev?.key !== picked.key) return prev;
-            
-            // Update the code editor if it's still the placeholder
-            if (generated.starterCode && isPlaceholder(code)) {
-              setCode(generated.starterCode);
-            }
-
+            if (generated.starterCode && isPlaceholder(code)) setCode(generated.starterCode);
             return {
               ...prev,
               detail: {
@@ -192,16 +179,13 @@ const InterviewSimulator = () => {
           });
         }
       }
-    } catch (e) {
-      // Silently ignore — local data is already shown
-    }
+    } catch (e) {}
   };
 
   const handleSubmit = async () => {
     clearInterval(timerRef.current);
     setPhase('review');
     setLoading(true);
-
     const elapsed = timeLimit * 60 - timeLeft;
     try {
       const { data } = await supabase.functions.invoke('analyze-complexity', {
@@ -212,7 +196,6 @@ const InterviewSimulator = () => {
         (timeLeft > 0 ? 30 : 0) + (feedback.toLowerCase().includes('optimal') ? 40 : 20) + 30
       )));
       setAiFeedback(typeof feedback === 'string' ? feedback : JSON.stringify(feedback));
-
       if (authUser) {
         await supabase.from('interview_results').insert({
           user_id: authUser.id,
@@ -239,7 +222,6 @@ const InterviewSimulator = () => {
         host_id: authUser.id,
         status: 'waiting'
       } as any).select().single();
-      
       if (error) throw error;
       navigate(`/lobby/${code}`);
     } catch (error) {
@@ -255,7 +237,6 @@ const InterviewSimulator = () => {
         .eq('code', roomCode.toUpperCase())
         .select()
         .single();
-      
       if (error) throw error;
       navigate(`/lobby/${roomCode.toUpperCase()}`);
     } catch (error) {
@@ -268,321 +249,344 @@ const InterviewSimulator = () => {
   if (!authUser) return <div className="flex h-screen items-center justify-center bg-background"><p className="text-foreground">Please log in</p></div>;
 
   return (
-    <div className="min-h-full bg-background flex flex-col">
-      <div className="max-w-6xl w-full mx-auto px-6 pt-10 pb-4 flex items-end justify-between gap-4">
-        <div className="space-y-2">
-          <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight text-balance">Mock Interview</h1>
-          <p className="text-[15px] text-muted-foreground max-w-md leading-relaxed">Configure a focused Java interview from roadmaps, companies, or solved problems.</p>
-        </div>
+    <div className="h-screen bg-background flex flex-col">
+      <div className="flex items-center gap-1 sm:gap-3 border-b border-panel-border bg-ide-toolbar px-3 sm:px-4 py-2 shrink-0">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/modules')} className="h-7 gap-1.5 text-xs font-medium rounded-lg">
+          <ArrowLeft className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Back</span>
+        </Button>
+        <div className="h-4 w-px bg-border shrink-0" />
+        <Users className="h-4 w-4 text-primary shrink-0" />
+        <span className="text-sm font-bold truncate">Interview Simulator</span>
+        
         {phase === 'coding' && (
-          <Badge variant={timeLeft < 60 ? 'destructive' : 'outline'} className="font-mono text-sm shrink-0">
-            <Timer className="h-3 w-3 mr-1" /> {fmt(timeLeft)}
-          </Badge>
+          <div className={`ml-auto px-3 py-1 rounded-full font-mono text-xs font-bold flex items-center gap-2 ${timeLeft < 60 ? 'bg-destructive/10 text-destructive animate-pulse' : 'bg-secondary text-foreground'}`}>
+            <Timer className="h-3 w-3" /> {fmt(timeLeft)}
+          </div>
         )}
       </div>
 
-      {phase === 'setup' && (
-        <div className="max-w-6xl w-full mx-auto px-6 pb-10 space-y-6 flex-1 animate-in-up">
-          <div className="grid grid-cols-1 md:grid-cols-[1fr,320px] gap-6">
-            <Card className="surface-elevated rounded-2xl">
-              <CardHeader><CardTitle>Configure Solo Interview</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
+      <div className="flex-1 overflow-auto">
+        {phase === 'setup' && (
+          <div className="max-w-5xl mx-auto p-4 sm:p-8 space-y-8 animate-in-up">
+            <div className="text-center sm:text-left space-y-2">
+              <h1 className="text-3xl sm:text-4xl font-black text-foreground tracking-tight">Mock Interview</h1>
+              <p className="text-sm text-muted-foreground max-w-md leading-relaxed">Simulate real technical interviews with AI-generated feedback and peer lobbies.</p>
+            </div>
 
-              {/* Source selection */}
-              <div>
-                <label className="text-sm font-medium text-foreground mb-1.5 block">Question Source</label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {([
-                    { key: 'random' as const, label: 'Random (All)', icon: <Shuffle className="h-3.5 w-3.5" /> },
-                    { key: 'module' as const, label: 'By Module', icon: <BookOpen className="h-3.5 w-3.5" /> },
-                    { key: 'company' as const, label: 'By Company', icon: <Building2 className="h-3.5 w-3.5" /> },
-                    { key: 'solved' as const, label: `Solved (${solvedKeys.size})`, icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
-                  ]).map(s => (
-                    <button
-                      key={s.key}
-                      onClick={() => setSource(s.key)}
-                      className={`card-interactive flex items-center gap-2 rounded-xl border px-3 py-2.5 text-xs font-medium transition-colors ${
-                        source === s.key
-                          ? 'border-foreground bg-foreground text-background'
-                          : 'border-border bg-card text-muted-foreground hover:text-foreground hover:border-foreground/20'
-                      }`}
-                    >
-                      {s.icon} {s.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              <div className="lg:col-span-8 space-y-6">
+                <Card className="rounded-3xl border-2 border-primary/10 bg-card/50 backdrop-blur-xl overflow-hidden shadow-2xl">
+                  <CardHeader className="pb-2 border-b border-white/5 bg-white/5">
+                    <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
+                      <Layout className="h-4 w-4 text-primary" /> Configuration
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-6 space-y-6">
+                    <div className="space-y-4">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Question Source</label>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {([
+                          { key: 'random' as const, label: 'Random', icon: <Shuffle className="h-4 w-4" /> },
+                          { key: 'module' as const, label: 'Modules', icon: <BookOpen className="h-4 w-4" /> },
+                          { key: 'company' as const, label: 'Company', icon: <Building2 className="h-4 w-4" /> },
+                          { key: 'solved' as const, label: `Solved`, icon: <CheckCircle2 className="h-4 w-4" /> },
+                        ]).map(s => (
+                          <button
+                            key={s.key}
+                            onClick={() => setSource(s.key)}
+                            className={`flex flex-col items-center justify-center gap-2 rounded-2xl border-2 px-3 py-4 text-[11px] font-black transition-all active:scale-95 ${
+                              source === s.key
+                                ? 'border-primary bg-primary/10 text-primary shadow-lg shadow-primary/10'
+                                : 'border-white/5 bg-secondary/30 text-muted-foreground hover:border-white/10 hover:bg-secondary/50'
+                            }`}
+                          >
+                            {s.icon} {s.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
 
-              {/* Module selector */}
-              {source === 'module' && (
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-1.5 block">Module</label>
-                  <Select value={selectedModule} onValueChange={v => setSelectedModule(v as ModuleKey)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Modules</SelectItem>
-                      <SelectItem value="striver">Striver SDE Sheet</SelectItem>
-                      <SelectItem value="neetcode">NeetCode 150</SelectItem>
-                      <SelectItem value="leetcode150">LeetCode Top 150</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {/* Company selector */}
-              {source === 'company' && (
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-1.5 block">Company</label>
-                  <Select value={selectedCompany} onValueChange={setSelectedCompany}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {COMPANY_NAMES.map(c => (
-                        <SelectItem key={c} value={c}>{c} ({COMPANY_TAGS[c].length} problems)</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {/* Difficulty */}
-              <div>
-                <label className="text-sm font-medium text-foreground mb-1.5 block">Difficulty</label>
-                <Select value={difficulty} onValueChange={setDifficulty}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Any Difficulty</SelectItem>
-                    <SelectItem value="Easy">Easy</SelectItem>
-                    <SelectItem value="Medium">Medium</SelectItem>
-                    <SelectItem value="Hard">Hard</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Time limit */}
-              <div>
-                <label className="text-sm font-medium text-foreground mb-1.5 block">Time Limit</label>
-                <Select value={String(timeLimit)} onValueChange={v => setTimeLimit(Number(v))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="15">15 min</SelectItem>
-                    <SelectItem value="30">30 min</SelectItem>
-                    <SelectItem value="45">45 min</SelectItem>
-                    <SelectItem value="60">60 min</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Pool info */}
-              <div className="rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs text-muted-foreground">
-                <span className="font-semibold text-foreground">{problemPool.length}</span> problems in pool
-                {source === 'company' && <span> from <span className="font-semibold text-foreground">{selectedCompany}</span></span>}
-                {source === 'module' && selectedModule !== 'all' && <span> from <span className="font-semibold text-foreground">{MODULES[selectedModule].label}</span></span>}
-                {difficulty !== 'all' && <span> ({difficulty})</span>}
-              </div>
-
-              <Button onClick={startInterview} disabled={problemPool.length === 0} className="w-full gap-2 shadow-lg shadow-primary/20">
-                <Play className="h-4 w-4" /> Start Solo Session
-              </Button>
-            </CardContent>
-          </Card>
-
-          <div className="space-y-6">
-            <Card className="surface-elevated rounded-2xl border-primary/20 bg-primary/5">
-              <CardHeader>
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Play className="h-4 w-4 text-primary" /> Live Lobby
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Join a shared room to practice with a peer. One codes, one interviews!
-                </p>
-                <div className="space-y-2">
-                  <Input 
-                    placeholder="Enter Room Code (e.g. JAVA-2024)" 
-                    className="h-9 text-xs" 
-                    value={roomCode}
-                    onChange={e => setRoomCode(e.target.value)}
-                  />
-                  <Button 
-                    variant="secondary" 
-                    className="w-full h-9 text-xs font-bold gap-2"
-                    onClick={joinLobby}
-                  >
-                     Join Live Session
-                  </Button>
-                </div>
-                <div className="h-px bg-primary/10 my-2" />
-                <Button 
-                  variant="outline" 
-                  className="w-full h-9 text-xs font-bold border-primary/20 text-primary"
-                  onClick={createLobby}
-                >
-                   Create New Lobby
-                </Button>
-              </CardContent>
-            </Card>
-
-            {history.length > 0 && (
-              <Card className="surface-elevated rounded-2xl">
-                <CardHeader><CardTitle className="text-sm">Recent Interviews</CardTitle></CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {history.map((h: any) => (
-                      <div key={h.id} className="flex items-center justify-between text-xs border-b border-panel-border pb-2 last:border-0">
-                        <div className="flex flex-col truncate max-w-[150px]">
-                          <span className="text-foreground font-medium truncate">{h.problem_title}</span>
-                          <span className="text-[9px] text-muted-foreground">{new Date(h.created_at).toLocaleDateString()}</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {source === 'module' && (
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Select Module</label>
+                          <Select value={selectedModule} onValueChange={v => setSelectedModule(v as ModuleKey)}>
+                            <SelectTrigger className="h-12 rounded-xl bg-secondary/50 border-transparent"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Roadmaps</SelectItem>
+                              <SelectItem value="striver">Striver SDE Sheet</SelectItem>
+                              <SelectItem value="neetcode">NeetCode 150</SelectItem>
+                              <SelectItem value="leetcode150">Top 150</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <Badge variant="outline" className="text-[9px] h-4">{h.difficulty}</Badge>
-                          <Badge className="text-[9px] h-4 bg-primary/10 text-primary border-0">{h.score}</Badge>
+                      )}
+
+                      {source === 'company' && (
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Select Company</label>
+                          <Select value={selectedCompany} onValueChange={setSelectedCompany}>
+                            <SelectTrigger className="h-12 rounded-xl bg-secondary/50 border-transparent"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {COMPANY_NAMES.map(c => (
+                                <SelectItem key={c} value={c}>{c}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Difficulty</label>
+                        <Select value={difficulty} onValueChange={setDifficulty}>
+                          <SelectTrigger className="h-12 rounded-xl bg-secondary/50 border-transparent"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Any Difficulty</SelectItem>
+                            <SelectItem value="Easy">Easy</SelectItem>
+                            <SelectItem value="Medium">Medium</SelectItem>
+                            <SelectItem value="Hard">Hard</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Time (minutes)</label>
+                        <Select value={String(timeLimit)} onValueChange={v => setTimeLimit(Number(v))}>
+                          <SelectTrigger className="h-12 rounded-xl bg-secondary/50 border-transparent"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {[15, 30, 45, 60].map(m => <SelectItem key={m} value={String(m)}>{m} Minutes</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-between">
+                       <div className="flex items-center gap-3">
+                         <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
+                           <Sparkles className="h-4 w-4 text-primary" />
+                         </div>
+                         <div>
+                           <p className="text-[11px] font-black text-foreground">{problemPool.length} Problems Match</p>
+                           <p className="text-[9px] text-muted-foreground">Ready to simulate {difficulty === 'all' ? 'mixed' : difficulty} difficulty</p>
+                         </div>
+                       </div>
+                       <Button onClick={startInterview} disabled={problemPool.length === 0} className="h-10 px-6 gap-2 rounded-xl font-black shadow-lg shadow-primary/20">
+                         <Play className="h-4 w-4 fill-current" /> Start Session
+                       </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {history.length > 0 && (
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2 px-2">
+                      <History className="h-4 w-4 text-muted-foreground" /> Performance History
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {history.map((h: any) => (
+                        <div key={h.id} className="p-4 rounded-2xl bg-card border border-panel-border hover:border-primary/20 transition-all group flex flex-col justify-between h-24">
+                          <div className="flex items-start justify-between">
+                            <span className="text-[13px] font-bold text-foreground truncate max-w-[150px]">{h.problem_title}</span>
+                            <Badge className="text-[10px] h-4 bg-primary/10 text-primary border-0">{h.score}%</Badge>
+                          </div>
+                          <div className="flex items-center justify-between mt-auto">
+                            <div className="flex items-center gap-2">
+                               <Badge variant="outline" className="text-[9px] h-4">{h.difficulty}</Badge>
+                               <span className="text-[10px] text-muted-foreground">{fmt(h.time_taken_seconds)} taken</span>
+                            </div>
+                            <span className="text-[9px] text-muted-foreground">{new Date(h.created_at).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="lg:col-span-4 space-y-6">
+                <Card className="rounded-3xl border-2 border-primary/20 bg-primary/5 overflow-hidden shadow-xl">
+                  <CardHeader className="pb-2 bg-primary/10">
+                    <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2 text-primary">
+                      <Users className="h-4 w-4" /> Multiplayer Lobby
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-6 space-y-4">
+                    <p className="text-[11px] text-primary/80 font-medium leading-relaxed">
+                      Practice with a peer in real-time. One acts as the interviewer while the other codes.
+                    </p>
+                    <div className="flex gap-2">
+                      <Input 
+                        placeholder="CODE" 
+                        className="h-11 text-xs font-black tracking-widest rounded-xl bg-white/10 border-transparent placeholder:text-primary/30" 
+                        value={roomCode}
+                        onChange={e => setRoomCode(e.target.value)}
+                      />
+                      <Button 
+                        variant="secondary" 
+                        className="h-11 px-4 font-black rounded-xl"
+                        onClick={joinLobby}
+                      >
+                         Join
+                      </Button>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      className="w-full h-11 font-black rounded-xl border-primary/30 text-primary hover:bg-primary/10"
+                      onClick={createLobby}
+                    >
+                       Create Private Lobby
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {lobbyHistory.length > 0 && (
+                   <Card className="rounded-3xl border border-panel-border overflow-hidden">
+                     <CardHeader className="py-3 px-4 bg-secondary/30">
+                       <CardTitle className="text-xs font-black uppercase tracking-widest flex items-center gap-2">
+                         <History className="h-4 w-4 text-muted-foreground" /> Recent Lobbies
+                       </CardTitle>
+                     </CardHeader>
+                     <CardContent className="p-0">
+                        <ScrollArea className="h-[250px]">
+                           <div className="divide-y divide-white/5">
+                             {lobbyHistory.map((entry: any) => {
+                               const lobby = entry.lobby;
+                               const isOpen = !lobby.closed_at && lobby.status !== 'closed';
+                               return (
+                                 <div key={entry.id} className="p-4 flex items-center justify-between group hover:bg-white/5 transition-colors">
+                                   <div>
+                                     <p className="text-xs font-black text-primary font-mono">{lobby.code}</p>
+                                     <p className="text-[10px] text-muted-foreground mt-0.5">{new Date(entry.joined_at).toLocaleDateString()}</p>
+                                   </div>
+                                   {isOpen && (
+                                     <Button size="sm" variant="ghost" className="h-7 text-[10px] gap-1.5 rounded-lg text-primary hover:bg-primary/10" onClick={() => navigate(`/lobby/${lobby.code}`)}>
+                                       <RefreshCw className="h-3 w-3" /> Rejoin
+                                     </Button>
+                                   )}
+                                 </div>
+                               );
+                             })}
+                           </div>
+                        </ScrollArea>
+                     </CardContent>
+                   </Card>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {phase === 'coding' && problem && (
+          <div className="h-full flex flex-col lg:flex-row overflow-hidden">
+            {/* Desktop Layout */}
+            <div className="hidden lg:flex flex-1 overflow-hidden">
+               <div className="w-[450px] h-full border-r border-panel-border bg-panel-sidebar/40 overflow-auto">
+                  <div className="p-8 space-y-8">
+                    <div className="space-y-4">
+                       <Badge className={`${problem.difficulty === 'Easy' ? 'bg-emerald-500/10 text-emerald-500' : problem.difficulty === 'Medium' ? 'bg-amber-500/10 text-amber-500' : 'bg-rose-500/10 text-rose-500'}`}>{problem.difficulty}</Badge>
+                       <h2 className="text-3xl font-black text-foreground tracking-tight">{problem.title}</h2>
+                    </div>
+                    <div className="prose prose-sm prose-invert max-w-none text-foreground/80 leading-relaxed">
+                       <ReactMarkdown>{problem.detail?.description || ''}</ReactMarkdown>
+                    </div>
+                    {problem.detail?.examples?.length > 0 && (
+                      <div className="space-y-4">
+                        <h3 className="text-[10px] font-black uppercase tracking-widest text-primary">Examples</h3>
+                        <div className="space-y-3">
+                          {problem.detail.examples.map((ex: any, i: number) => (
+                            <div key={i} className="p-4 rounded-2xl bg-secondary/30 border border-white/5 font-mono text-[11px] space-y-2">
+                               <p><span className="text-muted-foreground">Input:</span> {ex.input}</p>
+                               <p><span className="text-primary font-bold">Output:</span> {ex.output}</p>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    ))}
+                    )}
                   </div>
-                </CardContent>
-              </Card>
-            )}
+               </div>
+               <div className="flex-1 flex flex-col overflow-hidden">
+                  <div className="flex-1"><CodeEditor code={code} onChange={setCode} /></div>
+                  <div className="h-14 border-t border-panel-border bg-ide-toolbar/50 px-6 flex items-center justify-end">
+                    <Button onClick={handleSubmit} disabled={loading} className="gap-2 font-black shadow-lg shadow-primary/20">
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                      Submit Final Solution
+                    </Button>
+                  </div>
+               </div>
+            </div>
 
-            {/* Lobby History */}
-            <Card className="surface-elevated rounded-2xl">
-              <CardHeader className="py-3 px-4 border-b border-sidebar-border">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <History className="h-4 w-4 text-primary" /> Lobby History
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-3">
-                {lobbyHistory.length === 0 ? (
-                  <div className="text-center py-4">
-                    <Users className="h-6 w-6 mx-auto text-muted-foreground/30 mb-2" />
-                    <p className="text-[10px] text-muted-foreground">No lobby history yet</p>
+            {/* Mobile Layout (Tabs) */}
+            <div className="lg:hidden flex-1 flex flex-col overflow-hidden">
+               <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="flex-1 flex flex-col">
+                  <div className="flex-1 overflow-hidden">
+                    <TabsContent value="problem" className="h-full m-0 p-0">
+                      <ScrollArea className="h-full">
+                        <div className="p-6 space-y-6">
+                           <div className="space-y-2">
+                             <Badge variant="outline" className="text-[10px]">{problem.difficulty}</Badge>
+                             <h2 className="text-2xl font-black">{problem.title}</h2>
+                           </div>
+                           <div className="prose prose-sm prose-invert max-w-none text-foreground/70 leading-relaxed text-[13px]">
+                              <ReactMarkdown>{problem.detail?.description || ''}</ReactMarkdown>
+                           </div>
+                        </div>
+                      </ScrollArea>
+                    </TabsContent>
+                    <TabsContent value="code" className="h-full m-0 p-0 flex flex-col">
+                       <div className="flex-1"><CodeEditor code={code} onChange={setCode} /></div>
+                       <div className="p-3 border-t border-panel-border flex justify-end">
+                          <Button onClick={handleSubmit} disabled={loading} className="w-full gap-2 font-black h-12 rounded-xl">
+                             Submit Final Solution
+                          </Button>
+                       </div>
+                    </TabsContent>
+                  </div>
+                  <TabsList className="h-14 w-full bg-ide-toolbar border-t border-panel-border rounded-none p-1 shrink-0">
+                     <TabsTrigger value="problem" className="flex-1 gap-2 font-bold text-xs rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+                        <BookOpen className="h-4 w-4" /> Problem
+                     </TabsTrigger>
+                     <TabsTrigger value="code" className="flex-1 gap-2 font-bold text-xs rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+                        <Code2 className="h-4 w-4" /> Code
+                     </TabsTrigger>
+                  </TabsList>
+               </Tabs>
+            </div>
+          </div>
+        )}
+
+        {phase === 'review' && (
+          <div className="max-w-4xl mx-auto p-4 sm:p-10 space-y-6 animate-in-up">
+            <div className="text-center space-y-4">
+               <div className="h-20 w-20 rounded-3xl bg-primary/10 text-primary mx-auto flex items-center justify-center rotate-6 border-2 border-primary/20 shadow-2xl">
+                  <Sparkles className="h-10 w-10" />
+               </div>
+               <h1 className="text-3xl font-black">AI Assessment</h1>
+               <p className="text-sm text-muted-foreground">Your interview has been analyzed by our expert system.</p>
+            </div>
+
+            <Card className="rounded-3xl border-2 border-panel-border overflow-hidden bg-card/50 backdrop-blur-xl">
+              <CardContent className="p-8">
+                {loading ? (
+                  <div className="flex flex-col items-center gap-4 py-20">
+                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                    <p className="text-sm font-black text-muted-foreground animate-pulse">Processing code quality...</p>
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    {lobbyHistory.map((entry: any) => {
-                      const lobby = entry.lobby;
-                      const isOpen = !lobby.closed_at && lobby.status !== 'closed';
-                      const isHost = lobby.host_id === authUser?.id;
-                      return (
-                        <div key={entry.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/20 border border-border hover:border-primary/20 transition-colors gap-2">
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5 mb-0.5">
-                              <span className="text-[11px] font-bold font-mono text-primary">{lobby.code}</span>
-                              {isHost && <span className="text-[8px] text-amber-400 font-bold uppercase">Host</span>}
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <Badge 
-                                variant={isOpen ? 'default' : 'secondary'} 
-                                className={`text-[8px] h-3.5 px-1 ${isOpen ? 'bg-emerald-500/20 text-emerald-400 border-0' : 'opacity-50'}`}
-                              >
-                                {isOpen ? 'Open' : 'Closed'}
-                              </Badge>
-                              <span className="text-[9px] text-muted-foreground">
-                                {new Date(entry.joined_at).toLocaleDateString()}
-                              </span>
-                            </div>
-                          </div>
-                          {isOpen && (
-                            <Button 
-                              size="sm" 
-                              variant="ghost"
-                              className="h-7 text-[10px] px-2 gap-1 text-primary hover:bg-primary/10 shrink-0"
-                              onClick={() => navigate(`/lobby/${lobby.code}`)}
-                            >
-                              <RefreshCw className="h-3 w-3" /> Rejoin
-                            </Button>
-                          )}
-                        </div>
-                      );
-                    })}
+                  <div className="prose prose-sm prose-invert max-w-none text-foreground/90 leading-relaxed">
+                    <ReactMarkdown>{aiFeedback}</ReactMarkdown>
                   </div>
                 )}
               </CardContent>
             </Card>
-          </div>
-        </div>
-      </div>
-    )}
 
-      {phase === 'coding' && problem && (
-        <div className="max-w-6xl w-full mx-auto px-6 pb-10 grid grid-cols-1 lg:grid-cols-[400px,1fr] gap-6 flex-1 overflow-hidden">
-          <div className="surface-elevated rounded-2xl overflow-auto p-6 space-y-6 border border-sidebar-border shadow-2xl">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Badge className={`text-[10px] ${
-                  problem.difficulty === 'Easy' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
-                  problem.difficulty === 'Medium' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
-                  'bg-rose-500/10 text-rose-500 border-rose-500/20'
-                }`}>{problem.difficulty}</Badge>
-                {problem.topic && <Badge variant="outline" className="text-[10px] opacity-60 font-mono tracking-tighter">{problem.topic}</Badge>}
-              </div>
-              <h2 className="text-2xl font-black text-foreground tracking-tight">{problem.title}</h2>
-            </div>
-
-            <div className="prose prose-sm dark:prose-invert text-foreground/90 leading-relaxed text-[13px]">
-              <ReactMarkdown>{problem.detail?.description || ''}</ReactMarkdown>
-            </div>
-
-            {problem.detail?.examples?.length > 0 && (
-              <div className="space-y-4">
-                <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/80">Examples</h3>
-                <div className="space-y-3">
-                  {problem.detail.examples.map((ex: any, i: number) => (
-                    <div key={i} className="rounded-xl border border-sidebar-border bg-sidebar-accent/30 p-4 font-mono text-[11px] space-y-2 relative overflow-hidden group">
-                      <div className="absolute top-0 left-0 w-1 h-full bg-primary/20 group-hover:bg-primary/40 transition-colors" />
-                      <p><span className="text-muted-foreground font-bold">Input:</span> <span className="text-foreground/80">{ex.input}</span></p>
-                      <p><span className="text-muted-foreground font-bold">Output:</span> <span className="text-primary font-bold">{ex.output}</span></p>
-                      {ex.explanation && <p className="text-[10px] text-muted-foreground italic leading-normal border-t border-sidebar-border pt-2 mt-2">{ex.explanation}</p>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {problem.detail?.constraints?.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/80">Constraints</h3>
-                <ul className="list-disc list-inside space-y-1.5">
-                  {problem.detail.constraints.map((c: string, i: number) => (
-                    <li key={i} className="text-[11px] text-muted-foreground font-mono leading-normal">{c}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-          <div className="surface-elevated rounded-2xl overflow-hidden flex flex-col min-h-[520px]">
-            <div className="flex-1"><CodeEditor code={code} onChange={setCode} /></div>
-            <div className="border-t border-border p-2 flex justify-end bg-card">
-              <Button onClick={handleSubmit} size="sm" className="gap-1">
-                <CheckCircle2 className="h-3 w-3" /> Submit Solution
+            {!loading && (
+              <Button onClick={() => setPhase('setup')} variant="outline" className="w-full h-14 text-md font-black rounded-2xl border-2 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-300">
+                Finish & Exit Session
               </Button>
-            </div>
+            )}
           </div>
-        </div>
-      )}
-
-      {phase === 'review' && (
-        <div className="max-w-4xl w-full mx-auto px-6 pb-10 space-y-4 flex-1 animate-in-up">
-          <Card className="surface-elevated rounded-2xl">
-            <CardHeader><CardTitle>Interview Feedback</CardTitle></CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="flex items-center gap-2 py-8 justify-center text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Analyzing your solution...
-                </div>
-              ) : (
-                <div className="prose prose-sm dark:prose-invert max-w-none">
-                  <ReactMarkdown>{aiFeedback}</ReactMarkdown>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-          <Button onClick={() => setPhase('setup')} variant="outline" className="w-full">
-            Start New Interview
-          </Button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

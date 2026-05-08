@@ -1343,6 +1343,7 @@ const ProblemWorkspace = () => {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        <ReportIssueDialog pageTitle={roadmapProblem?.title || 'Problem'} />
         <div className="hidden xs:block">
           <ExecutionStatus status={execStatus} />
         </div>

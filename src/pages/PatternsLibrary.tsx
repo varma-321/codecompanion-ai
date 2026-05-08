@@ -272,21 +272,21 @@ const PatternsLibrary = () => {
     <div className="flex h-screen flex-col bg-background">
       <div className="flex items-center gap-3 border-b border-panel-border bg-ide-toolbar px-4 py-2">
         <Button variant="ghost" size="sm" onClick={() => navigate('/')} className="h-7 gap-1 text-xs">
-          <ArrowLeft className="h-3 w-3" /> Back
+          <ArrowLeft className="h-3 w-3" /> <span className="hidden sm:inline">Back</span>
         </Button>
-        <div className="flex items-center gap-2">
-          <BookOpen className="h-4 w-4 text-primary" />
-          <span className="text-sm font-bold">Solution Patterns Library</span>
+        <div className="flex items-center gap-2 min-w-0">
+          <BookOpen className="h-4 w-4 text-primary shrink-0" />
+          <span className="text-sm font-bold truncate">Patterns Library</span>
         </div>
-        <Badge variant="secondary" className="text-xs">{PATTERNS.length} patterns</Badge>
+        <Badge variant="secondary" className="text-[10px] hidden xs:inline-flex">{PATTERNS.length}</Badge>
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="max-w-3xl mx-auto p-6 space-y-3">
-          <div>
-            <h1 className="text-xl font-bold text-foreground">🧩 Common DSA Patterns</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Master these patterns and you'll be able to solve most interview problems
+        <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-3">
+          <div className="mb-6">
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">🧩 Common DSA Patterns</h1>
+            <p className="text-[13px] text-muted-foreground mt-1 leading-relaxed">
+              Master these high-frequency patterns to solve most technical interview problems.
             </p>
           </div>
 
@@ -295,29 +295,29 @@ const PatternsLibrary = () => {
             return (
               <Collapsible key={pattern.name} open={isOpen} onOpenChange={() => togglePattern(pattern.name)}>
                 <CollapsibleTrigger asChild>
-                  <Card className={`cursor-pointer transition-all hover:border-primary/30 ${isOpen ? 'border-primary/30 shadow-sm' : ''}`}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">{pattern.icon}</span>
+                  <Card className={`cursor-pointer transition-all border-2 ${isOpen ? 'border-primary/40 bg-primary/5 shadow-md' : 'hover:border-primary/20 border-border/50'}`}>
+                    <CardContent className="p-4 sm:p-5">
+                      <div className="flex items-center gap-4">
+                        <span className="text-3xl filter drop-shadow-sm">{pattern.icon}</span>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-foreground">{pattern.name}</span>
-                            <Badge variant="outline" className="text-[9px] font-mono">{pattern.complexity}</Badge>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm sm:text-base font-bold text-foreground">{pattern.name}</span>
+                            <Badge variant="outline" className="text-[9px] font-mono bg-background/50">{pattern.complexity}</Badge>
                           </div>
-                          <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">{pattern.description}</p>
+                          <p className="text-[11px] sm:text-xs text-muted-foreground mt-1 line-clamp-1">{pattern.description}</p>
                         </div>
-                        {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                        {isOpen ? <ChevronDown className="h-5 w-5 text-primary" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
                       </div>
                     </CardContent>
                   </Card>
                 </CollapsibleTrigger>
 
                 <CollapsibleContent>
-                  <div className="mt-1 ml-4 space-y-3 pb-2">
-                    <Card className="bg-muted/30">
-                      <CardContent className="p-3 space-y-3">
-                        <div>
-                          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">When to Use</span>
+                  <div className="mt-1 ml-0 sm:ml-4 space-y-3 pb-2 animate-in slide-in-from-top-2 duration-200">
+                    <Card className="bg-muted/30 border-dashed">
+                      <CardContent className="p-4 space-y-4">
+                        <div className="space-y-1">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-primary/60">When to Use</span>
                           <p className="text-xs text-foreground mt-0.5">{pattern.when}</p>
                         </div>
 

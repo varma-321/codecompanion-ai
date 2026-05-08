@@ -444,6 +444,7 @@ const Dashboard = () => {
     solutions: 'Solutions',
     streak: 'Streak',
     daily: 'Daily',
+    ai_tutor: 'AI Tutor',
   };
 
   const codeIsMainStyle = isMainClassStyle(code);
@@ -597,7 +598,7 @@ const Dashboard = () => {
               <div className={`p-1.5 rounded-xl ${mobileTab === 'explorer' ? 'bg-primary/10' : ''}`}>
                 <FolderOpen className={`h-5 w-5 ${mobileTab === 'explorer' ? 'stroke-[2.5px]' : ''}`} />
               </div>
-              <span className="text-[9px] font-bold uppercase tracking-wider">Explorer</span>
+              <span className="text-[9px] font-bold uppercase tracking-wider">Files</span>
             </button>
             <button 
               onClick={() => setMobileTab('editor')} 
@@ -615,7 +616,7 @@ const Dashboard = () => {
               <div className={`p-1.5 rounded-xl ${mobileTab === 'results' ? 'bg-primary/10' : ''}`}>
                 <FlaskConical className={`h-5 w-5 ${mobileTab === 'results' ? 'stroke-[2.5px]' : ''}`} />
               </div>
-              <span className="text-[9px] font-bold uppercase tracking-wider">Output</span>
+              <span className="text-[9px] font-bold uppercase tracking-wider">Console</span>
             </button>
             <button 
               onClick={() => setMobileTab('ai')} 
@@ -624,7 +625,7 @@ const Dashboard = () => {
               <div className={`p-1.5 rounded-xl ${mobileTab === 'ai' ? 'bg-primary/10' : ''}`}>
                 <MessageSquare className={`h-5 w-5 ${mobileTab === 'ai' ? 'stroke-[2.5px]' : ''}`} />
               </div>
-              <span className="text-[9px] font-bold uppercase tracking-wider">AI Chat</span>
+              <span className="text-[9px] font-bold uppercase tracking-wider">AI Tutor</span>
             </button>
           </nav>
         </div>
@@ -780,6 +781,18 @@ const Dashboard = () => {
                 <div className="flex flex-1 flex-col lg:flex-row">
                   <div className="flex-1 overflow-hidden">
                     <SolutionComparison code={code} problemTitle={activeProblem?.title} />
+                  </div>
+                </div>
+              )}
+              {bottomTab === 'ai_tutor' && (
+                <div className="flex flex-1 flex-col">
+                  <div className="flex-1 overflow-hidden">
+                    <AIChatPanel 
+                      code={code} 
+                      problemId={activeProblem?.id || null} 
+                      problemDescription={activeProblem?.description}
+                      aiEnabled={aiEnabled} 
+                    />
                   </div>
                 </div>
               )}

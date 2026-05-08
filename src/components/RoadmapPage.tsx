@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ChevronDown, ChevronRight, CheckCircle2, Circle, Bookmark, BookmarkCheck,
-  Loader2, Target, Sparkles, RotateCcw, ArrowRight,
+  Loader2, Target, Sparkles, RotateCcw, ArrowRight, AlertTriangle
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { useUser } from '@/lib/user-context';
 import { supabase } from '@/integrations/supabase/client';
 import { type RoadmapProblem, type RoadmapTopic } from '@/lib/striver-roadmap-data';
 import AppShell from '@/components/AppShell';
+import { ReportIssueDialog } from '@/components/ReportIssueDialog';
 
 interface UserProgress {
   problem_key: string;
@@ -135,9 +136,14 @@ const RoadmapPage = ({ title, roadmap }: RoadmapPageProps) => {
 
   return (
     <AppShell title={title} subtitle={`${stats.solved} of ${stats.total} solved · ${Math.round(overallPct)}%`}>
-      <div className="max-w-6xl mx-auto px-6 py-8 grid lg:grid-cols-[280px,1fr] gap-8 animate-in-up">
+      <div className="max-w-6xl mx-auto px-6 pt-2 pb-8 grid lg:grid-cols-[280px,1fr] gap-8 animate-in-up">
         {/* Side column */}
         <aside className="space-y-5 lg:sticky lg:top-20 lg:self-start">
+          <ReportIssueDialog trigger={
+            <Button variant="outline" className="w-full justify-start gap-2 text-muted-foreground hover:text-warning border-dashed">
+              <AlertTriangle className="h-4 w-4" /> Report Issue
+            </Button>
+          } />
           <div className="surface-elevated p-5 rounded-xl">
             <div className="flex items-baseline justify-between mb-3">
               <span className="text-[11px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">Progress</span>

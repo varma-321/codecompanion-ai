@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface CheatEntry {
   title: string;
@@ -151,29 +152,38 @@ const CheatSheet = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="border-b border-panel-border bg-ide-toolbar px-4 py-2 flex items-center gap-3">
+    <div className="h-screen flex flex-col bg-background">
+      <div className="border-b border-panel-border bg-ide-toolbar px-4 py-2 flex items-center gap-3 shrink-0">
         <Button variant="ghost" size="sm" onClick={() => navigate('/modules')} className="h-7 gap-1 text-xs">
-          <ArrowLeft className="h-3 w-3" /> Back
+          <ArrowLeft className="h-3 w-3" /> <span className="hidden sm:inline">Back</span>
         </Button>
-        <BookOpen className="h-4 w-4 text-primary" />
-        <span className="font-bold text-foreground">DSA Cheat Sheet</span>
-        <Badge variant="outline" className="text-[10px]">{CHEAT_ENTRIES.length} algorithms</Badge>
+        <BookOpen className="h-4 w-4 text-primary shrink-0" />
+        <span className="font-bold text-foreground text-sm whitespace-nowrap">DSA Cheat Sheet</span>
+        <Badge variant="outline" className="text-[10px] hidden xs:inline-flex">{CHEAT_ENTRIES.length}</Badge>
       </div>
 
-      <div className="max-w-5xl mx-auto p-6 space-y-4">
-        <div className="flex gap-3 flex-wrap">
-          <div className="relative flex-1 min-w-[200px]">
+      <div className="flex-1 overflow-auto p-4 sm:p-6">
+        <div className="max-w-5xl mx-auto space-y-4">
+        <div className="flex flex-col gap-3">
+          <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input className="pl-9" placeholder="Search algorithms..." value={search} onChange={e => setSearch(e.target.value)} />
+            <Input className="pl-9 h-10 rounded-xl" placeholder="Search algorithms..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <div className="flex gap-1 flex-wrap">
-            {categories.map(c => (
-              <Button key={c} size="sm" variant={category === c ? 'default' : 'outline'} onClick={() => setCategory(c)} className="h-8 text-xs">
-                {c}
-              </Button>
-            ))}
-          </div>
+          <ScrollArea className="w-full whitespace-nowrap pb-2 scrollbar-none">
+            <div className="flex gap-1.5">
+              {categories.map(c => (
+                <Button 
+                  key={c} 
+                  size="sm" 
+                  variant={category === c ? 'default' : 'outline'} 
+                  onClick={() => setCategory(c)} 
+                  className={`h-8 text-[11px] font-bold rounded-full transition-all ${category === c ? 'px-4' : 'px-3 opacity-70'}`}
+                >
+                  {c}
+                </Button>
+              ))}
+            </div>
+          </ScrollArea>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -228,7 +238,8 @@ const CheatSheet = () => {
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 };
 
 export default CheatSheet;

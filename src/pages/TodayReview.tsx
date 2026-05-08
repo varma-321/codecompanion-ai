@@ -1,3 +1,5 @@
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon, ArrowLeft, Clock, CheckCircle2, AlertCircle, Play, RotateCcw, Flame, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -183,52 +185,61 @@ const TodayReview = () => {
           </Card>
 
           {totalReview === 0 ? (
-            <Card className="border-border border-dashed bg-secondary/5">
-              <CardContent className="p-12 text-center">
-                <div className="h-20 w-20 rounded-full bg-secondary/20 flex items-center justify-center mx-auto mb-4">
+            <Card className="border-border border-dashed bg-secondary/5 rounded-3xl">
+              <CardContent className="p-10 sm:p-16 text-center">
+                <div className="h-20 w-20 rounded-3xl bg-secondary/20 flex items-center justify-center mx-auto mb-6 rotate-3">
                   <CalendarDays className="h-10 w-10 text-muted-foreground/30" />
                 </div>
-                <h3 className="text-lg font-bold text-foreground">No solves on this date</h3>
-                <p className="text-xs text-muted-foreground mt-2 max-w-[240px] mx-auto leading-relaxed">
-                  You haven't solved any problems on {format(selectedDate, 'MMMM d, yyyy')}.
+                <h3 className="text-xl font-bold text-foreground">No solves on this date</h3>
+                <p className="text-sm text-muted-foreground mt-2 max-w-[260px] mx-auto leading-relaxed">
+                  You didn't solve any problems on {format(selectedDate, 'MMMM d, yyyy')}. Start a streak today!
                 </p>
-                <Button className="mt-6 rounded-xl font-bold h-10 px-6" onClick={() => navigate('/modules')}>
-                  Start Solving Now
+                <Button className="mt-8 rounded-2xl font-bold h-12 px-8 shadow-lg shadow-primary/20" onClick={() => navigate('/modules')}>
+                  Explore Modules
                 </Button>
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {reviewItems.map((item: any) => {
                 const done = completedToday.has(item.key);
                 return (
-                  <Card key={item.key} className={`border-border transition-opacity ${done ? 'opacity-50' : ''}`}>
-                    <CardContent className="p-3 sm:p-4 flex items-center gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-medium text-foreground truncate">{item.title}</span>
-                          <Badge variant="outline" className={`text-[10px] shrink-0 ${item.difficulty === 'Easy' ? 'text-green-500' : item.difficulty === 'Medium' ? 'text-yellow-500' : 'text-red-500'}`}>
-                            {item.difficulty}
-                          </Badge>
-                          {item.overdue && !done && (
-                            <Badge variant="destructive" className="text-[10px] shrink-0">Overdue</Badge>
-                          )}
-                          {item.progress.marked_for_revision && (
-                            <Badge variant="secondary" className="text-[10px] shrink-0">📌 Revision</Badge>
+                  <Card key={item.key} className={`border-2 transition-all ${done ? 'opacity-40 grayscale-[0.5] border-transparent bg-secondary/10' : 'hover:border-primary/30 border-border/50'}`}>
+                    <CardContent className="p-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <span className="text-sm sm:text-base font-bold text-foreground truncate">{item.title}</span>
+                            <Badge variant="outline" className={`text-[9px] font-black uppercase tracking-tighter shrink-0 ${item.difficulty === 'Easy' ? 'bg-green-500/10 text-green-500 border-green-500/20' : item.difficulty === 'Medium' ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'}`}>
+                              {item.difficulty}
+                            </Badge>
+                            {item.overdue && !done && (
+                              <Badge variant="destructive" className="text-[9px] font-black uppercase tracking-widest shrink-0">Overdue</Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                            <span>{item.topic}</span>
+                            {item.progress.marked_for_revision && (
+                              <span className="text-primary flex items-center gap-1">
+                                <span className="h-1 w-1 rounded-full bg-primary" /> 📌 Revision
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0 sm:ml-auto">
+                          <Button size="sm" variant="outline" className="h-9 text-[11px] font-bold gap-2 px-4 rounded-xl flex-1 sm:flex-none" onClick={() => navigate(`/problem/${item.key}`)}>
+                            <Play className="h-3.5 w-3.5" /> Solve
+                          </Button>
+                          {!done ? (
+                            <Button size="sm" variant="ghost" className="h-9 text-[11px] font-bold gap-2 text-primary hover:bg-primary/10 rounded-xl flex-1 sm:flex-none border border-primary/10" onClick={() => handleMarkReviewed(item.key)}>
+                              <CheckCircle2 className="h-3.5 w-3.5" /> Mark Done
+                            </Button>
+                          ) : (
+                            <div className="h-9 w-9 flex items-center justify-center bg-primary/10 rounded-full">
+                               <CheckCircle2 className="h-5 w-5 text-primary" />
+                            </div>
                           )}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-0.5 truncate">{item.topic}</p>
-                      </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => navigate(`/problem/${item.key}`)}>
-                          <Play className="h-3 w-3" /> Solve
-                        </Button>
-                        {!done && (
-                          <Button size="sm" variant="ghost" className="h-7 text-xs gap-1 text-primary" onClick={() => handleMarkReviewed(item.key)}>
-                            <CheckCircle2 className="h-3 w-3" /> Done
-                          </Button>
-                        )}
-                        {done && <CheckCircle2 className="h-4 w-4 text-primary" />}
                       </div>
                     </CardContent>
                   </Card>
