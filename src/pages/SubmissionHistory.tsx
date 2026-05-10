@@ -36,6 +36,7 @@ const SubmissionHistory = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
