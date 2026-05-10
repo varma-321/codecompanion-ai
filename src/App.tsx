@@ -51,6 +51,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminSignup from "./pages/AdminSignup";
 import AdminAgentDashboard from "./pages/AdminAgentDashboard";
 import QuickPractice from "./pages/QuickPractice";
+import DailyQuestion from "./pages/DailyQuestion";
 
 import Mailbox from "./pages/Mailbox";
 import Lobby from "./pages/Lobby";
