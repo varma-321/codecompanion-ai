@@ -309,6 +309,7 @@ const App = () => (
               />
               <Route path="/admin/agent" element={<AdminAgentDashboard />} />
               <Route path="/quick-practice" element={bareShell(<QuickPractice />)} />
+              <Route path="/leetcode/daily-question" element={bareShell(<DailyQuestion />, true)} />
               <Route path="/mailbox" element={shell(<Mailbox />, "Mailbox", "Your reports, messages and support tickets")} />
 
               <Route path="/lobby/:code" element={<Lobby />} />
