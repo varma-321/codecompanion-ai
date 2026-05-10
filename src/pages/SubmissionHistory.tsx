@@ -129,11 +129,20 @@ const SubmissionHistory = () => {
         <div className="flex gap-2">
           <Input placeholder="Search by problem..." value={search} onChange={e => setSearch(e.target.value)} className="flex-1 h-9 text-sm" />
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-36 h-9 text-sm"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-32 h-9 text-sm"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="accepted">Accepted</SelectItem>
               <SelectItem value="rejected">Wrong Answer</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={dateFilter} onValueChange={setDateFilter}>
+            <SelectTrigger className="w-28 h-9 text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Time</SelectItem>
+              <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="week">Last 7d</SelectItem>
+              <SelectItem value="month">Last 30d</SelectItem>
             </SelectContent>
           </Select>
         </div>
