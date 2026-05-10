@@ -1088,7 +1088,7 @@ const ProblemWorkspace = () => {
     const saveKey = `${prefix}${key}`;
     try {
       const { data } = await supabase
-        .from('submission_history')
+        .from('submission_history' as any)
         .select('*')
         .eq('user_id', authUser.id)
         .eq('problem_key', key) // Use the raw key for history tracking across modes
