@@ -187,6 +187,116 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_questions: {
+        Row: {
+          constraints: Json
+          created_at: string
+          created_by: string | null
+          daily_date: string | null
+          description: string
+          difficulty: string
+          examples: Json
+          hidden_test_cases: Json
+          id: string
+          is_active: boolean
+          slug: string
+          starter_code: string
+          title: string
+          topic: string
+          updated_at: string
+          visible_test_cases: Json
+        }
+        Insert: {
+          constraints?: Json
+          created_at?: string
+          created_by?: string | null
+          daily_date?: string | null
+          description?: string
+          difficulty?: string
+          examples?: Json
+          hidden_test_cases?: Json
+          id?: string
+          is_active?: boolean
+          slug: string
+          starter_code?: string
+          title: string
+          topic?: string
+          updated_at?: string
+          visible_test_cases?: Json
+        }
+        Update: {
+          constraints?: Json
+          created_at?: string
+          created_by?: string | null
+          daily_date?: string | null
+          description?: string
+          difficulty?: string
+          examples?: Json
+          hidden_test_cases?: Json
+          id?: string
+          is_active?: boolean
+          slug?: string
+          starter_code?: string
+          title?: string
+          topic?: string
+          updated_at?: string
+          visible_test_cases?: Json
+        }
+        Relationships: []
+      }
+      daily_submissions: {
+        Row: {
+          code: string
+          created_at: string
+          first_failing_case: Json | null
+          id: string
+          language: string
+          memory_kb: number | null
+          passed_count: number
+          question_id: string
+          runtime_ms: number | null
+          status: string
+          total_count: number
+          user_id: string
+        }
+        Insert: {
+          code?: string
+          created_at?: string
+          first_failing_case?: Json | null
+          id?: string
+          language?: string
+          memory_kb?: number | null
+          passed_count?: number
+          question_id: string
+          runtime_ms?: number | null
+          status?: string
+          total_count?: number
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          first_failing_case?: Json | null
+          id?: string
+          language?: string
+          memory_kb?: number | null
+          passed_count?: number
+          question_id?: string
+          runtime_ms?: number | null
+          status?: string
+          total_count?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_submissions_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "daily_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       direct_messages: {
         Row: {
           content: string

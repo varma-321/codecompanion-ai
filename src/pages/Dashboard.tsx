@@ -301,7 +301,7 @@ const Dashboard = () => {
         code,
         activeProblem.id,
         activeProblem.title,
-        activeProblem.description || '',
+        (activeProblem as any).description || '',
         currentTestCases
       );
 
@@ -787,7 +787,7 @@ const Dashboard = () => {
                   </div>
                 </div>
               )}
-              {bottomTab === 'ai_tutor' && (
+              {bottomTab === 'ai_tutor' as any && (
                 <div className="flex flex-1 flex-col">
                   <div className="flex-1 overflow-hidden">
                     <AIChatPanel 

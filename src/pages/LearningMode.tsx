@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { toast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, BookOpen, Loader2, Sparkles, CheckCircle2, Trophy, ArrowRight, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -284,7 +285,7 @@ const LearningMode = () => {
                                     {['O(log N)', 'O(N)', 'O(N log N)', 'O(N²)'].map(opt => (
                                        <button 
                                           key={opt}
-                                          onClick={() => { setQuizScore(100); setProgress(100); toast.success('Perfect Score!'); }}
+                                          onClick={() => { setQuizScore(100); setProgress(100); toast({ title: 'Perfect Score!'); }}
                                           className="w-full p-3 rounded-xl border border-border text-left text-xs font-medium hover:border-primary/50 hover:bg-primary/5 transition-all"
                                        >
                                           {opt}

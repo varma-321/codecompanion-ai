@@ -105,7 +105,7 @@ const ModuleSelector = () => {
           } else break;
         }
         setStreak(s);
-      }).catch(err => console.error("Streak calculation error:", err));
+      }).then(undefined, (err: any) => console.error("Streak calculation error:", err));
   }, [authUser]);
 
   const categories: Array<keyof typeof CATEGORY_INFO> = ['roadmap', 'practice', 'study', 'social', 'tools'];

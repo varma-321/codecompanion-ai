@@ -51,7 +51,7 @@ async function checkRole(userId: string, role: string): Promise<boolean> {
     .from('user_roles')
     .select('role')
     .eq('user_id', userId)
-    .eq('role', role)
+    .eq('role', role as any)
     .maybeSingle();
   return !!data;
 }

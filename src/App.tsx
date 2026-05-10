@@ -51,6 +51,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminSignup from "./pages/AdminSignup";
 import AdminAgentDashboard from "./pages/AdminAgentDashboard";
 import QuickPractice from "./pages/QuickPractice";
+import DailyQuestion from "./pages/DailyQuestion";
 
 import Mailbox from "./pages/Mailbox";
 import Lobby from "./pages/Lobby";
@@ -308,6 +309,7 @@ const App = () => (
               />
               <Route path="/admin/agent" element={<AdminAgentDashboard />} />
               <Route path="/quick-practice" element={bareShell(<QuickPractice />)} />
+              <Route path="/leetcode/daily-question" element={bareShell(<DailyQuestion />, true)} />
               <Route path="/mailbox" element={shell(<Mailbox />, "Mailbox", "Your reports, messages and support tickets")} />
 
               <Route path="/lobby/:code" element={<Lobby />} />

@@ -36,6 +36,7 @@ const SubmissionHistory = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -54,9 +55,16 @@ const SubmissionHistory = () => {
   }, [authUser]);
 
   const filtered = useMemo(() => {
+    const now = Date.now();
+    const ranges: Record<string, number> = {
+      today: 86400000, week: 604800000, month: 2592000000,
+    };
     return submissions.filter(s => {
       if (statusFilter === 'accepted' && !s.passed) return false;
       if (statusFilter === 'rejected' && s.passed) return false;
+      if (dateFilter !== 'all' && ranges[dateFilter]) {
+        if (now - new Date(s.created_at).getTime() > ranges[dateFilter]) return false;
+      }
       if (search) {
         const prob = PROBLEM_MAP[s.problem_id];
         const title = prob?.title || s.problem_id;
@@ -64,7 +72,7 @@ const SubmissionHistory = () => {
       }
       return true;
     });
-  }, [submissions, search, statusFilter]);
+  }, [submissions, search, statusFilter, dateFilter]);
 
   const stats = useMemo(() => {
     const total = submissions.length;
@@ -121,11 +129,20 @@ const SubmissionHistory = () => {
         <div className="flex gap-2">
           <Input placeholder="Search by problem..." value={search} onChange={e => setSearch(e.target.value)} className="flex-1 h-9 text-sm" />
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-36 h-9 text-sm"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-32 h-9 text-sm"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="accepted">Accepted</SelectItem>
               <SelectItem value="rejected">Wrong Answer</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={dateFilter} onValueChange={setDateFilter}>
+            <SelectTrigger className="w-28 h-9 text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Time</SelectItem>
+              <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="week">Last 7d</SelectItem>
+              <SelectItem value="month">Last 30d</SelectItem>
             </SelectContent>
           </Select>
         </div>

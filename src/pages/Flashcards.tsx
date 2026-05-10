@@ -205,7 +205,7 @@ const Flashcards = () => {
                 </Button>
               </>
             ) : (
-              <Button variant="primary" size="sm" onClick={() => setFlipped(true)} className="flex-1 h-10 sm:h-9 gap-2 font-bold rounded-xl shadow-lg shadow-primary/20">
+              <Button variant={"primary" as any} size="sm" onClick={() => setFlipped(true)} className="flex-1 h-10 sm:h-9 gap-2 font-bold rounded-xl shadow-lg shadow-primary/20">
                 <RotateCcw className="h-4 w-4" /> Flip Card
               </Button>
             )}
