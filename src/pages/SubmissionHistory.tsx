@@ -55,9 +55,16 @@ const SubmissionHistory = () => {
   }, [authUser]);
 
   const filtered = useMemo(() => {
+    const now = Date.now();
+    const ranges: Record<string, number> = {
+      today: 86400000, week: 604800000, month: 2592000000,
+    };
     return submissions.filter(s => {
       if (statusFilter === 'accepted' && !s.passed) return false;
       if (statusFilter === 'rejected' && s.passed) return false;
+      if (dateFilter !== 'all' && ranges[dateFilter]) {
+        if (now - new Date(s.created_at).getTime() > ranges[dateFilter]) return false;
+      }
       if (search) {
         const prob = PROBLEM_MAP[s.problem_id];
         const title = prob?.title || s.problem_id;
@@ -65,7 +72,7 @@ const SubmissionHistory = () => {
       }
       return true;
     });
-  }, [submissions, search, statusFilter]);
+  }, [submissions, search, statusFilter, dateFilter]);
 
   const stats = useMemo(() => {
     const total = submissions.length;
