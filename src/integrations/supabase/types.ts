@@ -783,25 +783,58 @@ export type Database = {
           ban_until: string | null
           created_at: string
           display_id: number
+          email: string | null
+          github_auto_push: boolean | null
+          github_repo: string | null
+          github_token: string | null
           id: string
+          last_active: string | null
+          midnight_theme_enabled: boolean | null
+          midnight_theme_unlocked: boolean | null
+          requested_role: string | null
           status: string
+          streak_freeze_count: number | null
           username: string
+          xp: number | null
+          xp_boost_until: string | null
         }
         Insert: {
           ban_until?: string | null
           created_at?: string
           display_id?: number
+          email?: string | null
+          github_auto_push?: boolean | null
+          github_repo?: string | null
+          github_token?: string | null
           id: string
+          last_active?: string | null
+          midnight_theme_enabled?: boolean | null
+          midnight_theme_unlocked?: boolean | null
+          requested_role?: string | null
           status?: string
+          streak_freeze_count?: number | null
           username: string
+          xp?: number | null
+          xp_boost_until?: string | null
         }
         Update: {
           ban_until?: string | null
           created_at?: string
           display_id?: number
+          email?: string | null
+          github_auto_push?: boolean | null
+          github_repo?: string | null
+          github_token?: string | null
           id?: string
+          last_active?: string | null
+          midnight_theme_enabled?: boolean | null
+          midnight_theme_unlocked?: boolean | null
+          requested_role?: string | null
           status?: string
+          streak_freeze_count?: number | null
           username?: string
+          xp?: number | null
+          xp_boost_until?: string | null
         }
         Relationships: []
       }
@@ -1022,6 +1055,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_daily_xp: {
+        Row: {
+          earned_date: string | null
+          id: string
+          problem_key: string
+          user_id: string | null
+        }
+        Insert: {
+          earned_date?: string | null
+          id?: string
+          problem_key: string
+          user_id?: string | null
+        }
+        Update: {
+          earned_date?: string | null
+          id?: string
+          problem_key?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_problem_progress: {
         Row: {
           attempts: number
@@ -1102,6 +1156,7 @@ export type Database = {
           solved_count: number | null
           user_id: string | null
           username: string | null
+          xp: number | null
         }
         Relationships: []
       }
@@ -1119,6 +1174,13 @@ export type Database = {
         Args: { new_username: string; target_user_id: string }
         Returns: undefined
       }
+      admin_update_user_role: {
+        Args: {
+          new_role: Database["public"]["Enums"]["app_role"]
+          target_user_id: string
+        }
+        Returns: undefined
+      }
       get_user_status: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
@@ -1129,7 +1191,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "moderator"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1257,7 +1319,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "moderator"],
     },
   },
 } as const
