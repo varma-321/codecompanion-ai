@@ -1736,7 +1736,7 @@ const ProblemWorkspace = () => {
                   <div className="flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3">
                     <AlertTriangle className="h-4 w-4 text-destructive" />
                     <span className="text-xs text-destructive">{generateError}</span>
-                    <Button size="sm" variant="outline" className="ml-auto h-6 text-[10px]" onClick={generateFullDetail}>Retry</Button>
+                    <Button size="sm" variant="outline" className="ml-auto h-6 text-[10px]" onClick={() => generateFullDetail()}>Retry</Button>
                   </div>
                 )}
 
