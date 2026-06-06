@@ -123,21 +123,38 @@ export async function analyzeComplexityAdvanced(code: string, problemId?: string
   return data.radar || JSON.stringify(data);
 }
 
-export async function chat(code: string, userMessage: string, problemId?: string | null, history: any[] = [], problemDescription?: string): Promise<string> {
+export interface ChatContext {
+  problemTitle?: string;
+  problemExamples?: any[];
+  problemConstraints?: string[];
+  module?: string;
+}
+
+export async function chat(
+  code: string,
+  userMessage: string,
+  problemId?: string | null,
+  history: any[] = [],
+  problemDescription?: string,
+  context?: ChatContext,
+): Promise<string> {
   try {
     const { data, error } = await supabase.functions.invoke('agent-chat', {
-      body: { 
-        message: userMessage, 
-        code, 
-        problemId, 
+      body: {
+        message: userMessage,
+        code,
+        problemId,
         history,
-        problemDescription
-      }
+        problemDescription,
+        problemTitle: context?.problemTitle,
+        problemExamples: context?.problemExamples,
+        problemConstraints: context?.problemConstraints,
+        module: context?.module ?? inferModuleFromPath(),
+      },
     });
 
     if (error) {
       console.error('Supabase function error:', error);
-      // Fallback to legacy backend if edge function fails
       const legacyData = await postAPI('/api/chat', { code, message: userMessage, problemId });
       return legacyData.response || legacyData.reply || JSON.stringify(legacyData);
     }
@@ -149,6 +166,23 @@ export async function chat(code: string, userMessage: string, problemId?: string
     return data.response || data.reply || JSON.stringify(data);
   }
 }
+
+function inferModuleFromPath(): string | undefined {
+  try {
+    const p = typeof window !== 'undefined' ? window.location.pathname : '';
+    if (p.startsWith('/striver')) return 'Striver SDE';
+    if (p.startsWith('/neetcode')) return 'NeetCode 150';
+    if (p.startsWith('/leetcode150')) return 'LeetCode Top 150';
+    if (p.startsWith('/leetcode/daily-question')) return 'Daily Question';
+    if (p.startsWith('/contest')) return 'Contest';
+    if (p.startsWith('/interview')) return 'Mock Interview';
+    if (p.startsWith('/playground')) return 'Playground';
+    if (p.startsWith('/learning')) return 'Learning';
+    if (p.startsWith('/problem/')) return 'Problem Workspace';
+    return undefined;
+  } catch { return undefined; }
+}
+
 
 export async function generateTestCases(
   code: string,

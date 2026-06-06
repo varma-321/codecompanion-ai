@@ -246,6 +246,10 @@ interface AIChatPanelProps {
   code: string;
   problemId: string | null;
   problemDescription?: string;
+  problemTitle?: string;
+  problemExamples?: any[];
+  problemConstraints?: string[];
+  module?: string;
   aiEnabled?: boolean;
 }
 
@@ -260,8 +264,15 @@ const AIChatPanel = ({
   code,
   problemId,
   problemDescription,
+  problemTitle,
+  problemExamples,
+  problemConstraints,
+  module,
   aiEnabled = true,
 }: AIChatPanelProps) => {
+  const chatContext = useMemo(() => ({
+    problemTitle, problemExamples, problemConstraints, module,
+  }), [problemTitle, problemExamples, problemConstraints, module]);
   const [backendOnline, setBackendOnline] = useState(true);
   const [checking, setChecking] = useState(true);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -483,7 +494,7 @@ const AIChatPanel = ({
           `  • Mark it ✅ Correct, ⚠️ Suspicious, or ❌ Error and explain why.\n` +
           `  • Show how key variables change (use a small markdown table when useful).\n` +
           `Focus only on explaining and validating the user's own code.`;
-        const result = await aiChat(currentCode, prompt, problemId, history, problemDescription);
+        const result = await aiChat(currentCode, prompt, problemId, history, problemDescription, chatContext);
         addMessage("assistant", result);
       } else if (text === "__hints__") {
         if (hintLevel >= 4) {
@@ -504,7 +515,7 @@ const AIChatPanel = ({
             `Hint 3 = outline the algorithm steps as a short bullet list (no code).\n` +
             `Hint 4 = pseudocode-level outline (still no full Java solution).\n` +
             `Return ONLY hint ${nextLevel}. Do not include other hints. Keep it short and focused.`;
-          const hint = await aiChat(currentCode, prompt, problemId, history, problemDescription);
+          const hint = await aiChat(currentCode, prompt, problemId, history, problemDescription, chatContext);
           addMessage(
             "assistant",
             `### 💡 Hint ${nextLevel} of 4\n\n${hint}\n\n_${4 - nextLevel} hint${4 - nextLevel === 1 ? "" : "s"} remaining._`,
@@ -525,7 +536,7 @@ const AIChatPanel = ({
           `- step-by-step bullet list explaining the algorithm in plain English.\n\n` +
           `**Key data structures:** comma-separated list.\n\n` +
           `IMPORTANT: If NOT in tutor mode, you MUST include a complete code block at the end. If IN tutor mode, do NOT include any code.`;
-        const result = await aiChat(currentCode, prompt, problemId, history, problemDescription);
+        const result = await aiChat(currentCode, prompt, problemId, history, problemDescription, chatContext);
         addMessage("assistant", result);
       } else if (text === "__mistakes__") {
         addMessage("user", "🐛 Find Bugs");
@@ -542,7 +553,7 @@ const AIChatPanel = ({
           `Strict rules:\n` +
           `  - If NOT in tutor mode, you MAY provide a 2-3 line code fix for each bug.\n` +
           `  - If IN tutor mode, do NOT provide any code fixes.`;
-        const result = await aiChat(currentCode, prompt, problemId, history, problemDescription);
+        const result = await aiChat(currentCode, prompt, problemId, history, problemDescription, chatContext);
         addMessage("assistant", result);
       } else if (text === "__patterns__") {
         addMessage("user", "📚 Patterns");
@@ -557,7 +568,7 @@ const AIChatPanel = ({
           `Name the pattern the user is currently using.\n\n` +
           `### ✅ Is It Optimal?\n` +
           `Compare and give a verdict (Optimal / Sub-optimal / Brute-force).`;
-        const result = await aiChat(currentCode, prompt, problemId, history, problemDescription);
+        const result = await aiChat(currentCode, prompt, problemId, history, problemDescription, chatContext);
         addMessage("assistant", result);
       } else if (text === "__generate_tests__" || text === "__testcases__") {
         addMessage("user", "🧪 Generate Test Cases");
@@ -567,7 +578,7 @@ const AIChatPanel = ({
         );
       } else {
         addMessage("user", text);
-        const response = await aiChat(currentCode, finalPrompt, problemId, history, problemDescription);
+        const response = await aiChat(currentCode, finalPrompt, problemId, history, problemDescription, chatContext);
         addMessage("assistant", response);
       }
 

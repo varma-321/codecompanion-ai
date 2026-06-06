@@ -1649,7 +1649,11 @@ const ProblemWorkspace = () => {
                <AIChatPanel 
                 code={code} 
                 problemId={key || null} 
+                problemTitle={roadmapProblem?.title || (detail as any).title}
                 problemDescription={detail.description}
+                problemExamples={detail.examples}
+                problemConstraints={detail.constraints}
+                module={(roadmapProblem as any)?.topic || 'Problem Workspace'}
                 aiEnabled={true} 
               />
             </div>
@@ -2047,7 +2051,11 @@ const ProblemWorkspace = () => {
             <AIChatPanel 
               code={code} 
               problemId={key || null} 
+              problemTitle={roadmapProblem?.title || (detail as any).title}
               problemDescription={detail.description}
+              problemExamples={detail.examples}
+              problemConstraints={detail.constraints}
+              module={(roadmapProblem as any)?.topic || 'Problem Workspace'}
               aiEnabled={true} 
             />
           </div>
