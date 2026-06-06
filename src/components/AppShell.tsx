@@ -249,68 +249,79 @@ function Topbar({ title, subtitle, actions }: { title?: string; subtitle?: strin
 }
 
 export default function AppShell({ children, title, subtitle, actions, bare = false, hideMobileNav = false }: AppShellProps) {
+  return (
+    <SidebarProvider defaultOpen={false}>
+      <AppShellInner
+        title={title}
+        subtitle={subtitle}
+        actions={actions}
+        bare={bare}
+        hideMobileNav={hideMobileNav}
+      >
+        {children}
+      </AppShellInner>
+    </SidebarProvider>
+  );
+}
+
+function AppShellInner({ children, title, subtitle, actions, bare, hideMobileNav }: AppShellProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { setOpenMobile, toggleSidebar } = useSidebar();
 
   const mobileNavItems = [
-    { title: 'Home', url: '/', icon: Home },
-    { title: 'Modules', url: '/modules', icon: LayoutGrid },
-    { title: 'Search', url: '/search', icon: Search },
-    { title: 'Profile', url: '/profile', icon: User },
+    { title: 'Home', url: '/', icon: Home, action: () => navigate('/') },
+    { title: 'Modules', url: '/modules', icon: LayoutGrid, action: () => navigate('/modules') },
+    { title: 'Menu', url: '__menu__', icon: Layers, action: () => { setOpenMobile(true); toggleSidebar(); } },
+    { title: 'Search', url: '/search', icon: Search, action: () => navigate('/search') },
+    { title: 'Profile', url: '/profile', icon: User, action: () => navigate('/profile') },
   ];
 
   return (
-    <SidebarProvider defaultOpen={false}>
-      <div className="h-screen h-[100dvh] flex w-full bg-background overflow-hidden relative">
-        <AppSidebar />
-        <div className="flex-1 flex flex-col min-w-0 bg-background/50">
-          {!bare && <Topbar title={title} subtitle={subtitle} actions={actions} />}
-          <main className={`app-shell-main flex-1 min-w-0 relative ${!hideMobileNav ? ((location.pathname === '/' || location.pathname.startsWith('/problem/')) ? 'pb-[112px] md:pb-0' : 'pb-[56px] md:pb-0') : 'pb-0'} ${bare ? 'overflow-hidden' : 'overflow-auto'}`}>
-            {bare ? (
-              <div className="h-full w-full">
-                {children}
-              </div>
-            ) : (
-              <div className="max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8">
-                {children}
-              </div>
-            )}
-          </main>
-        </div>
-
-        {/* Mobile Bottom Navigation */}
-        {!hideMobileNav && (
-          <nav 
-            className="md:hidden fixed left-0 right-0 bg-card border-t border-border z-[1000] flex items-center justify-around px-4"
-            style={{ bottom: '0px', height: '56px' }}
-          >
-            {mobileNavItems.map((item) => {
-              const isActive = location.pathname === item.url || 
-                (item.url !== '/' && location.pathname.startsWith(item.url)) ||
-                (item.url === '/modules' && (
-                  location.pathname.startsWith('/striver') || 
-                  location.pathname.startsWith('/neetcode') || 
-                  location.pathname.startsWith('/leetcode150') ||
-                  location.pathname.startsWith('/problem/')
-                ));
-              return (
-                <button
-                  key={item.url}
-                  onClick={() => navigate(item.url)}
-                  className={`flex flex-col items-center gap-1 transition-all duration-200 ${
-                    isActive ? 'text-primary' : 'text-muted-foreground'
-                  }`}
-                >
-                  <div className={`p-1.5 rounded-xl transition-colors ${isActive ? 'bg-primary/10' : ''}`}>
-                    <item.icon className={`h-5 w-5 ${isActive ? 'stroke-[2.5px]' : 'stroke-[2px]'}`} />
-                  </div>
-                  <span className="text-[10px] font-medium tracking-tight">{item.title}</span>
-                </button>
-              );
-            })}
-          </nav>
-        )}
+    <div className="h-screen h-[100dvh] flex w-full bg-background overflow-hidden relative">
+      <AppSidebar />
+      <div className="flex-1 flex flex-col min-w-0 bg-background/50">
+        {!bare && <Topbar title={title} subtitle={subtitle} actions={actions} />}
+        <main className={`app-shell-main flex-1 min-w-0 relative ${!hideMobileNav ? ((location.pathname === '/' || location.pathname.startsWith('/problem/')) ? 'pb-[112px] md:pb-0' : 'pb-[56px] md:pb-0') : 'pb-0'} ${bare ? 'overflow-hidden' : 'overflow-auto'}`}>
+          {bare ? (
+            <div className="h-full w-full">{children}</div>
+          ) : (
+            <div className="max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8">{children}</div>
+          )}
+        </main>
       </div>
-    </SidebarProvider>
+
+      {!hideMobileNav && (
+        <nav
+          className="md:hidden fixed left-0 right-0 bg-card border-t border-border z-[1000] flex items-center justify-around px-2"
+          style={{ bottom: '0px', height: '56px' }}
+        >
+          {mobileNavItems.map((item) => {
+            const isActive = item.url !== '__menu__' && (
+              location.pathname === item.url ||
+              (item.url !== '/' && location.pathname.startsWith(item.url)) ||
+              (item.url === '/modules' && (
+                location.pathname.startsWith('/striver') ||
+                location.pathname.startsWith('/neetcode') ||
+                location.pathname.startsWith('/leetcode150') ||
+                location.pathname.startsWith('/problem/')
+              ))
+            );
+            return (
+              <button
+                key={item.title}
+                onClick={item.action}
+                className={`flex flex-col items-center gap-1 transition-all duration-200 ${isActive ? 'text-primary' : 'text-muted-foreground'}`}
+              >
+                <div className={`p-1.5 rounded-xl transition-colors ${isActive ? 'bg-primary/10' : ''}`}>
+                  <item.icon className={`h-5 w-5 ${isActive ? 'stroke-[2.5px]' : 'stroke-[2px]'}`} />
+                </div>
+                <span className="text-[10px] font-medium tracking-tight">{item.title}</span>
+              </button>
+            );
+          })}
+        </nav>
+      )}
+    </div>
   );
 }
