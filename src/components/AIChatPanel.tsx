@@ -264,8 +264,15 @@ const AIChatPanel = ({
   code,
   problemId,
   problemDescription,
+  problemTitle,
+  problemExamples,
+  problemConstraints,
+  module,
   aiEnabled = true,
 }: AIChatPanelProps) => {
+  const chatContext = useMemo(() => ({
+    problemTitle, problemExamples, problemConstraints, module,
+  }), [problemTitle, problemExamples, problemConstraints, module]);
   const [backendOnline, setBackendOnline] = useState(true);
   const [checking, setChecking] = useState(true);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
