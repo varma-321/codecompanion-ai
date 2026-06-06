@@ -246,6 +246,10 @@ interface AIChatPanelProps {
   code: string;
   problemId: string | null;
   problemDescription?: string;
+  problemTitle?: string;
+  problemExamples?: any[];
+  problemConstraints?: string[];
+  module?: string;
   aiEnabled?: boolean;
 }
 
