@@ -206,8 +206,8 @@ function Topbar({ title, subtitle, actions }: { title?: string; subtitle?: strin
   const navigate = useNavigate();
   const handleLogout = async () => { await signOut(); navigate('/'); };
 
-  return (
-    <header className="sticky top-0 z-30 h-14 flex items-center gap-3 px-4 border-b border-border glass">
+    <header className="sticky top-0 z-30 h-14 flex items-center gap-2 px-3 sm:px-4 border-b border-border glass">
+      <SidebarTrigger className="h-8 w-8 shrink-0" />
       {(title || subtitle) && (
         <div className="min-w-0 flex-1">
           {title && <div className="text-[13px] font-semibold tracking-tight truncate leading-none">{title}</div>}
