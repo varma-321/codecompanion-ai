@@ -583,7 +583,7 @@ const Dashboard = () => {
               <AIChatPanel 
                 code={code} 
                 problemId={activeProblem?.id || null} 
-                problemDescription={activeProblem?.description}
+                problemDescription={(activeProblem as any)?.description}
                 aiEnabled={aiEnabled} 
               />
             </div>
@@ -793,7 +793,7 @@ const Dashboard = () => {
                     <AIChatPanel 
                       code={code} 
                       problemId={activeProblem?.id || null} 
-                      problemDescription={activeProblem?.description}
+                      problemDescription={(activeProblem as any)?.description}
                       aiEnabled={aiEnabled} 
                     />
                   </div>
@@ -809,7 +809,7 @@ const Dashboard = () => {
             <AIChatPanel 
               code={code} 
               problemId={activeProblem?.id || null} 
-              problemDescription={activeProblem?.description}
+              problemDescription={(activeProblem as any)?.description}
               aiEnabled={aiEnabled} 
             />
           </div>
