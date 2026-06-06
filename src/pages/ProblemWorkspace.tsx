@@ -651,8 +651,8 @@ const ProblemWorkspace = () => {
         if (e.key === '2') { e.preventDefault(); setBottomTab('console'); }
         if (e.key === '3') { e.preventDefault(); setBottomTab('results'); }
         if (e.key === '4') { e.preventDefault(); setBottomTab('analysis'); }
-        if (e.key === '5') { e.preventDefault(); setBottomTab('visualizer'); }
-        if (e.key === '6') { e.preventDefault(); setBottomTab('analytics'); }
+        if (e.key === '5') { e.preventDefault(); setBottomTab('history' as any); }
+        if (e.key === '6') { e.preventDefault(); setBottomTab('snippets' as any); }
         if (e.key === '7') { e.preventDefault(); setBottomTab('history'); }
         if (e.key === '8') { e.preventDefault(); setBottomTab('snippets'); }
         if (e.key === '9') { e.preventDefault(); setBottomTab('solutions'); }
