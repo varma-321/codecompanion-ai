@@ -112,6 +112,90 @@ export type Database = {
           },
         ]
       }
+      coin_daily_claims: {
+        Row: {
+          claim_key: string
+          created_at: string
+          id: string
+          rule_key: string
+          user_id: string
+        }
+        Insert: {
+          claim_key: string
+          created_at?: string
+          id?: string
+          rule_key: string
+          user_id: string
+        }
+        Update: {
+          claim_key?: string
+          created_at?: string
+          id?: string
+          rule_key?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      coin_reward_rules: {
+        Row: {
+          amount: number
+          description: string | null
+          enabled: boolean
+          key: string
+          label: string
+          per_day_limit: number | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          description?: string | null
+          enabled?: boolean
+          key: string
+          label: string
+          per_day_limit?: number | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          description?: string | null
+          enabled?: boolean
+          key?: string
+          label?: string
+          per_day_limit?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      coin_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          kind: string
+          meta: Json | null
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          kind: string
+          meta?: Json | null
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          kind?: string
+          meta?: Json | null
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       contest_results: {
         Row: {
           contest_type: string
@@ -1025,6 +1109,51 @@ export type Database = {
           },
         ]
       }
+      store_items: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          enabled: boolean
+          icon: string | null
+          id: string
+          meta: Json | null
+          name: string
+          price: number
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          icon?: string | null
+          id?: string
+          meta?: Json | null
+          name: string
+          price: number
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          icon?: string | null
+          id?: string
+          meta?: Json | null
+          name?: string
+          price?: number
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       system_patch_proposals: {
         Row: {
           context_snippet: string | null
@@ -1165,6 +1294,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_coins: {
+        Row: {
+          balance: number
+          created_at: string
+          lifetime_earned: number
+          lifetime_spent: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          lifetime_earned?: number
+          lifetime_spent?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          lifetime_earned?: number
+          lifetime_spent?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_daily_xp: {
         Row: {
           earned_date: string | null
@@ -1183,6 +1339,36 @@ export type Database = {
           id?: string
           problem_key?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      user_inventory: {
+        Row: {
+          acquired_at: string
+          equipped: boolean
+          expires_at: string | null
+          id: string
+          item_slug: string
+          quantity: number
+          user_id: string
+        }
+        Insert: {
+          acquired_at?: string
+          equipped?: boolean
+          expires_at?: string | null
+          id?: string
+          item_slug: string
+          quantity?: number
+          user_id: string
+        }
+        Update: {
+          acquired_at?: string
+          equipped?: boolean
+          expires_at?: string | null
+          id?: string
+          item_slug?: string
+          quantity?: number
+          user_id?: string
         }
         Relationships: []
       }
@@ -1272,6 +1458,10 @@ export type Database = {
       }
     }
     Functions: {
+      admin_adjust_coins: {
+        Args: { _amount: number; _reason: string; _target_user: string }
+        Returns: undefined
+      }
       admin_delete_user: {
         Args: { target_user_id: string }
         Returns: undefined
@@ -1291,6 +1481,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      award_coins: {
+        Args: { _claim_key?: string; _rule_key: string; _user_id: string }
+        Returns: number
+      }
       get_user_status: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
@@ -1299,6 +1493,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      purchase_item: { Args: { _item_slug: string }; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "user" | "moderator"
