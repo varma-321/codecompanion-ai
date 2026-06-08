@@ -5,8 +5,9 @@ import {
   User, Users, LogOut, Settings, Moon, Sun, BarChart3, Layers, GraduationCap, Clock,
   Building2, MessageSquare, Award, Bookmark, FileSpreadsheet, Activity, Flame,
   Plus, Dices, Zap, Timer, Share2, AlertTriangle, RotateCcw, TrendingUp, Shield,
-  Mail, LayoutGrid
+  Mail, LayoutGrid, ShoppingBag, Coins
 } from 'lucide-react';
+import CoinBadge from './CoinBadge';
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
   SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
@@ -81,6 +82,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Tools',
     items: [
+      { title: 'Store', url: '/store', icon: ShoppingBag },
       { title: 'Goals', url: '/goals', icon: Target },
       { title: 'Pomodoro', url: '/pomodoro', icon: Clock },
       { title: 'Bookmarks', url: '/bookmarks', icon: Bookmark },
@@ -106,12 +108,12 @@ function AppSidebar() {
   const navGroups = useMemo(() => {
     let groups = [...NAV_GROUPS];
     if (isAdmin) {
-      // Add Admin to the very top of Workspace or as its own prominent group
       groups = [
         {
           label: 'Administration',
           items: [
             { title: 'Admin Dashboard', url: '/admin', icon: Shield },
+            { title: 'Coins Admin', url: '/admin/coins', icon: Coins },
           ],
         },
         ...groups
@@ -230,7 +232,9 @@ function Topbar({ title, subtitle, actions }: { title?: string; subtitle?: strin
       )}
       <div className="flex items-center gap-1 shrink-0">
         {actions}
+        <CoinBadge className="hidden sm:inline-flex mr-1" />
         <ReportIssueDialog pageTitle={title} />
+        
         
 
 
