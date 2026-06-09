@@ -323,6 +323,7 @@ const App = () => (
             </Routes>
           </BrowserRouter>
         </TooltipProvider>
+        </ActiveEffectsProvider>
       </ThemeProvider>
     </UserProvider>
   </QueryClientProvider>
