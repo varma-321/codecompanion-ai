@@ -498,11 +498,24 @@ const AIChatPanel = ({
         addMessage("assistant", result);
       } else if (text === "__hints__") {
         if (hintLevel >= 4) {
-          addMessage("user", "💡 Hint");
-          addMessage(
-            "assistant",
-            `### All 4 hints used\n\nYou've already received the maximum of 4 hints for this problem. Try the **Optimal** option in the AI menu for the recommended approach, or ask a specific question in the chat.`,
-          );
+          const { supabase } = await import('@/integrations/supabase/client');
+          const { data: consumed } = await (supabase as any).rpc('consume_extra_hint');
+          if (consumed) {
+            addMessage("user", "💡 Bonus Hint (Extra Hint Slot)");
+            const bonusPrompt =
+              `${contextPrefix}\n` +
+              `BONUS HINT MODE — User unlocked an EXTRA hint via the Store.\n` +
+              `Give a SPECIFIC, targeted hint pointing precisely at what's missing in their code.\n\n` +
+              `[JAVA CODE CONTEXT]\n\`\`\`java\n${currentCode || '// No code provided'}\n\`\`\``;
+            const hint = await aiChat(currentCode, bonusPrompt, problemId, history, problemDescription, chatContext);
+            addMessage("assistant", `### ✨ Bonus Hint (from your Extra Hint Slot)\n\n${hint}`);
+          } else {
+            addMessage("user", "💡 Hint");
+            addMessage(
+              "assistant",
+              `### All 4 hints used\n\nYou've used the maximum of 4 hints. Buy **Extra Hint Slot** in the Store for a bonus targeted hint.`,
+            );
+          }
         } else {
           const nextLevel = hintLevel + 1;
           addMessage("user", `💡 Hint ${nextLevel} of 4`);
