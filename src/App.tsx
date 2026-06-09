@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, useParams } from "react-router-dom";
 import type { ReactNode } from "react";
 import { UserProvider } from "@/lib/user-context";
 import { ThemeProvider } from "@/lib/theme-context";
+import { ActiveEffectsProvider } from "@/lib/active-effects";
 import Index from "./pages/Index";
 import StudyAnalytics from "./pages/StudyAnalytics";
 import ProblemGenerator from "./pages/ProblemGenerator";
@@ -76,6 +77,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <UserProvider>
       <ThemeProvider>
+        <ActiveEffectsProvider>
         <TooltipProvider>
           <Toaster />
           <Sonner />
