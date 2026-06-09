@@ -10,6 +10,7 @@ export default function CoinBadge({ className = '' }: { className?: string }) {
   if (!authUser) return null;
   return (
     <button
+      data-coin-badge
       onClick={() => navigate('/store')}
       className={`inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-border bg-secondary/60 hover:bg-secondary text-[12px] font-medium transition-colors ${className}`}
       title="Coin balance — open store"

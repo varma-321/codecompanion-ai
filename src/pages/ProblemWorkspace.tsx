@@ -1018,6 +1018,20 @@ const ProblemWorkspace = () => {
       if (allPassed) {
         setCelebrationTime(execTime);
         setShowCelebration(true);
+        // Award coins + fire equipped submission confetti
+        try {
+          const { awardCoins } = await import('@/lib/coins');
+          const { triggerSubmissionConfetti } = await import('@/lib/active-effects');
+          if (authUser?.id) {
+            const diff = String(roadmapProblem?.difficulty || 'Medium').toLowerCase();
+            const ruleKey = diff.includes('easy') ? 'problem_solved_easy'
+              : diff.includes('hard') ? 'problem_solved_hard' : 'problem_solved_medium';
+            // unique per problem so it only awards once per problem
+            await awardCoins(authUser.id, ruleKey, `solved:${key}`);
+            await awardCoins(authUser.id, 'first_submission_daily');
+          }
+          triggerSubmissionConfetti();
+        } catch {}
       }
     } catch (err: any) {
       addConsoleEntry('error', 'Submission failed: ' + err.message);
