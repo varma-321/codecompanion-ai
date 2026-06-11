@@ -16,7 +16,7 @@ import { Moon, Sun, BookOpen } from 'lucide-react';
 
 const DEFAULT_GUEST_CODE = `public class Main {
     public static void main(String[] args) {
-        System.out.println("Hello, Guest! Welcome to AI Java DSA Lab");
+        System.out.println("Hello, Guest! Welcome to JavaArena");
         
         // Try writing your Java code here
         // Note: Your code won't be saved in Guest Mode
@@ -124,7 +124,7 @@ const GuestDashboard = () => {
       {/* Toolbar */}
       <div className="flex items-center justify-between border-b border-border bg-card px-2 sm:px-4 py-2 gap-1 overflow-x-auto scrollbar-none">
         <div className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0">
-          <span className="text-sm font-semibold tracking-tight text-foreground mr-1 hidden sm:inline">DSA Lab</span>
+          <span className="text-sm font-semibold tracking-tight text-foreground mr-1 hidden sm:inline">JavaArena</span>
           <div className="h-4 w-px bg-border hidden sm:block" />
 
           <span className="flex items-center gap-1.5 rounded-full bg-warning/15 border border-warning/30 px-2.5 py-1 text-[11px] font-medium text-warning">

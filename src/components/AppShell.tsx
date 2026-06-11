@@ -135,7 +135,7 @@ function AppSidebar() {
           </div>
           {state !== 'collapsed' && (
             <div className="text-left animate-in fade-in slide-in-from-left-1 duration-200">
-              <div className="text-sm font-semibold tracking-tight leading-none">DSA Lab</div>
+              <div className="text-sm font-semibold tracking-tight leading-none">JavaArena</div>
               <div className="text-[10px] text-muted-foreground leading-none mt-1">Practice Studio</div>
             </div>
           )}

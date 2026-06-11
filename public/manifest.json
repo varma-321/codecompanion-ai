@@ -1,6 +1,6 @@
 {
-    "name": "AI CodeCompiler",
-    "short_name": "CodeCompiler",
+    "name": "JavaArena",
+    "short_name": "JavaArena",
     "description": "AI-powered online code compiler for writing, compiling, and running code instantly.",
     "start_url": "/",
     "scope": "/",
