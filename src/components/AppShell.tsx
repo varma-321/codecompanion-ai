@@ -176,12 +176,12 @@ function AppSidebar() {
           onClick={() => navigate('/profile')}
           className="flex items-center gap-2.5 rounded-md p-1.5 hover:bg-sidebar-accent transition-colors w-full"
         >
-          <div className="h-7 w-7 rounded-full bg-foreground text-background flex items-center justify-center text-[10px] font-semibold shrink-0">
+          <div data-avatar-frame className="h-7 w-7 rounded-full bg-foreground text-background flex items-center justify-center text-[10px] font-semibold shrink-0">
             {initials}
           </div>
           {!collapsed && (
             <div className="flex-1 text-left min-w-0">
-              <div className="text-[12px] font-medium truncate">{authUser?.email?.split('@')[0] || 'Guest'}</div>
+              <div data-user-name className="text-[12px] font-medium truncate">{authUser?.email?.split('@')[0] || 'Guest'}</div>
               <div className="text-[10px] text-muted-foreground truncate">{authUser?.email || 'Sign in'}</div>
             </div>
           )}

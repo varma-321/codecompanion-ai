@@ -68,13 +68,22 @@ export default function Store() {
   const handleBuy = async () => {
     if (!confirm) return;
     setBuying(true);
-    const res = await purchaseItem(confirm.slug);
+    const item = confirm;
+    const res = await purchaseItem(item.slug);
     setBuying(false);
     if (!res.ok) { toast.error(res.error || 'Purchase failed'); return; }
-    toast.success(`Purchased ${confirm.name}`);
     setConfirm(null);
-    refresh();
-    refreshFx();
+    // Auto-equip cosmetics & power-ups so the effect is visible immediately.
+    const consumable = (item.meta as any)?.consumable;
+    if (!consumable) {
+      const r = await equip(item.slug);
+      if (r.ok) toast.success(`Purchased ${item.name} — equipped & active now`);
+      else toast.success(`Purchased ${item.name}`);
+    } else {
+      toast.success(`Purchased ${item.name}`);
+    }
+    await refresh();
+    await refreshFx();
   };
 
   const handleEquip = async (slug: string, currentlyEquipped: boolean) => {

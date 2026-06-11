@@ -105,14 +105,14 @@ const UserProfile = () => {
     <AppShell title="Profile" subtitle={`Member since ${stats.memberSince}`}>
       <div className="max-w-5xl mx-auto p-6 space-y-8 animate-in-up">
         {/* Hero card */}
-        <section className="surface-elevated p-8 rounded-2xl">
+        <section data-profile-banner className="surface-elevated p-8 rounded-2xl">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-            <div className="h-20 w-20 rounded-2xl bg-foreground text-background flex items-center justify-center text-2xl font-semibold shrink-0 shadow-md">
+            <div data-avatar-frame className="h-20 w-20 rounded-2xl bg-foreground text-background flex items-center justify-center text-2xl font-semibold shrink-0 shadow-md">
               {initials}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-semibold tracking-tight">{username}</h1>
+                <h1 data-user-name className="text-2xl font-semibold tracking-tight">{username}</h1>
                 <Badge variant="outline" className="text-[10px] font-mono border-primary/20 text-primary">
                   ID: {profile?.display_id || '...'}
                 </Badge>
