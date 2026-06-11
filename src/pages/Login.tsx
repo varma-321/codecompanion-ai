@@ -69,7 +69,7 @@ const Login = () => {
           <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-foreground shadow-md transition-transform hover:scale-105 duration-300">
             <Code2 className="h-8 w-8 text-background" />
           </div>
-          <h1 className="text-3xl font-semibold tracking-tight text-balance text-foreground">AI Java DSA Lab</h1>
+          <h1 className="text-3xl font-semibold tracking-tight text-balance text-foreground">JavaArena</h1>
           <p className="mt-2 text-[15px] text-muted-foreground leading-relaxed">Your AI-powered DSA practice environment</p>
         </div>
 
