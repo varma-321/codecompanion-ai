@@ -406,7 +406,7 @@ const StudyPlanner = () => {
               </CardHeader>
               <CardContent className="space-y-2">
                 <Button variant="outline" className="w-full h-9 text-xs justify-start" onClick={() => navigate('/striver')}>
-                  📚 Continue Striver Sheet
+                  📚 Continue DSA Master Sheet
                 </Button>
                 <Button variant="outline" className="w-full h-9 text-xs justify-start" onClick={() => navigate('/spaced-repetition')}>
                   🔄 Review Due Problems

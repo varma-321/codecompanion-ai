@@ -360,9 +360,9 @@ const AdminAgentDashboard = () => {
                   className="h-9 rounded-md border border-input bg-background px-2 text-sm"
                 >
                   <option value="all">All modules</option>
-                  <option value="Striver">Striver</option>
-                  <option value="NeetCode">NeetCode</option>
-                  <option value="LeetCode 150">LeetCode 150</option>
+                  <option value="Striver">DSA Master Sheet</option>
+                  <option value="NeetCode">Interview Essentials 150</option>
+                  <option value="LeetCode 150">Top 150 Coding Problems</option>
                 </select>
                 <select value={topicFilter} onChange={(e) => setTopicFilter(e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm max-w-[180px]">
                   <option value="all">All topics</option>
