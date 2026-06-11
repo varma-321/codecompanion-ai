@@ -4,7 +4,7 @@ import { NEETCODE_ROADMAP } from '@/lib/neetcode-roadmap-data';
 
 const NeetCodeRoadmap = () => (
   <RoadmapPage
-    title="NeetCode 150"
+    title="Interview Essentials 150"
     icon={<span className="text-lg">💻</span>}
     roadmap={NEETCODE_ROADMAP}
   />

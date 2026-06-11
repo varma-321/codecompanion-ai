@@ -170,9 +170,9 @@ export async function chat(
 function inferModuleFromPath(): string | undefined {
   try {
     const p = typeof window !== 'undefined' ? window.location.pathname : '';
-    if (p.startsWith('/striver')) return 'Striver SDE';
-    if (p.startsWith('/neetcode')) return 'NeetCode 150';
-    if (p.startsWith('/leetcode150')) return 'LeetCode Top 150';
+    if (p.startsWith('/striver')) return 'DSA Master Sheet';
+    if (p.startsWith('/neetcode')) return 'Interview Essentials 150';
+    if (p.startsWith('/leetcode150')) return 'Top 150 Coding Problems';
     if (p.startsWith('/leetcode/daily-question')) return 'Daily Question';
     if (p.startsWith('/contest')) return 'Contest';
     if (p.startsWith('/interview')) return 'Mock Interview';

@@ -19,9 +19,9 @@ interface ModuleCard {
 }
 
 const MODULES: ModuleCard[] = [
-  { id: 'striver', title: 'Striver SDE Sheet', subtitle: '454 curated problems', icon: <Map className="h-4 w-4" />, route: '/striver', category: 'roadmap' },
-  { id: 'neetcode', title: 'NeetCode 150', subtitle: '150 essential problems', icon: <Code2 className="h-4 w-4" />, route: '/neetcode', category: 'roadmap' },
-  { id: 'leetcode150', title: 'LeetCode Top 150', subtitle: '150 must-do problems', icon: <BookOpen className="h-4 w-4" />, route: '/leetcode150', category: 'roadmap' },
+  { id: 'striver', title: 'DSA Master Sheet', subtitle: '454 curated problems', icon: <Map className="h-4 w-4" />, route: '/striver', category: 'roadmap' },
+  { id: 'neetcode', title: 'Interview Essentials 150', subtitle: '150 essential problems', icon: <Code2 className="h-4 w-4" />, route: '/neetcode', category: 'roadmap' },
+  { id: 'leetcode150', title: 'Top 150 Coding Problems', subtitle: '150 must-do problems', icon: <BookOpen className="h-4 w-4" />, route: '/leetcode150', category: 'roadmap' },
   { id: 'learning-path', title: 'Adaptive Path', subtitle: 'AI-personalized roadmap', icon: <Brain className="h-4 w-4" />, route: '/learning-path', category: 'roadmap' },
 
   { id: 'contest', title: 'Contest Mode', subtitle: 'Timed problem solving', icon: <Timer className="h-4 w-4" />, route: '/contest', category: 'practice' },

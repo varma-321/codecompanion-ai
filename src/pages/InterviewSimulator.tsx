@@ -22,9 +22,9 @@ import ReactMarkdown from 'react-markdown';
 // ─── Problem pool helpers ────────────────────────────────────────
 
 const MODULES = {
-  striver: { label: 'Striver SDE Sheet', data: STRIVER_ROADMAP },
-  neetcode: { label: 'NeetCode 150', data: NEETCODE_ROADMAP },
-  leetcode150: { label: 'LeetCode Top 150', data: LEETCODE_TOP150_ROADMAP },
+  striver: { label: 'DSA Master Sheet', data: STRIVER_ROADMAP },
+  neetcode: { label: 'Interview Essentials 150', data: NEETCODE_ROADMAP },
+  leetcode150: { label: 'Top 150 Coding Problems', data: LEETCODE_TOP150_ROADMAP },
 };
 
 type ModuleKey = keyof typeof MODULES | 'all';
@@ -314,9 +314,9 @@ const InterviewSimulator = () => {
                             <SelectTrigger className="h-12 rounded-xl bg-secondary/50 border-transparent"><SelectValue /></SelectTrigger>
                             <SelectContent>
                               <SelectItem value="all">All Roadmaps</SelectItem>
-                              <SelectItem value="striver">Striver SDE Sheet</SelectItem>
-                              <SelectItem value="neetcode">NeetCode 150</SelectItem>
-                              <SelectItem value="leetcode150">Top 150</SelectItem>
+                              <SelectItem value="striver">DSA Master Sheet</SelectItem>
+                              <SelectItem value="neetcode">Interview Essentials 150</SelectItem>
+                              <SelectItem value="leetcode150">Top 150 Coding Problems</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>

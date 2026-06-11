@@ -4,7 +4,7 @@ import { STRIVER_ROADMAP } from '@/lib/striver-roadmap-data';
 
 const StriverRoadmap = () => (
   <RoadmapPage
-    title="Striver SDE Sheet Roadmap"
+    title="DSA Master Sheet"
     icon={<Map className="h-4 w-4 text-primary" />}
     roadmap={STRIVER_ROADMAP}
   />

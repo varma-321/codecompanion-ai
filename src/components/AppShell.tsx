@@ -36,9 +36,9 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Roadmaps',
     items: [
-      { title: 'Striver SDE', url: '/striver', icon: Map },
-      { title: 'NeetCode 150', url: '/neetcode', icon: Code2 },
-      { title: 'LeetCode Top 150', url: '/leetcode150', icon: BookOpen },
+      { title: 'DSA Master Sheet', url: '/striver', icon: Map },
+      { title: 'Interview Essentials 150', url: '/neetcode', icon: Code2 },
+      { title: 'Top 150 Coding Problems', url: '/leetcode150', icon: BookOpen },
       { title: 'Adaptive Path', url: '/learning-path', icon: Brain },
     ],
   },

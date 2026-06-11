@@ -109,9 +109,9 @@ const GlobalSearch = () => {
                 <SelectTrigger className="h-8 w-36 text-xs"><SelectValue placeholder="All Modules" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Modules</SelectItem>
-                  <SelectItem value="Striver">Striver</SelectItem>
-                  <SelectItem value="NeetCode">NeetCode</SelectItem>
-                  <SelectItem value="LeetCode 150">LeetCode 150</SelectItem>
+                  <SelectItem value="Striver">DSA Master Sheet</SelectItem>
+                  <SelectItem value="NeetCode">Interview Essentials 150</SelectItem>
+                  <SelectItem value="LeetCode 150">Top 150 Coding Problems</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={topic} onValueChange={setTopic}>
