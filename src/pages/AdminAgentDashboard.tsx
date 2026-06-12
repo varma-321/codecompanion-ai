@@ -419,9 +419,9 @@ const AdminAgentDashboard = () => {
                       grouped[p.module][p.topic].push(p);
                     }
                     const MODULE_COLORS: Record<string, string> = {
-                      'Striver': 'bg-orange-500/15 text-orange-400 border-orange-500/30',
-                      'NeetCode': 'bg-blue-500/15 text-blue-400 border-blue-500/30',
-                      'LeetCode 150': 'bg-purple-500/15 text-purple-400 border-purple-500/30',
+                      'DSA Master': 'bg-orange-500/15 text-orange-400 border-orange-500/30',
+                      'Essentials 150': 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+                      'Top 150': 'bg-purple-500/15 text-purple-400 border-purple-500/30',
                     };
                     return Object.entries(grouped).map(([moduleName, topics]) => (
                       <div key={moduleName}>
