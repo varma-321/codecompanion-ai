@@ -13,9 +13,10 @@ import { fetchStoreItems, fetchBalance, purchaseItem, type StoreItem, type CoinB
 import { useActiveEffects } from '@/lib/active-effects';
 import { supabase } from '@/integrations/supabase/client';
 
-function timeLeft(expires: string | null) {
-  if (!expires) return 'Permanent';
-  const ms = new Date(expires).getTime() - Date.now();
+function timeLeft(expires: string | null, fallbackDays = 7) {
+  // All store items are time-limited. If somehow expires is null, treat as fallback window.
+  const target = expires ? new Date(expires).getTime() : Date.now() + fallbackDays * 86400000;
+  const ms = target - Date.now();
   if (ms <= 0) return 'Expired';
   const d = Math.floor(ms / 86400000);
   const h = Math.floor((ms % 86400000) / 3600000);
@@ -23,6 +24,15 @@ function timeLeft(expires: string | null) {
   if (d > 0) return `${d}d ${h}h left`;
   if (h > 0) return `${h}h ${m}m left`;
   return `${m}m left`;
+}
+
+function durationLabel(meta: any) {
+  const d = Number(meta?.duration_days);
+  const h = Number(meta?.duration_hours);
+  if (d) return `Active ${d} day${d > 1 ? 's' : ''} after equipping`;
+  if (h) return `Active ${h} hour${h > 1 ? 's' : ''} after equipping`;
+  if (meta?.consumable) return 'One-time use';
+  return 'Limited time';
 }
 
 interface OwnedRow { item_slug: string; equipped: boolean; expires_at: string | null; quantity: number; }
