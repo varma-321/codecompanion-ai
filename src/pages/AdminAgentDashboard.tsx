@@ -492,8 +492,8 @@ const AdminAgentDashboard = () => {
                                         <div className="flex items-center gap-1.5 min-w-0">
                                           {search.trim() && (
                                             <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border uppercase tracking-wider shrink-0 ${
-                                              p.module === 'Striver' ? 'bg-orange-500/15 text-orange-400 border-orange-500/30'
-                                              : p.module === 'NeetCode' ? 'bg-blue-500/15 text-blue-400 border-blue-500/30'
+                                              p.module === 'DSA Master' ? 'bg-orange-500/15 text-orange-400 border-orange-500/30'
+                                              : p.module === 'Essentials 150' ? 'bg-blue-500/15 text-blue-400 border-blue-500/30'
                                               : 'bg-purple-500/15 text-purple-400 border-purple-500/30'
                                             }`}>{p.module}</span>
                                           )}
