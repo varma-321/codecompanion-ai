@@ -209,7 +209,9 @@ export default function Store() {
                     </div>
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Clock className="h-3 w-3" />
-                      <span className={expired ? 'text-destructive' : ''}>{timeLeft(row.expires_at)}</span>
+                      <span className={expired ? 'text-destructive' : ''}>
+                        {row.equipped || row.expires_at ? timeLeft(row.expires_at) : durationLabel(item.meta)}
+                      </span>
                       {consumable && <span className="ml-auto">Qty: {row.quantity}</span>}
                     </div>
                     <div className="flex items-center justify-between mt-auto pt-2 border-t border-border gap-2">
