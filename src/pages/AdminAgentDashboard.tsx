@@ -26,19 +26,19 @@ interface FlatProblem {
   title: string;
   difficulty: string;
   topic: string;
-  module: 'Striver' | 'NeetCode' | 'LeetCode 150';
+  module: 'DSA Master' | 'Essentials 150' | 'Top 150';
 }
 
 function flatten(): FlatProblem[] {
   const out: FlatProblem[] = [];
   for (const t of STRIVER_ROADMAP) for (const p of t.problems) {
-    out.push({ problem_key: p.key, title: p.title, difficulty: p.difficulty, topic: t.name, module: 'Striver' });
+    out.push({ problem_key: p.key, title: p.title, difficulty: p.difficulty, topic: t.name, module: 'DSA Master' });
   }
   for (const t of NEETCODE_ROADMAP) for (const p of t.problems) {
-    out.push({ problem_key: p.key, title: p.title, difficulty: p.difficulty, topic: t.name, module: 'NeetCode' });
+    out.push({ problem_key: p.key, title: p.title, difficulty: p.difficulty, topic: t.name, module: 'Essentials 150' });
   }
   for (const t of LEETCODE_TOP150_ROADMAP) for (const p of t.problems) {
-    out.push({ problem_key: p.key, title: p.title, difficulty: p.difficulty, topic: t.name, module: 'LeetCode 150' });
+    out.push({ problem_key: p.key, title: p.title, difficulty: p.difficulty, topic: t.name, module: 'Top 150' });
   }
   return out;
 }
