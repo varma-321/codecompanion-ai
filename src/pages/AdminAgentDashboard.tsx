@@ -26,19 +26,19 @@ interface FlatProblem {
   title: string;
   difficulty: string;
   topic: string;
-  module: 'Striver' | 'NeetCode' | 'LeetCode 150';
+  module: 'DSA Master' | 'Essentials 150' | 'Top 150';
 }
 
 function flatten(): FlatProblem[] {
   const out: FlatProblem[] = [];
   for (const t of STRIVER_ROADMAP) for (const p of t.problems) {
-    out.push({ problem_key: p.key, title: p.title, difficulty: p.difficulty, topic: t.name, module: 'Striver' });
+    out.push({ problem_key: p.key, title: p.title, difficulty: p.difficulty, topic: t.name, module: 'DSA Master' });
   }
   for (const t of NEETCODE_ROADMAP) for (const p of t.problems) {
-    out.push({ problem_key: p.key, title: p.title, difficulty: p.difficulty, topic: t.name, module: 'NeetCode' });
+    out.push({ problem_key: p.key, title: p.title, difficulty: p.difficulty, topic: t.name, module: 'Essentials 150' });
   }
   for (const t of LEETCODE_TOP150_ROADMAP) for (const p of t.problems) {
-    out.push({ problem_key: p.key, title: p.title, difficulty: p.difficulty, topic: t.name, module: 'LeetCode 150' });
+    out.push({ problem_key: p.key, title: p.title, difficulty: p.difficulty, topic: t.name, module: 'Top 150' });
   }
   return out;
 }
@@ -360,9 +360,9 @@ const AdminAgentDashboard = () => {
                   className="h-9 rounded-md border border-input bg-background px-2 text-sm"
                 >
                   <option value="all">All modules</option>
-                  <option value="Striver">DSA Master Sheet</option>
-                  <option value="NeetCode">Interview Essentials 150</option>
-                  <option value="LeetCode 150">Top 150 Coding Problems</option>
+                  <option value="DSA Master">DSA Master Sheet</option>
+                  <option value="Essentials 150">Interview Essentials 150</option>
+                  <option value="Top 150">Top 150 Coding Problems</option>
                 </select>
                 <select value={topicFilter} onChange={(e) => setTopicFilter(e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm max-w-[180px]">
                   <option value="all">All topics</option>
@@ -419,9 +419,9 @@ const AdminAgentDashboard = () => {
                       grouped[p.module][p.topic].push(p);
                     }
                     const MODULE_COLORS: Record<string, string> = {
-                      'Striver': 'bg-orange-500/15 text-orange-400 border-orange-500/30',
-                      'NeetCode': 'bg-blue-500/15 text-blue-400 border-blue-500/30',
-                      'LeetCode 150': 'bg-purple-500/15 text-purple-400 border-purple-500/30',
+                      'DSA Master': 'bg-orange-500/15 text-orange-400 border-orange-500/30',
+                      'Essentials 150': 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+                      'Top 150': 'bg-purple-500/15 text-purple-400 border-purple-500/30',
                     };
                     return Object.entries(grouped).map(([moduleName, topics]) => (
                       <div key={moduleName}>
@@ -492,8 +492,8 @@ const AdminAgentDashboard = () => {
                                         <div className="flex items-center gap-1.5 min-w-0">
                                           {search.trim() && (
                                             <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border uppercase tracking-wider shrink-0 ${
-                                              p.module === 'Striver' ? 'bg-orange-500/15 text-orange-400 border-orange-500/30'
-                                              : p.module === 'NeetCode' ? 'bg-blue-500/15 text-blue-400 border-blue-500/30'
+                                              p.module === 'DSA Master' ? 'bg-orange-500/15 text-orange-400 border-orange-500/30'
+                                              : p.module === 'Essentials 150' ? 'bg-blue-500/15 text-blue-400 border-blue-500/30'
                                               : 'bg-purple-500/15 text-purple-400 border-purple-500/30'
                                             }`}>{p.module}</span>
                                           )}
