@@ -12,16 +12,16 @@ import { STRIVER_ROADMAP } from '@/lib/striver-roadmap-data';
 import { NEETCODE_ROADMAP } from '@/lib/neetcode-roadmap-data';
 import { LEETCODE_TOP150_ROADMAP } from '@/lib/leetcode-top150-data';
 
-const STRIVER_PROBLEMS   = STRIVER_ROADMAP.flatMap(t => t.problems.map(p => ({ ...p, topic: t.name, module: 'Striver' as const })));
-const NEETCODE_PROBLEMS  = NEETCODE_ROADMAP.flatMap(t => t.problems.map(p => ({ ...p, topic: t.name, module: 'NeetCode' as const })));
-const LEETCODE_PROBLEMS  = LEETCODE_TOP150_ROADMAP.flatMap(t => t.problems.map(p => ({ ...p, topic: t.name, module: 'LeetCode 150' as const })));
+const STRIVER_PROBLEMS   = STRIVER_ROADMAP.flatMap(t => t.problems.map(p => ({ ...p, topic: t.name, module: 'DSA Master' as const })));
+const NEETCODE_PROBLEMS  = NEETCODE_ROADMAP.flatMap(t => t.problems.map(p => ({ ...p, topic: t.name, module: 'Essentials 150' as const })));
+const LEETCODE_PROBLEMS  = LEETCODE_TOP150_ROADMAP.flatMap(t => t.problems.map(p => ({ ...p, topic: t.name, module: 'Top 150' as const })));
 const ALL_PROBLEMS = [...STRIVER_PROBLEMS, ...NEETCODE_PROBLEMS, ...LEETCODE_PROBLEMS];
 const ALL_TOPICS = [...new Set(ALL_PROBLEMS.map(p => p.topic))].sort();
 
 const MODULE_COLORS: Record<string, string> = {
-  'Striver':      'bg-orange-500/15 text-orange-400 border-orange-500/30',
-  'NeetCode':     'bg-blue-500/15  text-blue-400  border-blue-500/30',
-  'LeetCode 150': 'bg-purple-500/15 text-purple-400 border-purple-500/30',
+  'DSA Master':     'bg-orange-500/15 text-orange-400 border-orange-500/30',
+  'Essentials 150': 'bg-blue-500/15  text-blue-400  border-blue-500/30',
+  'Top 150':        'bg-purple-500/15 text-purple-400 border-purple-500/30',
 };
 
 const GlobalSearch = () => {
