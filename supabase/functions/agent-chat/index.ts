@@ -1,52 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { chatWithFeatureAI, getAISettings, getUserIdFromRequest, logAIUsage } from "../_shared/ai-pool.ts";
+import { chatWithFeatureAI } from "../_shared/ai-pool.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
-
-const LOVABLE_URL = 'https://ai.gateway.lovable.dev/v1/chat/completions';
-const LOVABLE_MODEL = 'google/gemini-3-flash-preview';
-
-// Default IDE chatbot: the built-in Gemini setup (unchanged). Usage is logged.
-async function callLovable(messages: any[], temperature: number, userId: string | null): Promise<string> {
-  const key = Deno.env.get('LOVABLE_API_KEY');
-  if (!key) throw new Error('LOVABLE_API_KEY not configured');
-  const started = Date.now();
-  const res = await fetch(LOVABLE_URL, {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: LOVABLE_MODEL, messages, temperature }),
-  });
-  const base = { userId, feature: 'ide-chatbot', provider: 'lovable', model: LOVABLE_MODEL, latencyMs: Date.now() - started, httpStatus: res.status, headers: res.headers };
-  if (!res.ok) {
-    const text = await res.text();
-    await logAIUsage({ ...base, status: res.status === 429 ? 'rate_limited' : 'error', error: text });
-    if (res.status === 429) throw new Error('RATE_LIMIT: Too many requests, please wait a moment and try again.');
-    if (res.status === 402) throw new Error('CREDITS: AI credits exhausted. Please top up to keep using the tutor.');
-    throw new Error(`Lovable AI HTTP ${res.status}: ${text.slice(0, 200)}`);
-  }
-  const data = await res.json();
-  const u = data?.usage ?? {};
-  await logAIUsage({ ...base, status: 'ok', promptTokens: u.prompt_tokens, completionTokens: u.completion_tokens, totalTokens: u.total_tokens });
-  return data?.choices?.[0]?.message?.content ?? '';
-}
-
-async function callAI(messages: any[], req: Request, temperature = 0.3): Promise<{ content: string; keyIndex: number; provider: string }> {
-  const userId = await getUserIdFromRequest(req);
-  const { ide_use_primary } = await getAISettings();
-  if (ide_use_primary) {
-    // Admin turned on "Also use for IDE chatbot" → route through the active primary key.
-    const r = await chatWithFeatureAI('ide-chatbot', { messages, temperature, userId });
-    return { content: r.content, keyIndex: 0, provider: r.provider };
-  }
-  const content = await callLovable(messages, temperature, userId);
-  if (!content) throw new Error('Empty response from AI tutor');
-  return { content, keyIndex: 0, provider: 'lovable' };
-}
-
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -138,12 +97,16 @@ serve(async (req) => {
     // 4. Current user message
     messages.push({ role: 'user', content: String(message ?? '') });
 
-    const { content, keyIndex, provider } = await callAI(messages, req);
-
-    return new Response(JSON.stringify({ response: content, keyUsed: keyIndex, provider }), {
-
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    const result = await chatWithFeatureAI('agent-chat', {
+      messages,
+      temperature: 0.3,
+      maxTokens: 4096,
     });
+
+    return new Response(
+      JSON.stringify({ response: result.content, keyUsed: result.keyLabel, provider: result.provider }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    );
   } catch (e) {
     return new Response(JSON.stringify({ error: (e as Error).message }), {
       status: 500,

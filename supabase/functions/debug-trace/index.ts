@@ -13,7 +13,6 @@ serve(async (req) => {
     const { code } = await req.json();
 
     const stream = await streamWithFeatureAI("debug-trace", {
-      req,
       messages: [
         {
           role: "system",

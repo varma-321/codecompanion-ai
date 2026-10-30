@@ -1,19 +1,13 @@
-import { chatWithFeatureAI } from '../_shared/ai-pool.ts';
-// Groq agent edge function with API key rotation.
-// Two modes: 'generate' (write Java solution) and 'fix' (repair Java code given an error).
-// Uses the admin-selected primary AI key (see _shared/ai-pool.ts).
+// Java code generation / repair agent — routed through the shared AI key pool.
+
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { chatWithFeatureAI } from "../_shared/ai-pool.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
-
-
-async function callAI(messages: any[], temperature = 0.2, req?: Request): Promise<{ content: string; keyIndex: number; provider: string }> {
-  const r = await chatWithFeatureAI('agent-solver', { messages, temperature, req });
-  return { content: r.content, keyIndex: 0, provider: r.provider };
-}
 
 function stripCodeFence(text: string): string {
   // Remove ```java ... ``` or ``` ... ``` fences, keep inner
@@ -42,7 +36,6 @@ Strict rules:
 - If the error class is LOGIC: rethink the algorithm to produce the correct output.
 - If the error class is TIMEOUT: optimize the algorithm time complexity.
 - Output the FULL corrected Solution class.`;
-
 
 interface GenerateBody {
   mode: 'generate';
@@ -134,9 +127,13 @@ ${failBlock}Return only the complete corrected Solution class.`;
       });
     }
 
-    const { content, keyIndex, provider } = await callAI(messages, body.mode === 'fix' ? 0.1 : 0.2, req);
-    const code = stripCodeFence(content);
-    return new Response(JSON.stringify({ code, keyUsed: keyIndex, provider }), {
+    const result = await chatWithFeatureAI('agent-groq', {
+      messages,
+      temperature: body.mode === 'fix' ? 0.1 : 0.2,
+      maxTokens: 2048,
+    });
+    const code = stripCodeFence(result.content);
+    return new Response(JSON.stringify({ code, keyUsed: result.keyLabel, provider: result.provider }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (e) {
