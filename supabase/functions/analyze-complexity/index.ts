@@ -16,7 +16,6 @@ serve(async (req) => {
     if (fullExplanation) {
       try {
         const { content } = await chatWithFeatureAI("complexity", {
-      req,
           messages: [
             {
               role: "system",
@@ -47,7 +46,6 @@ Format as clean markdown.`,
 
     // Quick analysis mode - returns structured JSON via tool call
     const { content, raw } = await chatWithFeatureAI("complexity", {
-      req,
       messages: [
         { role: "system", content: "Analyze code complexity concisely." },
         { role: "user", content: `Analyze this Java code's complexity.${executionTimeMs ? ` Execution took ${executionTimeMs}ms.` : ''}\n\n${code}` },

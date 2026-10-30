@@ -14,7 +14,6 @@ serve(async (req) => {
 
     try {
       const { content } = await chatWithFeatureAI("adaptive-path", {
-      req,
         messages: [
           {
             role: "system",
