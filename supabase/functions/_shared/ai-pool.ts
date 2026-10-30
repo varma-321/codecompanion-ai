@@ -1,9 +1,11 @@
 // Shared AI key pool for all edge functions.
 //
-// Architecture: PRIMARY KEY ONLY — no fallbacks, no env-var keys.
-// The admin sets exactly one key as `is_primary = true` in public.ai_api_keys.
+// Architecture: PRIMARY KEY ONLY — no env-var fallbacks.
+// The admin marks one key as primary in the Admin Dashboard (stored in
+// public.ai_feature_config with feature_key = 'primary', key_ids[0]).
 // Every AI call uses that key. If the primary key is rate-limited or invalid,
 // the request fails with a clear error message until the admin switches the primary.
+// If no primary is configured yet, the first enabled key is used so features keep working.
 //
 // Keys are service_role-only (RLS enabled, no public policies).
 // The raw api_key is never returned to the client — only masked strings.
@@ -12,8 +14,6 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-
-export const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
 
 export interface PoolKey {
   id: string;
@@ -64,12 +64,32 @@ async function loadPrimary(force = false): Promise<PoolKey | null> {
     return primaryCache.key;
   }
   const supabase = adminClient();
-  const { data } = await supabase
-    .from('ai_api_keys')
-    .select('*')
-    .eq('is_primary', true)
-    .eq('enabled', true)
+
+  // The admin marks one key as primary via ai_feature_config (feature_key = 'primary').
+  const { data: cfg } = await supabase
+    .from('ai_feature_config')
+    .select('key_ids')
+    .eq('feature_key', 'primary')
     .maybeSingle();
+
+  const primaryKeyId =
+    Array.isArray(cfg?.key_ids) && cfg.key_ids.length > 0 ? String(cfg.key_ids[0]) : null;
+
+  // Load the configured primary; if it's missing or disabled, fall back to the first enabled key.
+  let data: any = null;
+  if (primaryKeyId) {
+    const res = await supabase.from('ai_api_keys').select('*').eq('id', primaryKeyId).maybeSingle();
+    if (res.data?.enabled) data = res.data;
+  }
+  if (!data) {
+    const res = await supabase
+      .from('ai_api_keys')
+      .select('*')
+      .eq('enabled', true)
+      .order('created_at', { ascending: true })
+      .limit(1);
+    data = res.data?.[0] ?? null;
+  }
 
   const key: PoolKey | null = data
     ? {
@@ -137,7 +157,7 @@ export async function chatWithPrimaryAI(opts: ChatOptions): Promise<AIResult> {
   const key = await loadPrimary();
   if (!key) {
     throw new Error(
-      'No primary AI key configured. An admin must add an API key and set it as primary in the Admin Dashboard.',
+      'No AI key configured. An admin must add an API key in the Admin Dashboard → AI API Keys.',
     );
   }
 
@@ -190,7 +210,7 @@ export async function streamWithPrimaryAI(opts: ChatOptions): Promise<StreamResu
   const key = await loadPrimary();
   if (!key) {
     throw new Error(
-      'No primary AI key configured. An admin must add an API key and set it as primary in the Admin Dashboard.',
+      'No AI key configured. An admin must add an API key in the Admin Dashboard → AI API Keys.',
     );
   }
 
